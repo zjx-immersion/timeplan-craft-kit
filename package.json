@@ -1,0 +1,51 @@
+{
+  "name": "timeplan-craft-kit",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Timeline Planning & Gantt Chart Kit - Ant Design Version",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:dev": "vite build --mode development",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^6.30.1",
+    "antd": "^6.2.1",
+    "@ant-design/icons": "^5.6.1",
+    "zustand": "^5.0.10",
+    "@tanstack/react-query": "^5.90.20",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "date-fns": "^3.6.0",
+    "zod": "^3.25.76",
+    "clsx": "^2.1.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.23",
+    "@types/react-dom": "^18.3.7",
+    "@types/node": "^22.16.5",
+    "@vitejs/plugin-react-swc": "^3.11.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4",
+    "vitest": "^3.2.4",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/jest-dom": "^6.6.0",
+    "jsdom": "^25.0.0",
+    "eslint": "^9.32.0",
+    "@eslint/js": "^9.32.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "typescript-eslint": "^8.38.0",
+    "globals": "^15.15.0",
+    "@playwright/test": "^1.58.0"
+  }
+}

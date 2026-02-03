@@ -1,0 +1,37 @@
+/**
+ * NotFound - 404页面
+ * 
+ * 1:1 还原原项目的 NotFound 页面
+ */
+
+import { Button, Result } from 'antd';
+import { useNavigate } from 'react-router-dom';
+import { HomeOutlined } from '@ant-design/icons';
+
+export default function NotFound() {
+  const navigate = useNavigate();
+
+  return (
+    <div style={{
+      height: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}>
+      <Result
+        status="404"
+        title="404"
+        subTitle="抱歉，您访问的页面不存在。"
+        extra={
+          <Button
+            type="primary"
+            icon={<HomeOutlined />}
+            onClick={() => navigate('/')}
+          >
+            返回首页
+          </Button>
+        }
+      />
+    </div>
+  );
+}
