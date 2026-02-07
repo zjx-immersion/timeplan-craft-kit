@@ -298,7 +298,7 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
         return (
           <IterationView
             data={plan}
-            iterationDays={14}
+            onDataChange={handleDataChange}
           />
         );
 
