@@ -351,6 +351,10 @@ export const RelationRenderer: React.FC<RelationRendererProps> = ({
           const isHovered = hoveredId === relation.id;
           const arrowLength = 8;
           
+          // 🎯 检查是否在关键路径中
+          const isCriticalPath = criticalPathNodeIds.has(relation.fromLineId) && 
+                                 criticalPathNodeIds.has(relation.toLineId);
+          
           let endX = toPos.x;
           let endY = toPos.y;
           
