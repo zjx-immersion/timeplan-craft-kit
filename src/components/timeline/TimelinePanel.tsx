@@ -67,6 +67,7 @@ import {
   addDays,
   startOfWeek,
 } from 'date-fns';
+// addDays已在上面导入
 import { isHoliday, isNonWorkingDay, getHolidayName } from '@/utils/holidayUtils';
 import { useTimelineDrag } from '@/hooks/useTimelineDrag';
 import { useBarResize } from '@/hooks/useBarResize';
@@ -89,6 +90,7 @@ import BaselineRangeDragCreator from './BaselineRangeDragCreator';
 import NodeContextMenu from './NodeContextMenu';
 import { NodeEditDialog } from '../dialogs/NodeEditDialog';
 import { TimelineTimeShiftDialog } from '../dialogs/TimelineTimeShiftDialog';
+import { calculateCriticalPath } from '@/utils/criticalPath';
 
 /**
  * TimelinePanel 组件属性
@@ -839,6 +841,14 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     setInternalShowCriticalPath(newValue);
     message.info(newValue ? '已显示关键路径' : '已关闭关键路径');
   }, [showCriticalPath]);
+
+  // 计算关键路径节点
+  const criticalPathNodeIds = useMemo(() => {
+    if (!showCriticalPath) return new Set<string>();
+    const pathLines = calculateCriticalPath(data.lines, data.relations || []);
+    console.log('[TimelinePanel] 🎯 关键路径:', pathLines.length, '个元素');
+    return new Set(pathLines);
+  }, [data.lines, data.relations, showCriticalPath]);
 
   // ==================== 基线系统事件处理 ====================
 
@@ -1886,6 +1896,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                     rowHeight={ROW_HEIGHT}
                     selectedRelationId={selectedRelationId}
                     isEditMode={isEditMode}
+                    criticalPathNodeIds={criticalPathNodeIds}
                     onRelationClick={handleRelationClick}
                     onRelationDelete={handleRelationDelete}
                   />
@@ -2029,6 +2040,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                           isEditMode={isEditMode}
                           isHovered={line.id === hoveredLineId}
                           connectionMode={connectionMode}
+                          isCriticalPath={criticalPathNodeIds.has(line.id)}
                           onMouseDown={(e) => isEditMode && handleDragStart(e, line)}
                           onClick={() => handleLineClick(line)}
                           onResizeStart={(e, edge) => handleResizeStart(e, line, edge)}

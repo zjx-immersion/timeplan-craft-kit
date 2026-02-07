@@ -30,6 +30,8 @@ interface RelationRendererProps {
   isEditMode?: boolean;
   onRelationClick?: (relationId: string) => void;
   onRelationDelete?: (relationId: string) => void;
+  // 关键路径
+  criticalPathNodeIds?: Set<string>;
 }
 
 interface LinePosition {
@@ -55,6 +57,7 @@ export const RelationRenderer: React.FC<RelationRendererProps> = ({
   isEditMode = false,
   onRelationClick,
   onRelationDelete,
+  criticalPathNodeIds = new Set(),
 }) => {
   const [hoveredId, setHoveredId] = React.useState<string | null>(null);
   
@@ -164,6 +167,21 @@ export const RelationRenderer: React.FC<RelationRendererProps> = ({
             fill="#14B8A6"
           />
         </marker>
+        {/* 🎯 关键路径箭头：红色 */}
+        <marker
+          id="arrowhead-critical"
+          markerWidth="6"
+          markerHeight="4"
+          refX="6"
+          refY="2"
+          orient="auto"
+          markerUnits="strokeWidth"
+        >
+          <polygon
+            points="0 0, 6 2, 0 4"
+            fill="#ef4444"
+          />
+        </marker>
         
         {/* Hover状态的箭头 */}
         <marker
@@ -233,6 +251,10 @@ export const RelationRenderer: React.FC<RelationRendererProps> = ({
           
           const isHovered = hoveredId === relation.id;
           
+          // 🎯 检查是否在关键路径中
+          const isCriticalPath = criticalPathNodeIds.has(relation.fromLineId) && 
+                                 criticalPathNodeIds.has(relation.toLineId);
+          
           // 计算标签位置（路径中点）
           const midX = (startX + endX) / 2;
           const midY = (startY + endY) / 2;
@@ -260,12 +282,17 @@ export const RelationRenderer: React.FC<RelationRendererProps> = ({
               />
               
               {/* ✅ 实际显示的依赖线 */}
+              {/* 🎯 关键路径：红色加粗实线 */}
               <path
                 d={path}
                 fill="none"
-                stroke={selectedRelationId === relation.id ? '#3B82F6' : (isHovered ? '#0F9F94' : '#14B8A6')}
-                strokeWidth={selectedRelationId === relation.id || isHovered ? 3 : 2}
-                strokeDasharray="6 3"
+                stroke={isCriticalPath 
+                  ? '#ef4444'  // 关键路径：红色
+                  : (selectedRelationId === relation.id ? '#3B82F6' : (isHovered ? '#0F9F94' : '#14B8A6'))}
+                strokeWidth={isCriticalPath 
+                  ? 3  // 关键路径：加粗
+                  : (selectedRelationId === relation.id || isHovered ? 3 : 2)}
+                strokeDasharray={isCriticalPath ? 'none' : '6 3'}  // 关键路径：实线
                 style={{ pointerEvents: 'none' }}
               />
               
@@ -365,12 +392,19 @@ export const RelationRenderer: React.FC<RelationRendererProps> = ({
               />
               
               {/* ✅ 箭头（单独渲染，确保不被其他线覆盖） */}
+              {/* 🎯 关键路径：红色箭头 */}
               <path
                 d={arrowPath}
                 fill="none"
-                stroke={isHovered ? '#0F9F94' : '#14B8A6'}
-                strokeWidth={isHovered ? 3 : 2}
-                markerEnd={isHovered ? 'url(#arrowhead-hover)' : 'url(#arrowhead)'}
+                stroke={isCriticalPath 
+                  ? '#ef4444'  // 关键路径：红色
+                  : (isHovered ? '#0F9F94' : '#14B8A6')}
+                strokeWidth={isCriticalPath 
+                  ? 3  // 关键路径：加粗
+                  : (isHovered ? 3 : 2)}
+                markerEnd={isCriticalPath 
+                  ? 'url(#arrowhead-critical)'  // 关键路径箭头
+                  : (isHovered ? 'url(#arrowhead-hover)' : 'url(#arrowhead)')}
                 style={{ pointerEvents: 'none' }}
               />
             </g>

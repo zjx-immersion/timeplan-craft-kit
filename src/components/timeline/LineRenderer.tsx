@@ -32,6 +32,8 @@ interface LineRendererProps {
   connectionMode?: { lineId: string | null; direction: 'from' | 'to' };
   onStartConnection?: (lineId: string, direction: 'from' | 'to') => void;
   onCompleteConnection?: (targetLineId: string) => void;
+  // 关键路径
+  isCriticalPath?: boolean;
 }
 
 /**
@@ -51,6 +53,7 @@ const BarRenderer: React.FC<LineRendererProps> = ({
   connectionMode = { lineId: null, direction: 'from' },
   onStartConnection,
   onCompleteConnection,
+  isCriticalPath = false,
 }) => {
   // 🎨 获取节点颜色（优先级：attributes.color > line.color > 默认Teal色）
   // ✅ 修复：使用透明度版本，参考源项目
@@ -83,14 +86,19 @@ const BarRenderer: React.FC<LineRendererProps> = ({
               : (isHovering && isEditMode ? hoverColor : barColor)),
         borderRadius: 4,
         // 🎯 选中样式：双层ring效果
-        border: isSelected
-          ? `2px solid ${timelineColors.selected}`
-          : `1px solid rgba(0,0,0,0.04)`,
-        boxShadow: isSelected 
-          ? `0 0 0 2px ${timelineColors.selected}, 0 0 0 5px ${timelineColors.selectedRing}, 0 4px 12px rgba(0,0,0,0.15)` // 增强ring + 阴影
-          : (isInteracting
-              ? timelineShadows.dragging
-              : (isHovering ? timelineShadows.nodeMd : timelineShadows.nodeSm)),
+        // 🎯 关键路径样式：加粗红色边框 + 红色阴影
+        border: isCriticalPath
+          ? `3px solid #ef4444` // 红色加粗边框
+          : (isSelected
+              ? `2px solid ${timelineColors.selected}`
+              : `1px solid rgba(0,0,0,0.04)`),
+        boxShadow: isCriticalPath
+          ? `0 0 8px rgba(239, 68, 68, 0.5), 0 0 16px rgba(239, 68, 68, 0.3)` // 红色阴影
+          : (isSelected 
+              ? `0 0 0 2px ${timelineColors.selected}, 0 0 0 5px ${timelineColors.selectedRing}, 0 4px 12px rgba(0,0,0,0.15)` // 增强ring + 阴影
+              : (isInteracting
+                  ? timelineShadows.dragging
+                  : (isHovering ? timelineShadows.nodeMd : timelineShadows.nodeSm))),
         cursor: isEditMode ? (isInteracting ? 'grabbing' : 'grab') : 'pointer',
         display: 'flex',
         alignItems: 'center',
@@ -182,6 +190,7 @@ const MilestoneRenderer: React.FC<LineRendererProps> = ({
   line,
   startPos,
   isSelected,
+  isCriticalPath = false,
   isInteracting,
   isEditMode,
   onMouseDown,
@@ -226,14 +235,19 @@ const MilestoneRenderer: React.FC<LineRendererProps> = ({
           width: size,
           height: size,
           backgroundColor: 'transparent',
-          border: isSelected
-            ? `3px solid ${timelineColors.selected}`  // ✅ 选中时更粗
-            : `2px solid ${color}`,
+          border: isCriticalPath
+            ? `3px solid #ef4444` // 关键路径：红色加粗边框
+            : (isSelected
+                ? `3px solid ${timelineColors.selected}`  // ✅ 选中时更粗
+                : `2px solid ${color}`),
           transform: 'rotate(45deg)',
           // 🎯 选中时使用增强ring效果
-          boxShadow: isSelected 
-            ? `0 0 0 2px ${timelineColors.selected}, 0 0 0 5px ${timelineColors.selectedRing}`
-            : (isHovering && isEditMode ? '0 0 0 1px rgba(0,0,0,0.1)' : 'none'),
+          // 🎯 关键路径：红色阴影
+          boxShadow: isCriticalPath
+            ? `0 0 8px rgba(239, 68, 68, 0.5), 0 0 16px rgba(239, 68, 68, 0.3)`
+            : (isSelected 
+                ? `0 0 0 2px ${timelineColors.selected}, 0 0 0 5px ${timelineColors.selectedRing}`
+                : (isHovering && isEditMode ? '0 0 0 1px rgba(0,0,0,0.1)' : 'none')),
         }}
       />
       
@@ -279,6 +293,7 @@ const GatewayRenderer: React.FC<LineRendererProps> = ({
   line,
   startPos,
   isSelected,
+  isCriticalPath = false,
   isInteracting,
   isEditMode,
   onMouseDown,
@@ -314,7 +329,9 @@ const GatewayRenderer: React.FC<LineRendererProps> = ({
         zIndex: isSelected ? 12 : (isInteracting ? 10 : 1),
         opacity: isInteracting ? 0.7 : 0.95,
         transition: isInteracting ? 'none' : `${timelineTransitions.normal}, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)`,
-        filter: isSelected ? 'drop-shadow(0 4px 16px rgba(0,0,0,0.2))' : 'none',
+        filter: isCriticalPath 
+          ? 'drop-shadow(0 0 8px rgba(239, 68, 68, 0.5)) drop-shadow(0 0 16px rgba(239, 68, 68, 0.3))'
+          : (isSelected ? 'drop-shadow(0 4px 16px rgba(0,0,0,0.2))' : 'none'),
       }}
     >
       {/* 六边形使用SVG - ✅ 改为空心 */}
@@ -322,8 +339,8 @@ const GatewayRenderer: React.FC<LineRendererProps> = ({
         <polygon
           points="12,2 21,7 21,17 12,22 3,17 3,7"
           fill="transparent"
-          stroke={isSelected ? timelineColors.selected : color}
-          strokeWidth={isSelected ? 3 : 2}
+          stroke={isCriticalPath ? '#ef4444' : (isSelected ? timelineColors.selected : color)}
+          strokeWidth={isCriticalPath ? 3 : (isSelected ? 3 : 2)}
         />
         {/* 选中时的增强ring效果 */}
         {isSelected && (
