@@ -18,7 +18,7 @@ import {
   DeleteOutlined,
   CopyOutlined,
   BgColorsOutlined,
-  CalendarClockOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons';
 
 /**
@@ -144,7 +144,7 @@ export const TimelineQuickMenu: React.FC<TimelineQuickMenuProps> = ({
       menuItems.push({
         key: 'time-shift',
         label: '整体时间调整',
-        icon: <CalendarClockOutlined />,
+        icon: <ClockCircleOutlined />,
         onClick: () => onTimeShift(timelineId),
       });
     }
