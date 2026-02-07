@@ -304,8 +304,21 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
         ? initialData.viewConfig.endDate
         : new Date(initialData.viewConfig.endDate);
     }
-    // 否则使用默认范围
-    return addMonths(new Date(), 18);
+    
+    // ✅ 修复：动态计算结束日期，确保覆盖所有节点 + 6个月缓冲
+    if (initialData.lines && initialData.lines.length > 0) {
+      const allEndDates = initialData.lines
+        .map(line => new Date(line.endDate || line.startDate))
+        .filter(date => !isNaN(date.getTime()));
+      
+      if (allEndDates.length > 0) {
+        const maxDate = new Date(Math.max(...allEndDates.map(d => d.getTime())));
+        return addMonths(maxDate, 6); // 最后节点后延伸6个月
+      }
+    }
+    
+    // 否则使用默认范围（大幅增加到24个月）
+    return addMonths(new Date(), 24);
   });
   const [internalIsEditMode, setInternalIsEditMode] = useState(false);
   // ✅ 修复：优先使用 externalIsEditMode，然后是 readonly 反转，最后是内部状态
@@ -460,6 +473,31 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
       scrollToTodayRef.current = scrollToToday;
     }
   }, [scrollToToday, scrollToTodayRef]);
+
+  // ✅ 修复：动态更新viewEndDate，确保时间轴覆盖所有节点
+  useEffect(() => {
+    // 如果viewConfig中有endDate，不自动更新
+    if (data.viewConfig?.endDate) {
+      return;
+    }
+
+    // 计算所有节点的最大结束日期
+    if (data.lines && data.lines.length > 0) {
+      const allEndDates = data.lines
+        .map(line => new Date(line.endDate || line.startDate))
+        .filter(date => !isNaN(date.getTime()));
+      
+      if (allEndDates.length > 0) {
+        const maxDate = new Date(Math.max(...allEndDates.map(d => d.getTime())));
+        const calculatedEndDate = addMonths(maxDate, 6); // 最后节点后延伸6个月
+        
+        // 只有当计算出的日期比当前viewEndDate更远时才更新
+        if (calculatedEndDate > viewEndDate) {
+          setViewEndDate(calculatedEndDate);
+        }
+      }
+    }
+  }, [data.lines, data.viewConfig?.endDate, viewEndDate]);
 
   /**
    * 缩放 - 放大（增加精度）
@@ -1852,7 +1890,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
               })
             )}
 
-            {/* 水平网格线 */}
+            {/* 水平网格线 - ✅ 修复：确保与Timeline行底部对齐 */}
             {data.timelines.map((_, index) => (
               <div
                 key={index}
@@ -1860,9 +1898,10 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                   position: 'absolute',
                   left: 0,
                   right: 0,
-                  top: index * ROW_HEIGHT,
+                  top: (index + 1) * ROW_HEIGHT - 1,  // ✅ 修复：在每行底部，与borderBottom对齐
                   height: 1,
                   backgroundColor: token.colorBorderSecondary,
+                  pointerEvents: 'none',  // ✅ 不阻挡交互
                 }}
               />
             ))}
@@ -1971,9 +2010,12 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                   key={timeline.id}
                   style={{
                     position: 'relative',
-                    height: ROW_HEIGHT,
+                    height: ROW_HEIGHT,  // ✅ 固定高度120px，与左侧一致
                     borderBottom: `1px solid ${token.colorBorderSecondary}`,
                     backgroundColor: '#fff',
+                    boxSizing: 'border-box',  // ✅ 确保border包含在高度内，与左侧一致
+                    margin: 0,  // ✅ 确保没有额外margin
+                    padding: 0,  // ✅ 确保没有额外padding（内容使用绝对定位）
                   }}
                 >
                   {/* 渲染该 Timeline 的所有 Lines */}
