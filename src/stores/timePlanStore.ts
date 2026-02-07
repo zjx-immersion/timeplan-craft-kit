@@ -227,6 +227,82 @@ export const useTimePlanStore = create<TimePlanState>()(
     {
       name: 'timeplan-craft-storage',
       storage: createJSONStorage(() => localStorage),
+      // 自定义序列化/反序列化，处理 Date 对象
+      serialize: (state) => {
+        return JSON.stringify(state);
+      },
+      deserialize: (str) => {
+        const state = JSON.parse(str);
+        
+        // 将日期字符串转换回 Date 对象
+        if (state?.state?.plans) {
+          state.state.plans = state.state.plans.map((plan: any) => ({
+            ...plan,
+            createdAt: plan.createdAt ? new Date(plan.createdAt) : undefined,
+            lastAccessTime: plan.lastAccessTime ? new Date(plan.lastAccessTime) : undefined,
+            updatedAt: plan.updatedAt ? new Date(plan.updatedAt) : undefined,
+            // 处理 lines 中的日期
+            lines: plan.lines?.map((line: any) => ({
+              ...line,
+              startDate: line.startDate ? new Date(line.startDate) : undefined,
+              endDate: line.endDate ? new Date(line.endDate) : undefined,
+              createdAt: line.createdAt ? new Date(line.createdAt) : undefined,
+              updatedAt: line.updatedAt ? new Date(line.updatedAt) : undefined,
+            })),
+            // 处理 relations 中的日期
+            relations: plan.relations?.map((relation: any) => ({
+              ...relation,
+              createdAt: relation.createdAt ? new Date(relation.createdAt) : undefined,
+              updatedAt: relation.updatedAt ? new Date(relation.updatedAt) : undefined,
+            })),
+            // 处理 baselines 中的日期
+            baselines: plan.baselines?.map((baseline: any) => ({
+              ...baseline,
+              date: baseline.date ? new Date(baseline.date) : undefined,
+            })),
+            // 处理 viewConfig 中的日期
+            viewConfig: plan.viewConfig ? {
+              ...plan.viewConfig,
+              startDate: plan.viewConfig.startDate ? new Date(plan.viewConfig.startDate) : undefined,
+              endDate: plan.viewConfig.endDate ? new Date(plan.viewConfig.endDate) : undefined,
+            } : undefined,
+          }));
+        }
+        
+        // 处理 currentPlan
+        if (state?.state?.currentPlan) {
+          const plan = state.state.currentPlan;
+          state.state.currentPlan = {
+            ...plan,
+            createdAt: plan.createdAt ? new Date(plan.createdAt) : undefined,
+            lastAccessTime: plan.lastAccessTime ? new Date(plan.lastAccessTime) : undefined,
+            updatedAt: plan.updatedAt ? new Date(plan.updatedAt) : undefined,
+            lines: plan.lines?.map((line: any) => ({
+              ...line,
+              startDate: line.startDate ? new Date(line.startDate) : undefined,
+              endDate: line.endDate ? new Date(line.endDate) : undefined,
+              createdAt: line.createdAt ? new Date(line.createdAt) : undefined,
+              updatedAt: line.updatedAt ? new Date(line.updatedAt) : undefined,
+            })),
+            relations: plan.relations?.map((relation: any) => ({
+              ...relation,
+              createdAt: relation.createdAt ? new Date(relation.createdAt) : undefined,
+              updatedAt: relation.updatedAt ? new Date(relation.updatedAt) : undefined,
+            })),
+            baselines: plan.baselines?.map((baseline: any) => ({
+              ...baseline,
+              date: baseline.date ? new Date(baseline.date) : undefined,
+            })),
+            viewConfig: plan.viewConfig ? {
+              ...plan.viewConfig,
+              startDate: plan.viewConfig.startDate ? new Date(plan.viewConfig.startDate) : undefined,
+              endDate: plan.viewConfig.endDate ? new Date(plan.viewConfig.endDate) : undefined,
+            } : undefined,
+          };
+        }
+        
+        return state;
+      },
     }
   )
 );

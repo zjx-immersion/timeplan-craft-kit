@@ -6,7 +6,7 @@ import path from "path";
 export default defineConfig({
   server: {
     host: "::",
-    port: 9081, // 不同于原项目的 9080 端口
+    port: 9082, // Different from the original project's 9080 port
     hmr: {
       overlay: false,
     },

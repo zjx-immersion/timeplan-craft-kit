@@ -524,8 +524,12 @@ export interface Line {
   
   // 基础信息
   label: string;                    // 显示名称
+  title?: string;                   // 标题（兼容旧版）
   startDate: Date;                  // 开始日期
   endDate?: Date;                   // 结束日期（milestone/gateway 可能没有）
+  
+  // 显示属性（兼容旧版）
+  color?: string;                   // 颜色（建议改为在attributes中）
   
   // Schema 引用
   schemaId: string;                 // 关联的 LineSchema ID
@@ -555,11 +559,16 @@ export interface Relation {
   fromLineId: string;               // 源 Line ID
   toLineId: string;                 // 目标 Line ID
   
+  // 关系特定属性（兼容旧版，建议放在properties中）
+  lag?: number;                     // 延迟天数
+  notes?: string;                   // 备注
+  
   // Schema 引用
   schemaId?: string;                // 关联的 RelationSchema ID
   
   // 关系特定属性（基于 type）
   properties?: Record<string, any>; // 如 { dependencyType: 'finish-to-start', lag: 2 }
+  attributes?: Record<string, any>; // 动态属性（基于schema）
   
   // 显示配置
   displayConfig?: RelationDisplayConfig;
@@ -577,6 +586,7 @@ export interface Relation {
 export interface Timeline {
   id: string;
   name: string;
+  title?: string;                   // 标题（兼容旧版，建议使用name）
   owner: string;
   description?: string;
   color?: string;
@@ -587,6 +597,7 @@ export interface Timeline {
   
   // 动态属性（基于 schema.attributes 定义）
   attributes?: Record<string, any>;
+  productLine?: string;             // 产品线（兼容旧版，建议放在attributes中）
   
   // Line 引用
   lineIds: string[];                // 包含的 Line ID 列表
@@ -604,6 +615,7 @@ export interface Baseline {
   date: Date;
   label: string;
   color?: string;
+  lineId?: string;                  // 关联的 Line ID（兼容旧版）
   
   // Schema 引用
   schemaId?: string;                // 关联的 BaselineSchema ID
@@ -640,6 +652,7 @@ export interface TimePlan {
   title: string;
   owner?: string;
   description?: string;
+  version?: string;                 // 版本（兼容旧版）
   
   // Schema 引用
   schemaId: string;                 // 关联的 TimePlanSchema ID
@@ -657,10 +670,13 @@ export interface TimePlan {
   viewConfig?: ViewConfig;
   
   // 元数据
+  tags?: string[];                  // 标签
+  attachments?: string[];           // 附件 URL
   createdAt?: Date;
+  updatedAt?: Date;                 // 更新时间
   lastAccessTime?: Date;
   createdBy?: string;
-  tags?: string[];
+  updatedBy?: string;               // 更新人
 }
 
 /**

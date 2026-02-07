@@ -9,31 +9,32 @@
  * - 任务管理
  * - 依赖关系
  * 
- * @version 1.0.0
- * @status 🚧 开发中 - 待实现甘特图组件
+ * @version 1.0.1
+ * @status ✅ TimelinePanel 已集成
  */
 
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Result, Button, Spin, theme } from 'antd';
 import { HomeOutlined } from '@ant-design/icons';
-import { useTimePlanStore } from '@/stores/timePlanStore';
+import { useTimePlanStoreWithHistory } from '@/stores/timePlanStoreWithHistory';
+import { UnifiedTimelinePanelV2 } from '@/components/timeline/UnifiedTimelinePanelV2';
 
 export default function Index() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { token } = theme.useToken();
-  
+
   // Store
-  const { currentPlan, setCurrentPlan, getPlanById } = useTimePlanStore();
-  
+  const { currentPlan, setCurrentPlan, getPlanById } = useTimePlanStoreWithHistory();
+
   // 加载项目
   useEffect(() => {
     if (id) {
       setCurrentPlan(id);
     }
   }, [id, setCurrentPlan]);
-  
+
   // 项目不存在
   if (id && !getPlanById(id)) {
     return (
@@ -60,7 +61,7 @@ export default function Index() {
       </div>
     );
   }
-  
+
   // 加载中
   if (!currentPlan) {
     return (
@@ -70,45 +71,21 @@ export default function Index() {
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-        <Spin size="large" tip="加载项目中..." />
+        <Spin size="large">
+          <div style={{ padding: 50 }} />
+        </Spin>
       </div>
     );
   }
-  
-  // TODO: 实现甘特图组件
+
+  // 渲染 UnifiedTimelinePanelV2
   return (
-    <div style={{
-      height: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      backgroundColor: token.colorBgLayout,
-    }}>
-      {/* 工具栏 */}
-      <div style={{
-        padding: token.padding,
-        borderBottom: `1px solid ${token.colorBorder}`,
-        backgroundColor: token.colorBgContainer,
-      }}>
-        <h2 style={{ margin: 0 }}>{currentPlan.title}</h2>
-      </div>
-      
-      {/* 主内容区 */}
-      <div style={{
-        flex: 1,
-        padding: token.paddingLG,
-        overflow: 'auto',
-      }}>
-        <Result
-          status="info"
-          title="甘特图组件开发中"
-          subTitle="TimelinePanel 组件正在迁移中，敬请期待"
-          extra={
-            <Button type="primary" onClick={() => navigate('/')}>
-              返回项目列表
-            </Button>
-          }
-        />
-      </div>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <UnifiedTimelinePanelV2
+        planId={currentPlan.id}
+        initialView="gantt"
+        showTimeAxisScaler={true}
+      />
     </div>
   );
 }

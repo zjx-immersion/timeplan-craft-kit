@@ -1,0 +1,1717 @@
+/**
+ * TimelinePanel - 时间线面板（甘特图核心组件）
+ * 
+ * 📋 迁移信息:
+ * - 原文件: src/components/timeline/TimelinePanel.tsx
+ * - 迁移日期: 2026-02-03
+ * - 布局: 按原项目效果图实现
+ * - 对比状态: ⏳ 待验证
+ * 
+ * 🎯 布局要求（基于效果图）:
+ * - 顶部工具栏：编辑图、Timeline、节点、关键路径等按钮
+ * - 右上角视图切换：甘特图、表格、矩阵、版本对比、选代规划等
+ * - 左侧Timeline列表：折叠图标、颜色、名称、负责人、产品线等信息
+ * - 右侧时间轴区域：时间刻度、网格、任务条、里程碑、依赖关系
+ * 
+ * 🔄 技术替换:
+ * - Radix UI → Ant Design
+ * - Context → Zustand Store
+ * - Tailwind → Ant Design Token
+ */
+
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { Button, Space, Tooltip, Segmented, theme, message, Input, Dropdown, type MenuProps } from 'antd';
+import {
+  EditOutlined,
+  PlusOutlined,
+  NodeIndexOutlined,
+  ShareAltOutlined,
+  CalendarOutlined,
+  DownOutlined,
+  RightOutlined,
+  TableOutlined,
+  AppstoreOutlined,
+  BarChartOutlined,
+  HistoryOutlined,
+  BlockOutlined,
+  SaveOutlined,
+  UndoOutlined,
+  RedoOutlined,
+  ZoomInOutlined,
+  ZoomOutOutlined,
+  ArrowLeftOutlined,
+  MinusOutlined,
+  FlagOutlined,
+  BgColorsOutlined,
+  CloseOutlined,
+  DownloadOutlined,
+  UploadOutlined,
+  SearchOutlined,
+  FullscreenOutlined,
+} from '@ant-design/icons';
+import { TimePlan, Timeline, Line } from '@/types/timeplanSchema';
+import { TimeScale } from '@/utils/dateUtils';
+import {
+  getDateHeaders,
+  getTotalTimelineWidth,
+  normalizeViewStartDate,
+  normalizeViewEndDate,
+  getPositionFromDate,
+  getPositionFromDatePrecise,
+  getBarWidthPrecise,
+  getBarWidthTruePrecise,
+  getScaleUnit,
+} from '@/utils/dateUtils';
+import {
+  format,
+  addDays,
+  startOfWeek,
+} from 'date-fns';
+import { isHoliday, isNonWorkingDay, getHolidayName } from '@/utils/holidayUtils';
+import { useTimelineDrag } from '@/hooks/useTimelineDrag';
+import { useBarResize } from '@/hooks/useBarResize';
+import { useUndoRedo } from '@/hooks/useUndoRedo';
+import { addMonths, subMonths } from 'date-fns';
+import { LineRenderer } from './LineRenderer';
+import { RelationRenderer } from './RelationRenderer';
+import { TodayLine } from './TodayLine';
+import TimelineHeader from './TimelineHeader';
+import TimelineQuickMenu from './TimelineQuickMenu';
+import { TimelineEditDialog } from '../dialogs/TimelineEditDialog';
+import { downloadJSON, downloadCSV, downloadExcel } from '@/utils/dataExport';
+import ConnectionPoints from './ConnectionPoints';
+import { ConnectionMode } from './ConnectionMode';
+
+/**
+ * TimelinePanel 组件属性
+ */
+interface TimelinePanelProps {
+  /**
+   * 时间计划数据
+   */
+  data: TimePlan;
+
+  /**
+   * 数据变化回调
+   */
+  onDataChange?: (data: TimePlan) => void;
+
+  /**
+   * 节点双击回调
+   */
+  onNodeDoubleClick?: (line: Line) => void;
+
+  /**
+   * 导入示例数据回调
+   */
+  onImportSampleData?: () => void;
+
+  /**
+   * 标题变化回调
+   */
+  onTitleChange?: (newTitle: string) => void;
+
+  /**
+   * 是否隐藏内置工具栏和页头
+   * @default false
+   */
+  hideToolbar?: boolean;
+
+  /**
+   * 时间刻度（外部控制）
+   */
+  scale?: TimeScale;
+
+  /**
+   * 缩放比例（外部控制）
+   */
+  zoom?: number;
+
+  /**
+   * 是否显示关键路径（外部控制）
+   */
+  showCriticalPath?: boolean;
+
+  /**
+   * 是否只读（外部控制）
+   */
+  readonly?: boolean;
+
+  /**
+   * 视图切换回调
+   */
+  onViewChange?: (view: string) => void;
+
+  /**
+   * 编辑模式切换回调
+   */
+  onEditModeChange?: (editMode: boolean) => void;
+
+  /**
+   * 时间刻度切换回调
+   */
+  onScaleChange?: (scale: TimeScale) => void;
+}
+
+/**
+ * 行高度常量
+ */
+// 🎨 行高调整：与源项目一致（120px）
+const ROW_HEIGHT = 120; // 源项目：timeline-craft-kit 使用 120px
+
+/**
+ * 侧边栏宽度
+ */
+const SIDEBAR_WIDTH = 200;
+
+/**
+ * 视图类型
+ */
+type ViewType = 'gantt' | 'table' | 'matrix' | 'iteration' | 'baseline' | 'version';
+
+/**
+ * TimelinePanel 主组件
+ */
+const TimelinePanel: React.FC<TimelinePanelProps> = ({
+  data: initialData,
+  onDataChange,
+  onNodeDoubleClick,
+  onImportSampleData,
+  onTitleChange,
+  hideToolbar = false,
+  scale: externalScale,
+  zoom: externalZoom,
+  showCriticalPath: externalShowCriticalPath,
+  readonly: externalReadonly,
+  onViewChange,
+  onEditModeChange,
+  onScaleChange,
+}) => {
+  const { token } = theme.useToken();
+
+  // ==================== 标题编辑状态 ====================
+
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(initialData.title);
+
+  // ==================== 关键路径状态 ====================
+  
+  const [internalShowCriticalPath, setInternalShowCriticalPath] = useState(false);
+  const showCriticalPath = externalShowCriticalPath !== undefined ? externalShowCriticalPath : internalShowCriticalPath;
+
+  const handleSaveTitle = useCallback(() => {
+    if (editedTitle.trim() && editedTitle !== initialData.title) {
+      onTitleChange?.(editedTitle.trim());
+      message.success('标题已更新');
+    }
+    setIsEditingTitle(false);
+  }, [editedTitle, initialData.title, onTitleChange]);
+
+  const handleCancelEditTitle = useCallback(() => {
+    setEditedTitle(initialData.title);
+    setIsEditingTitle(false);
+  }, [initialData.title]);
+
+  // ==================== 撤销/重做状态管理 ====================
+
+  const {
+    state: data,
+    setState: setData,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    hasChanges,
+    save: saveChanges,
+    reset: resetChanges,
+  } = useUndoRedo<TimePlan>(initialData);
+
+  // 同步外部数据变化
+  const prevInitialDataRef = useRef(initialData);
+
+  useEffect(() => {
+    const initialDataChanged = JSON.stringify(prevInitialDataRef.current) !== JSON.stringify(initialData);
+
+    if (initialDataChanged) {
+      setData(initialData);
+      prevInitialDataRef.current = initialData;
+    }
+  }, [initialData, setData]);
+
+  // 自动保存
+  useEffect(() => {
+    if (!onDataChange) return;
+    if (JSON.stringify(data) === JSON.stringify(initialData)) return;
+
+    const timeoutId = setTimeout(() => {
+      onDataChange(data);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [data, onDataChange, initialData]);
+
+  // ==================== 状态管理 ====================
+
+  // 视图相关状态
+  const [internalScale, setInternalScale] = useState<TimeScale>(initialData.viewConfig?.scale || 'month');
+  const scale = externalScale || internalScale;
+  const handleScaleChange = useCallback((newScale: TimeScale) => {
+    setInternalScale(newScale);
+    onScaleChange?.(newScale);
+  }, [onScaleChange]);
+
+  const [viewType, setViewType] = useState<ViewType>('gantt');
+  const handleViewTypeChange = useCallback((newView: ViewType) => {
+    setViewType(newView);
+    onViewChange?.(newView);
+  }, [onViewChange]);
+  const [viewStartDate, setViewStartDate] = useState(() => {
+    // 优先使用数据自带的 viewConfig
+    if (initialData.viewConfig?.startDate) {
+      return initialData.viewConfig.startDate instanceof Date
+        ? initialData.viewConfig.startDate
+        : new Date(initialData.viewConfig.startDate);
+    }
+    // 否则使用默认范围
+    return subMonths(new Date(), 6);
+  });
+  const [viewEndDate, setViewEndDate] = useState(() => {
+    // 优先使用数据自带的 viewConfig
+    if (initialData.viewConfig?.endDate) {
+      return initialData.viewConfig.endDate instanceof Date
+        ? initialData.viewConfig.endDate
+        : new Date(initialData.viewConfig.endDate);
+    }
+    // 否则使用默认范围
+    return addMonths(new Date(), 18);
+  });
+  const [internalIsEditMode, setInternalIsEditMode] = useState(false);
+  const isEditMode = externalReadonly !== undefined ? !externalReadonly : internalIsEditMode;
+  const handleIsEditModeChange = useCallback((newMode: boolean) => {
+    setInternalIsEditMode(newMode);
+    onEditModeChange?.(newMode);
+  }, [onEditModeChange]);
+
+  // 选择相关状态
+  const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
+  const [hoveredLineId, setHoveredLineId] = useState<string | null>(null);
+  const [selectedRelationId, setSelectedRelationId] = useState<string | null>(null);
+  const [collapsedTimelines, setCollapsedTimelines] = useState<Set<string>>(new Set());
+
+  // Timeline编辑状态
+  const [editingTimeline, setEditingTimeline] = useState<Timeline | null>(null);
+  const [isTimelineEditDialogOpen, setIsTimelineEditDialogOpen] = useState(false);
+
+  // 连线模式状态
+  const [connectionMode, setConnectionMode] = useState<{
+    lineId: string | null;
+    direction: 'from' | 'to';
+  }>({ lineId: null, direction: 'from' });
+
+  // Refs
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  
+  /**
+   * ✅ 滚动对齐：整体滚动，左侧固定
+   * 注意：现在使用外层统一滚动容器，无需单独同步
+   */
+
+  // ==================== 规范化的视图日期 ====================
+
+  const normalizedViewStartDate = useMemo(
+    () => normalizeViewStartDate(viewStartDate, scale),
+    [viewStartDate, scale]
+  );
+
+  const normalizedViewEndDate = useMemo(
+    () => normalizeViewEndDate(viewEndDate, scale),
+    [viewEndDate, scale]
+  );
+
+  // ==================== 时间轴相关计算 ====================
+
+  // 获取日期表头
+  const dateHeaders = useMemo(
+    () => getDateHeaders(normalizedViewStartDate, normalizedViewEndDate, scale),
+    [normalizedViewStartDate, normalizedViewEndDate, scale]
+  );
+
+  // 计算时间轴总宽度
+  const totalWidth = useMemo(
+    () => getTotalTimelineWidth(normalizedViewStartDate, normalizedViewEndDate, scale),
+    [normalizedViewStartDate, normalizedViewEndDate, scale]
+  );
+
+  // ==================== 辅助函数 ====================
+
+  /**
+   * 处理 Line 移动
+   */
+  const handleLineMove = useCallback((lineId: string, newStartDate: Date, newEndDate?: Date) => {
+    const updatedLines = data.lines.map((line) =>
+      line.id === lineId
+        ? { ...line, startDate: newStartDate, endDate: newEndDate ?? line.endDate }
+        : line
+    );
+
+    setData({
+      ...data,
+      lines: updatedLines,
+    });
+
+    message.success('任务已移动');
+  }, [data, setData]);
+
+  /**
+   * 处理 Line 调整大小
+   */
+  const handleLineResize = useCallback((lineId: string, newStartDate: Date, newEndDate: Date) => {
+    const updatedLines = data.lines.map((line) =>
+      line.id === lineId
+        ? { ...line, startDate: newStartDate, endDate: newEndDate }
+        : line
+    );
+
+    setData({
+      ...data,
+      lines: updatedLines,
+    });
+
+    message.success('任务时间已调整');
+  }, [data, setData]);
+
+  /**
+   * 处理保存
+   */
+  const handleSave = useCallback(() => {
+    saveChanges();
+    if (onDataChange) {
+      onDataChange(data);
+    }
+    message.success('保存成功');
+  }, [saveChanges, data, onDataChange]);
+
+  /**
+   * 定位到今天
+   */
+  const scrollToToday = useCallback(() => {
+    if (!scrollContainerRef.current) return;
+
+    const today = new Date();
+    const position = getPositionFromDate(today, normalizedViewStartDate, scale);
+
+    // 滚动到今天的位置，居中显示
+    const containerWidth = scrollContainerRef.current.clientWidth;
+    const scrollLeft = Math.max(0, position - containerWidth / 2 + SIDEBAR_WIDTH);
+
+    scrollContainerRef.current.scrollTo({
+      left: scrollLeft,
+      behavior: 'smooth',
+    });
+  }, [normalizedViewStartDate, scale]);
+
+  /**
+   * 缩放 - 放大（增加精度）
+   */
+  const handleZoomIn = useCallback(() => {
+    const scaleOrder: TimeScale[] = ['quarter', 'month', 'biweekly', 'week', 'day'];
+    const currentIndex = scaleOrder.indexOf(scale);
+    if (currentIndex < scaleOrder.length - 1) {
+      handleScaleChange(scaleOrder[currentIndex + 1]);
+    }
+  }, [scale, handleScaleChange]);
+
+  /**
+   * 缩放 - 缩小（减少精度）
+   */
+  const handleZoomOut = useCallback(() => {
+    const scaleOrder: TimeScale[] = ['day', 'week', 'biweekly', 'month', 'quarter'];
+    const currentIndex = scaleOrder.indexOf(scale);
+    if (currentIndex < scaleOrder.length - 1) {
+      handleScaleChange(scaleOrder[currentIndex + 1]);
+    }
+  }, [scale, handleScaleChange]);
+
+
+  // ==================== 拖拽和调整大小 Hooks ====================
+
+  const {
+    isDragging,
+    draggingNodeId,
+    handleDragStart,
+    dragVisualDates,
+    dragSnappedDates,
+    dragMousePosition,
+    isDragActive
+  } = useTimelineDrag({
+    viewStartDate: normalizedViewStartDate,
+    scale,
+    onNodeMove: handleLineMove,
+    isEditMode,
+  });
+
+  const {
+    resizingNodeId,
+    handleResizeStart,
+    resizeVisualDates,
+    resizeSnappedDates,
+    resizeMousePosition,
+    isResizing
+  } = useBarResize({
+    viewStartDate: normalizedViewStartDate,
+    scale,
+    onNodeResize: handleLineResize,
+    isEditMode,
+  });
+
+  // ==================== 其他辅助函数 ====================
+
+  /**
+   * 根据 Timeline ID 获取其 Lines
+   */
+  const getLinesByTimelineId = useCallback((timelineId: string): Line[] => {
+    return data.lines.filter((line) => line.timelineId === timelineId);
+  }, [data.lines]);
+
+  /**
+   * 切换 Timeline 折叠状态
+   */
+  const toggleTimelineCollapse = useCallback((timelineId: string) => {
+    setCollapsedTimelines((prev) => {
+      const next = new Set(prev);
+      if (next.has(timelineId)) {
+        next.delete(timelineId);
+      } else {
+        next.add(timelineId);
+      }
+      return next;
+    });
+  }, []);
+
+  /**
+   * 处理 Line 点击
+   */
+  const handleLineClick = useCallback((line: Line) => {
+    setSelectedLineId(line.id === selectedLineId ? null : line.id);
+  }, [selectedLineId]);
+
+  /**
+   * 编辑 Timeline
+   */
+  const handleEditTimeline = useCallback((timelineId: string) => {
+    const timeline = data.timelines.find(t => t.id === timelineId);
+    if (timeline) {
+      setEditingTimeline(timeline);
+      setIsTimelineEditDialogOpen(true);
+    }
+  }, [data.timelines]);
+
+  /**
+   * 保存 Timeline 编辑
+   */
+  const handleSaveTimeline = useCallback((id: string, updates: Partial<Timeline>) => {
+    if (id) {
+      // 更新现有Timeline
+      const updatedTimelines = data.timelines.map(t =>
+        t.id === id ? { ...t, ...updates } : t
+      );
+      setData({
+        ...data,
+        timelines: updatedTimelines,
+      });
+      message.success('Timeline 已更新');
+    } else {
+      // 创建新Timeline (暂未实现)
+      message.info('创建新Timeline功能待实现');
+    }
+    setIsTimelineEditDialogOpen(false);
+    setEditingTimeline(null);
+  }, [data, setData]);
+
+  /**
+   * 删除 Timeline
+   */
+  const handleDeleteTimeline = useCallback((timelineId: string) => {
+    // 删除Timeline及其所有Lines
+    const updatedTimelines = data.timelines.filter(t => t.id !== timelineId);
+    const updatedLines = data.lines.filter(l => l.timelineId !== timelineId);
+    
+    // 删除相关的Relations
+    const lineIds = new Set(data.lines.filter(l => l.timelineId === timelineId).map(l => l.id));
+    const updatedRelations = data.relations.filter(
+      rel => !lineIds.has(rel.fromLineId) && !lineIds.has(rel.toLineId)
+    );
+    
+    setData({
+      ...data,
+      timelines: updatedTimelines,
+      lines: updatedLines,
+      relations: updatedRelations,
+    });
+    
+    message.success('Timeline 已删除');
+  }, [data, setData]);
+
+  /**
+   * 复制 Timeline
+   */
+  const handleCopyTimeline = useCallback((timelineId: string) => {
+    const timeline = data.timelines.find(t => t.id === timelineId);
+    if (!timeline) return;
+    
+    // 创建副本
+    const newTimeline: Timeline = {
+      ...timeline,
+      id: `timeline-${Date.now()}`,
+      name: `${timeline.name} (副本)`,
+    };
+    
+    setData({
+      ...data,
+      timelines: [...data.timelines, newTimeline],
+    });
+    
+    message.success('Timeline 已复制');
+  }, [data, setData]);
+
+  /**
+   * 开始连线
+   */
+  const handleStartConnection = useCallback((lineId: string, direction: 'from' | 'to') => {
+    const line = data.lines.find(l => l.id === lineId);
+    if (!line) return;
+    
+    setConnectionMode({ lineId, direction });
+    console.log('[TimelinePanel] 🔗 开始连线', { lineId, direction, lineTitle: line.title });
+    message.info(`连线模式：${direction === 'from' ? '从' : '到'} "${line.title}"`);
+  }, [data.lines]);
+
+  /**
+   * 完成连线
+   */
+  const handleCompleteConnection = useCallback((targetLineId: string) => {
+    if (!connectionMode.lineId) return;
+    
+    // 防止自连接
+    if (connectionMode.lineId === targetLineId) {
+      message.warning('不能连接到自己');
+      setConnectionMode({ lineId: null, direction: 'from' });
+      return;
+    }
+    
+    // 确定起点和终点
+    const fromLineId = connectionMode.direction === 'from' ? connectionMode.lineId : targetLineId;
+    const toLineId = connectionMode.direction === 'from' ? targetLineId : connectionMode.lineId;
+    
+    // 检查是否已存在相同的连线
+    const isDuplicate = data.relations?.some(
+      r => r.fromLineId === fromLineId && r.toLineId === toLineId
+    );
+    
+    if (isDuplicate) {
+      message.warning('该连线已存在');
+      setConnectionMode({ lineId: null, direction: 'from' });
+      return;
+    }
+    
+    // 创建新的relation
+    const newRelation: Relation = {
+      id: `rel-${Date.now()}`,
+      fromLineId,
+      toLineId,
+      type: 'dependency',
+    };
+    
+    console.log('[TimelinePanel] ✅ 创建新连线', newRelation);
+    
+    setData({
+      ...data,
+      relations: [...(data.relations || []), newRelation],
+    });
+    
+    message.success('连线创建成功');
+    setConnectionMode({ lineId: null, direction: 'from' });
+  }, [connectionMode, data, setData]);
+
+  /**
+   * 取消连线
+   */
+  const handleCancelConnection = useCallback(() => {
+    setConnectionMode({ lineId: null, direction: 'from' });
+    console.log('[TimelinePanel] ❌ 取消连线');
+  }, []);
+
+  /**
+   * 点击连线
+   */
+  const handleRelationClick = useCallback((relationId: string) => {
+    setSelectedRelationId(prev => prev === relationId ? null : relationId);
+    console.log('[TimelinePanel] 🔗 选中连线:', relationId);
+  }, []);
+
+  /**
+   * 删除连线
+   */
+  const handleRelationDelete = useCallback((relationId: string) => {
+    Modal.confirm({
+      title: '删除连线',
+      content: '确定要删除这条依赖连线吗？',
+      okText: '删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: () => {
+        const updatedRelations = data.relations.filter(r => r.id !== relationId);
+        setData({
+          ...data,
+          relations: updatedRelations,
+        });
+        setSelectedRelationId(null);
+        message.success('连线已删除');
+        console.log('[TimelinePanel] 🗑️ 删除连线:', relationId);
+      },
+    });
+  }, [data, setData]);
+
+  /**
+   * 添加节点到Timeline
+   */
+  const handleAddNodeToTimeline = useCallback((timelineId: string, type: 'bar' | 'milestone' | 'gateway') => {
+    // 获取当前滚动位置，在该位置创建节点
+    const scrollLeft = scrollContainerRef.current?.scrollLeft || 0;
+    const position = scrollLeft + 200; // 在可视区域左侧200px处创建
+    
+    // 根据类型创建对应的schemaId
+    const schemaId = type === 'bar' ? 'bar-schema' :
+                    type === 'milestone' ? 'milestone-schema' :
+                    type === 'gateway' ? 'gateway-schema' : 'bar-schema';
+    
+    // 创建新Line
+    const today = new Date();
+    const lineName = type === 'bar' ? '新计划单元' : type === 'milestone' ? '新里程碑' : '新网关';
+    const newLine: Line = {
+      id: `line-${Date.now()}`,
+      timelineId,
+      schemaId,
+      label: lineName,
+      startDate: today,
+      endDate: type === 'bar' ? addDays(today, 7) : undefined,
+      attributes: {
+        name: lineName,
+      },
+    };
+    
+    setData({
+      ...data,
+      lines: [...data.lines, newLine],
+    });
+    
+    message.success('节点已添加');
+  }, [data, setData]);
+
+  /**
+   * 添加Timeline
+   */
+  const handleAddTimeline = useCallback(() => {
+    const newTimeline: Timeline = {
+      id: `timeline-${Date.now()}`,
+      name: '新 Timeline',
+      description: '未指定',
+      color: '#1677ff',
+      lineIds: [],
+    };
+    
+    setData({
+      ...data,
+      timelines: [...data.timelines, newTimeline],
+    });
+    
+    message.success('Timeline 已添加');
+  }, [data, setData]);
+
+  /**
+   * 添加节点（到当前选中的Timeline或第一个Timeline）
+   */
+  const handleAddNode = useCallback((type: 'bar' | 'milestone' | 'gateway') => {
+    // 获取第一个Timeline作为目标
+    const targetTimeline = data.timelines[0];
+    
+    if (!targetTimeline) {
+      message.warning('请先添加 Timeline');
+      return;
+    }
+    
+    handleAddNodeToTimeline(targetTimeline.id, type);
+  }, [data.timelines, handleAddNodeToTimeline]);
+
+  /**
+   * 切换关键路径显示
+   */
+  const handleToggleCriticalPath = useCallback(() => {
+    const newValue = !showCriticalPath;
+    setInternalShowCriticalPath(newValue);
+    message.info(newValue ? '已显示关键路径' : '已关闭关键路径');
+  }, [showCriticalPath]);
+
+  /**
+   * 取消所有未保存的更改
+   */
+  const handleCancelChanges = useCallback(() => {
+    if (!hasChanges) return;
+    
+    // ✅ 直接调用reset()重置到最后保存的状态
+    // resetChanges 已经实现了清空历史并恢复到savedState
+    resetChanges();
+    
+    message.info('已取消所有更改');
+  }, [hasChanges, resetChanges]);
+
+  /**
+   * 导出数据
+   */
+  const handleExportData = useCallback((format: 'json' | 'csv' | 'excel') => {
+    switch (format) {
+      case 'json':
+        downloadJSON(data);
+        message.success('JSON 数据已导出');
+        break;
+      case 'csv':
+        downloadCSV(data);
+        message.success('CSV 数据已导出');
+        break;
+      case 'excel':
+        downloadExcel(data);
+        message.success('Excel 数据已导出');
+        break;
+    }
+  }, [data]);
+
+  /**
+   * 导入数据
+   */
+  const handleImportData = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      
+      try {
+        const text = await file.text();
+        const importedData = JSON.parse(text) as TimePlan;
+        
+        // 验证数据结构
+        if (!importedData.timelines || !importedData.lines) {
+          message.error('数据格式不正确');
+          return;
+        }
+        
+        setData(importedData);
+        message.success('数据导入成功');
+      } catch (error) {
+        message.error('数据解析失败');
+        console.error('Import error:', error);
+      }
+    };
+    
+    input.click();
+  }, [setData]);
+
+  /**
+   * 切换全屏
+   */
+  const handleToggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        message.error(`无法进入全屏: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  }, []);
+
+  // ==================== 视图切换菜单 ====================
+
+  const viewMenuItems: MenuProps['items'] = [
+    {
+      key: 'gantt',
+      label: '甘特图',
+      icon: <BarChartOutlined />,
+    },
+    {
+      key: 'table',
+      label: '表格',
+      icon: <TableOutlined />,
+    },
+    {
+      key: 'matrix',
+      label: '矩阵',
+      icon: <AppstoreOutlined />,
+    },
+    {
+      key: 'iteration',
+      label: '选代规划',
+      icon: <BlockOutlined />,
+    },
+    {
+      key: 'baseline',
+      label: '版本对比',
+      icon: <HistoryOutlined />,
+    },
+  ];
+
+  // ==================== 渲染 ====================
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        backgroundColor: token.colorBgContainer,
+      }}
+    >
+      {/* ✅ 顶部 Header：返回 + TimeP标题（可编辑） + 视图切换 */}
+      {!hideToolbar && (
+        <div
+          style={{
+            padding: `${token.paddingSM}px ${token.padding}px`,
+            borderBottom: `1px solid ${token.colorBorder}`,
+            backgroundColor: token.colorBgContainer,
+            display: 'flex',
+            alignItems: 'center',
+            gap: token.marginSM,
+          }}
+        >
+          {/* 左侧：返回按钮（只显示图标） */}
+          <Button
+            type="text"
+            icon={<ArrowLeftOutlined />}
+            onClick={() => window.history.back()}
+            style={{ marginRight: token.marginXS }}
+          />
+
+          {/* 中间：TimePlan标题（可编辑，更大字号） */}
+          {isEditingTitle ? (
+            <Input
+              value={editedTitle}
+              onChange={(e) => setEditedTitle(e.target.value)}
+              onPressEnter={handleSaveTitle}
+              onBlur={handleSaveTitle}
+              autoFocus
+              style={{ width: 400, fontWeight: 600, fontSize: 20 }}
+            />
+          ) : (
+            <div
+              onClick={() => setIsEditingTitle(true)}
+              style={{
+                fontSize: 20,
+                fontWeight: 600,
+                color: token.colorText,
+                cursor: 'pointer',
+                padding: '4px 8px',
+                borderRadius: token.borderRadius,
+                transition: 'background-color 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = token.colorBgTextHover;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              {data.title}
+              <EditOutlined style={{ marginLeft: 8, fontSize: 14, opacity: 0.6 }} />
+            </div>
+          )}
+
+          <div style={{ flex: 1 }} />
+
+          {/* ✅ 右侧：视图切换按钮组（参考截图3） */}
+          <Space size={4}>
+            <Button
+              size="small"
+              icon={<BarChartOutlined />}
+              type={viewType === 'gantt' ? 'primary' : 'default'}
+              onClick={() => handleViewTypeChange('gantt')}
+              style={{
+                color: viewType === 'gantt' ? '#FFFFFF' : undefined,
+              }}
+            >
+              甘特图
+            </Button>
+            <Button
+              size="small"
+              icon={<TableOutlined />}
+              type={viewType === 'table' ? 'primary' : 'default'}
+              onClick={() => handleViewTypeChange('table')}
+              style={{
+                color: viewType === 'table' ? '#FFFFFF' : undefined,
+              }}
+            >
+              表格
+            </Button>
+            <Button
+              size="small"
+              icon={<AppstoreOutlined />}
+              type={viewType === 'matrix' ? 'primary' : 'default'}
+              onClick={() => handleViewTypeChange('matrix')}
+              style={{
+                color: viewType === 'matrix' ? '#FFFFFF' : undefined,
+              }}
+            >
+              矩阵
+            </Button>
+            <Button
+              size="small"
+              icon={<HistoryOutlined />}
+              type={viewType === 'version' ? 'primary' : 'default'}
+              onClick={() => handleViewTypeChange('version')}
+              style={{
+                color: viewType === 'version' ? '#FFFFFF' : undefined,
+              }}
+            >
+              版本对比
+            </Button>
+            <Button
+              size="small"
+              icon={<BlockOutlined />}
+              type={viewType === 'iteration' ? 'primary' : 'default'}
+              onClick={() => handleViewTypeChange('iteration')}
+              style={{
+                color: viewType === 'iteration' ? '#FFFFFF' : undefined,
+              }}
+            >
+              迭代规划
+            </Button>
+          </Space>
+        </div>
+      )}
+
+      {/* ✅ 工具栏：左侧功能按钮 + 右侧缩放和时间刻度 */}
+      {!hideToolbar && (
+        <div
+          style={{
+            padding: `${token.paddingSM}px ${token.padding}px`,
+            borderBottom: `1px solid ${token.colorBorder}`,
+            backgroundColor: token.colorBgContainer,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            {/* 左侧功能按钮 */}
+            <Space size={4}>
+              <Button
+                size="small"
+                icon={<EditOutlined />}
+                type={isEditMode ? 'primary' : 'default'}
+                onClick={() => handleIsEditModeChange(!isEditMode)}
+                style={{
+                  color: isEditMode ? '#FFFFFF' : undefined,
+                }}
+              >
+                {isEditMode ? '编辑' : '查看'}
+              </Button>
+
+              <Button
+                size="small"
+                icon={<PlusOutlined />}
+                onClick={handleAddTimeline}
+              >
+                Timeline
+              </Button>
+
+              <Dropdown
+                menu={{
+                  items: [
+                    {
+                      key: 'add-bar',
+                      label: '添加计划单元 (Bar)',
+                      icon: <MinusOutlined />,
+                      onClick: () => handleAddNode('bar'),
+                      disabled: !isEditMode,
+                    },
+                    {
+                      key: 'add-milestone',
+                      label: '添加里程碑 (Milestone)',
+                      icon: <FlagOutlined />,
+                      onClick: () => handleAddNode('milestone'),
+                      disabled: !isEditMode,
+                    },
+                    {
+                      key: 'add-gateway',
+                      label: '添加网关 (Gateway)',
+                      icon: <BgColorsOutlined />,
+                      onClick: () => handleAddNode('gateway'),
+                      disabled: !isEditMode,
+                    },
+                  ],
+                }}
+                placement="bottomLeft"
+                disabled={!isEditMode}
+              >
+                <Button
+                  size="small"
+                  icon={<NodeIndexOutlined />}
+                  disabled={!isEditMode}
+                >
+                  节点 <DownOutlined style={{ fontSize: 10, marginLeft: 4 }} />
+                </Button>
+              </Dropdown>
+
+              <Button
+                size="small"
+                icon={<ShareAltOutlined />}
+                type={showCriticalPath ? 'primary' : 'default'}
+                onClick={handleToggleCriticalPath}
+                style={{
+                  color: showCriticalPath ? '#FFFFFF' : undefined,
+                }}
+              >
+                关键路径
+              </Button>
+
+              <div
+                style={{
+                  width: 1,
+                  height: 20,
+                  backgroundColor: token.colorBorder,
+                  margin: `0 ${token.marginXS}px`,
+                }}
+              />
+
+              <Tooltip title="撤销 (Ctrl+Z)">
+                <Button size="small" icon={<UndoOutlined />} disabled={!canUndo} onClick={undo} />
+              </Tooltip>
+
+              <Tooltip title="重做 (Ctrl+Shift+Z)">
+                <Button size="small" icon={<RedoOutlined />} disabled={!canRedo} onClick={redo} />
+              </Tooltip>
+
+              <Tooltip title="取消所有更改">
+                <Button
+                  size="small"
+                  icon={<CloseOutlined />}
+                  disabled={!hasChanges}
+                  onClick={handleCancelChanges}
+                  danger
+                />
+              </Tooltip>
+
+              <Tooltip title="保存 (Ctrl+S)">
+                <Button
+                  size="small"
+                  icon={<SaveOutlined />}
+                  type="primary"
+                  onClick={handleSave}
+                  disabled={!hasChanges}
+                  style={{
+                    color: '#FFFFFF',
+                  }}
+                />
+              </Tooltip>
+            </Space>
+
+            {/* ✅ 右侧：时间导航、缩放、导出/导入 */}
+            <Space size={4}>
+              <Tooltip title="定位到今天">
+                <Button
+                  size="small"
+                  onClick={scrollToToday}
+                >
+                  今天
+                </Button>
+              </Tooltip>
+
+              <div
+                style={{
+                  width: 1,
+                  height: 20,
+                  backgroundColor: token.colorBorder,
+                  margin: `0 ${token.marginXS}px`,
+                }}
+              />
+
+              <Tooltip title="放大">
+                <Button
+                  size="small"
+                  icon={<ZoomInOutlined />}
+                  onClick={handleZoomIn}
+                />
+              </Tooltip>
+
+              <Tooltip title="缩小">
+                <Button
+                  size="small"
+                  icon={<ZoomOutOutlined />}
+                  onClick={handleZoomOut}
+                />
+              </Tooltip>
+
+              {/* 时间刻度选择 */}
+              <Segmented
+                size="small"
+                value={scale}
+                onChange={(value) => handleScaleChange(value as TimeScale)}
+                options={[
+                  { label: '天', value: 'day' },
+                  { label: '周', value: 'week' },
+                  { label: '双周', value: 'biweekly' },
+                  { label: '月', value: 'month' },
+                  { label: '季度', value: 'quarter' },
+                ]}
+              />
+
+              <div
+                style={{
+                  width: 1,
+                  height: 20,
+                  backgroundColor: token.colorBorder,
+                  margin: `0 ${token.marginXS}px`,
+                }}
+              />
+
+              {/* 导出下拉菜单 */}
+              <Dropdown
+                menu={{
+                  items: [
+                    {
+                      key: 'export-json',
+                      label: '导出为 JSON',
+                      icon: <DownloadOutlined />,
+                      onClick: () => handleExportData('json'),
+                    },
+                    {
+                      key: 'export-csv',
+                      label: '导出为 CSV',
+                      icon: <DownloadOutlined />,
+                      onClick: () => handleExportData('csv'),
+                    },
+                    {
+                      key: 'export-excel',
+                      label: '导出为 Excel',
+                      icon: <DownloadOutlined />,
+                      onClick: () => handleExportData('excel'),
+                    },
+                  ],
+                }}
+                placement="bottomRight"
+              >
+                <Button
+                  size="small"
+                  icon={<DownloadOutlined />}
+                  title="导出"
+                />
+              </Dropdown>
+
+              {/* 导入按钮 */}
+              <Tooltip title="导入数据">
+                <Button
+                  size="small"
+                  icon={<UploadOutlined />}
+                  onClick={handleImportData}
+                />
+              </Tooltip>
+
+              {/* 全屏按钮 */}
+              <Tooltip title="全屏">
+                <Button
+                  size="small"
+                  icon={<FullscreenOutlined />}
+                  onClick={handleToggleFullscreen}
+                />
+              </Tooltip>
+            </Space>
+          </div>
+        </div>
+      )}
+
+      {/* 主内容区域 - 统一滚动容器 */}
+      <div
+        ref={scrollContainerRef}
+        style={{
+          display: 'flex',
+          flex: 1,
+          overflow: 'auto',
+          position: 'relative',
+        }}
+      >
+        {/* 左侧边栏 - Timeline 列表 */}
+        <div
+          ref={sidebarRef}
+          style={{
+            width: SIDEBAR_WIDTH,
+            flexShrink: 0,
+            backgroundColor: token.colorBgLayout,
+            borderRight: `1px solid ${token.colorBorder}`,
+            position: 'sticky',
+            left: 0,
+            zIndex: 100,  // ✅ 提高到最高层级，确保不被连线覆盖
+          }}
+        >
+          {/* 表头占位（与右侧时间轴表头等高） */}
+          <div
+            style={{
+              height: 68, // 两层表头：32 + 36
+              display: 'flex',
+              alignItems: 'center',
+              padding: `0 ${token.paddingSM}px`,
+              borderBottom: `1px solid ${token.colorBorder}`,
+              backgroundColor: token.colorBgContainer,
+              position: 'sticky',
+              top: 0,
+              zIndex: 101,  // ✅ 比sidebar更高，确保表头在最顶层
+              fontSize: 12,
+              fontWeight: 500,
+            }}
+          >
+            Timeline 列表
+          </div>
+
+          {/* Timeline 列表 */}
+          {data.timelines.map((timeline) => {
+            const isCollapsed = collapsedTimelines.has(timeline.id);
+            const lines = getLinesByTimelineId(timeline.id);
+
+            return (
+              <div key={timeline.id}>
+                <div
+                  style={{
+                    height: ROW_HEIGHT,  // ✅ 固定高度120px
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: `0 ${token.paddingSM}px`,  // ✅ 关键：垂直padding为0
+                    borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                    cursor: 'pointer',
+                    backgroundColor: token.colorBgContainer,
+                    boxSizing: 'border-box',  // ✅ 确保border不影响高度
+                  }}
+                  onClick={() => toggleTimelineCollapse(timeline.id)}
+                >
+                  {/* 折叠图标 */}
+                  <div style={{ marginRight: token.marginXS, flexShrink: 0 }}>
+                    {isCollapsed ? <RightOutlined style={{ fontSize: 12 }} /> : <DownOutlined style={{ fontSize: 12 }} />}
+                  </div>
+
+                  {/* 颜色标签 */}
+                  <div
+                    style={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: 3,
+                      backgroundColor: timeline.color || token.colorPrimary,
+                      marginRight: token.marginSM,
+                      flexShrink: 0,
+                    }}
+                  />
+
+                  {/* Timeline 信息 */}
+                  <div style={{ flex: 1, overflow: 'hidden', minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div
+                      style={{
+                        fontSize: 15,
+                        fontWeight: 600,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        color: token.colorText,
+                        lineHeight: '20px',
+                      }}
+                    >
+                      {timeline.title}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: token.colorTextSecondary,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        lineHeight: '16px',
+                        marginTop: 2,
+                      }}
+                    >
+                      @ {timeline.description || '未指定负责人'}
+                    </div>
+                  </div>
+
+                  {/* Timeline 快捷菜单 */}
+                  <TimelineQuickMenu
+                    timelineId={timeline.id}
+                    timelineName={timeline.title}
+                    isEditMode={isEditMode}
+                    onAddNode={handleAddNodeToTimeline}
+                    onEditTimeline={handleEditTimeline}
+                    onDeleteTimeline={handleDeleteTimeline}
+                    onCopyTimeline={handleCopyTimeline}
+                  />
+                </div>
+              </div>
+            );
+          })}
+
+          {/* 空状态 */}
+          {data.timelines.length === 0 && (
+            <div
+              style={{
+                padding: token.paddingLG,
+                textAlign: 'center',
+                color: token.colorTextSecondary,
+                fontSize: 12,
+              }}
+            >
+              暂无时间线
+            </div>
+          )}
+        </div>
+
+        {/* 右侧内容区域 - 时间轴和内容 */}
+        <div
+          style={{
+            flex: 1,
+            position: 'relative',
+            backgroundColor: '#fafafa',
+            minWidth: totalWidth,
+          }}
+        >
+          {/* ✅ 时间轴表头（使用独立的TimelineHeader组件） */}
+          <TimelineHeader
+            startDate={normalizedViewStartDate}
+            endDate={normalizedViewEndDate}
+            scale={scale}
+          />
+
+          {/* 网格背景（含节假日标记） */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 68, // 两层表头高度：32 + 36
+              left: 0,
+              width: totalWidth,
+              height: data.timelines.length * ROW_HEIGHT || 400,
+              pointerEvents: 'none',
+              zIndex: 0,
+            }}
+          >
+            {/* 节假日/周末背景块（在天视图中） */}
+            {scale === 'day' && dateHeaders.map((date, index) => {
+              const columnWidth = getScaleUnit(scale);
+              const isWeekendDay = date.getDay() === 0 || date.getDay() === 6;
+              const isHolidayDay = isHoliday(date);
+
+              if (!isWeekendDay && !isHolidayDay) return null;
+
+              return (
+                <div
+                  key={`bg-${index}`}
+                  style={{
+                    position: 'absolute',
+                    left: index * columnWidth,
+                    top: 0,
+                    bottom: 0,
+                    width: columnWidth,
+                    backgroundColor: isHolidayDay
+                      ? 'rgba(255, 77, 79, 0.05)'  // 节假日 - 淡红色
+                      : 'rgba(0, 0, 0, 0.02)',     // 周末 - 淡灰色
+                  }}
+                />
+              );
+            })}
+
+            {/* ✅ 垂直网格线 - 月视图和季度视图特殊处理 */}
+            {scale === 'month' || scale === 'quarter' ? (
+              // 月视图和季度视图：根据月份/季度绘制网格线
+              dateHeaders.map((date, index) => {
+                const columnWidth = getScaleUnit(scale);
+                return (
+                  <div
+                    key={`line-${index}`}
+                    style={{
+                      position: 'absolute',
+                      left: index * columnWidth,
+                      top: 0,
+                      bottom: 0,
+                      width: 1,
+                      backgroundColor: token.colorBorderSecondary,
+                    }}
+                  />
+                );
+              })
+            ) : (
+              // 其他视图：保持原有逻辑
+              dateHeaders.map((date, index) => {
+                const columnWidth = getScaleUnit(scale);
+                const isMonthStart = date.getDate() === 1;
+
+                return (
+                  <div
+                    key={`line-${index}`}
+                    style={{
+                      position: 'absolute',
+                      left: index * columnWidth,
+                      top: 0,
+                      bottom: 0,
+                      width: isMonthStart ? 2 : 1,  // 月初线条加粗
+                      backgroundColor: isMonthStart
+                        ? token.colorBorder
+                        : token.colorBorderSecondary,
+                    }}
+                  />
+                );
+              })
+            )}
+
+            {/* 水平网格线 */}
+            {data.timelines.map((_, index) => (
+              <div
+                key={index}
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                  top: index * ROW_HEIGHT,
+                  height: 1,
+                  backgroundColor: token.colorBorderSecondary,
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Timeline 行内容 */}
+          <div
+            style={{
+              position: 'relative',
+              width: totalWidth,
+              minWidth: '100%',
+              paddingTop: 0,
+            }}
+          >
+            {/* 依赖关系线 */}
+            {(() => {
+              console.log('[TimelinePanel] 🔗 Relations Debug:');
+              console.log('  - hasRelations:', !!data.relations);
+              console.log('  - relationsCount:', data.relations?.length || 0);
+              console.log('  - linesCount:', data.lines?.length || 0);
+              console.log('  - timelinesCount:', data.timelines?.length || 0);
+              console.log('  - scale:', scale);
+              
+              if (data.relations && data.relations.length > 0) {
+                console.log('  - ✅ Relations数据存在，开始渲染');
+                console.log('  - Relations详情:', data.relations);
+                return (
+                  <RelationRenderer
+                    relations={data.relations}
+                    lines={data.lines}
+                    timelines={data.timelines}
+                    viewStartDate={normalizedViewStartDate}
+                    scale={scale}
+                    rowHeight={ROW_HEIGHT}
+                    selectedRelationId={selectedRelationId}
+                    isEditMode={isEditMode}
+                    onRelationClick={handleRelationClick}
+                    onRelationDelete={handleRelationDelete}
+                  />
+                );
+              } else {
+                console.warn('  - ❌ 没有Relations数据，跳过渲染');
+                return null;
+              }
+            })()}
+
+            {/* Today 线 */}
+            <TodayLine
+              viewStartDate={normalizedViewStartDate}
+              viewEndDate={normalizedViewEndDate}
+              scale={scale}
+              height={data.timelines.length * ROW_HEIGHT}
+            />
+
+            {data.timelines.map((timeline) => {
+              const lines = getLinesByTimelineId(timeline.id);
+
+              return (
+                <div
+                  key={timeline.id}
+                  style={{
+                    position: 'relative',
+                    height: ROW_HEIGHT,
+                    borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                    backgroundColor: '#fff',
+                  }}
+                >
+                  {/* 渲染该 Timeline 的所有 Lines */}
+                  {lines.map((line) => {
+                    const isDraggingThis = draggingNodeId === line.id;
+                    const isResizingThis = resizingNodeId === line.id;
+
+                    // 使用视觉日期展现平滑移动效果
+                    const displayStartDate = isDraggingThis && dragVisualDates.start
+                      ? dragVisualDates.start
+                      : isResizingThis && resizeVisualDates.start
+                        ? resizeVisualDates.start
+                        : new Date(line.startDate);
+
+                    const displayEndDate = isDraggingThis && dragVisualDates.end
+                      ? dragVisualDates.end
+                      : isResizingThis && resizeVisualDates.end
+                        ? resizeVisualDates.end
+                        : line.endDate ? new Date(line.endDate) : new Date(line.startDate);
+
+                    const startPos = isDraggingThis || isResizingThis
+                      ? getPositionFromDatePrecise(
+                        displayStartDate,
+                        normalizedViewStartDate,
+                        scale
+                      )
+                      : getPositionFromDate(
+                        displayStartDate,
+                        normalizedViewStartDate,
+                        scale
+                      );
+
+                    const width = isDraggingThis || isResizingThis
+                      ? getBarWidthTruePrecise(
+                        displayStartDate,
+                        displayEndDate,
+                        scale
+                      )
+                      : getBarWidthPrecise(
+                        displayStartDate,
+                        displayEndDate,
+                        scale
+                      );
+                    const isSelected = line.id === selectedLineId;
+                    const isInteracting = isDraggingThis || isResizingThis;
+
+                    return (
+                      <LineRenderer
+                        key={line.id}
+                        line={line}
+                        startPos={startPos}
+                        width={width}
+                        isSelected={isSelected}
+                        isInteracting={isInteracting}
+                        isEditMode={isEditMode}
+                        isHovered={line.id === hoveredLineId}
+                        connectionMode={connectionMode}
+                        onMouseDown={(e) => isEditMode && handleDragStart(e, line)}
+                        onClick={() => handleLineClick(line)}
+                        onResizeStart={(e, edge) => handleResizeStart(e, line, edge)}
+                        onStartConnection={handleStartConnection}
+                        onCompleteConnection={handleCompleteConnection}
+                      />
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 空状态 */}
+          {data.timelines.length === 0 && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 68, // 两层表头：32 + 36
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: token.colorTextSecondary,
+              }}
+            >
+              <Space direction="vertical" align="center" size="large">
+                <CalendarOutlined style={{ fontSize: 64, color: token.colorTextTertiary }} />
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 500, color: token.colorText, marginBottom: 8 }}>
+                    暂无时间线数据
+                  </div>
+                  <div style={{ color: token.colorTextSecondary, textAlign: 'center' }}>
+                    您可以添加 Timeline 来开始规划项目，或导入示例数据快速体验
+                  </div>
+                </div>
+                <Space>
+                  <Button type="primary" icon={<PlusOutlined />}>
+                    添加 Timeline
+                  </Button>
+                  {onImportSampleData && (
+                    <Button icon={<PlusOutlined />} onClick={onImportSampleData}>
+                      导入示例数据
+                    </Button>
+                  )}
+                </Space>
+              </Space>
+            </div>
+          )}
+        </div>
+
+        {/* 拖拽/调整大小时的浮动日期提示 */}
+        {(isDragActive || isResizing) && (
+          <div
+            style={{
+              position: 'fixed',
+              left: (isDragActive ? dragMousePosition.x : resizeMousePosition.x) + 15,
+              top: (isDragActive ? dragMousePosition.y : resizeMousePosition.y) - 35,
+              backgroundColor: 'rgba(0, 0, 0, 0.75)',
+              color: '#fff',
+              padding: '4px 8px',
+              borderRadius: 4,
+              fontSize: 12,
+              zIndex: 9999,
+              pointerEvents: 'none',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 2 }}>
+              {isDragActive ? '移动中' : '调整中'}
+            </div>
+            <div style={{ fontSize: 11, opacity: 0.9 }}>
+              {isDragActive
+                ? `${format(dragSnappedDates.start!, 'yyyy-MM-dd')}`
+                : `${format(resizeSnappedDates.start!, 'yyyy-MM-dd')} ~ ${format(resizeSnappedDates.end!, 'yyyy-MM-dd')}`
+              }
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Timeline 编辑对话框 */}
+      <TimelineEditDialog
+        open={isTimelineEditDialogOpen}
+        timeline={editingTimeline}
+        onSave={handleSaveTimeline}
+        onClose={() => {
+          setIsTimelineEditDialogOpen(false);
+          setEditingTimeline(null);
+        }}
+      />
+
+      {/* 连线模式指示器 */}
+      <ConnectionMode
+        isActive={!!connectionMode.lineId}
+        sourceNode={
+          connectionMode.lineId
+            ? {
+                id: connectionMode.lineId,
+                label: data.lines.find(l => l.id === connectionMode.lineId)?.title || '',
+              }
+            : undefined
+        }
+        connectionType="FS"
+        onCancel={handleCancelConnection}
+      />
+    </div>
+  );
+};
+
+export default TimelinePanel;

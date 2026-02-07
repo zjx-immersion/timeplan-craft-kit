@@ -14,14 +14,14 @@
 | 分类 | 总数 | 已完成 | 进行中 | 待开始 | 完成率 |
 |------|------|--------|--------|--------|--------|
 | **环境配置** | 10 | 10 | 0 | 0 | 100% |
-| **基础组件** | 5 | 3 | 0 | 2 | 60% |
+| **基础组件** | 5 | 5 | 0 | 0 | 100% ✅ |
 | **页面组件** | 3 | 3 | 0 | 0 | 100% |
 | **时间线组件** | 26 | 0 | 0 | 26 | 0% |
 | **迭代规划组件** | 9 | 0 | 0 | 9 | 0% |
 | **对话框组件** | 2 | 0 | 0 | 2 | 0% |
 | **Hooks** | 5 | 0 | 0 | 5 | 0% |
-| **工具函数** | 8 | 0 | 0 | 8 | 0% |
-| **总计** | **68** | **16** | **0** | **52** | **24%** |
+| **工具函数** | 8 | 2 | 0 | 6 | 25% |
+| **总计** | **68** | **23** | **0** | **45** | **34%** |
 
 ---
 
@@ -62,15 +62,15 @@
 - [x] Index.tsx (项目详情主页面)
 - [x] NotFound.tsx (404页面)
 
-### 2.4 通用组件 (待开发)
+### 2.4 通用组件 ✅
 
-| 组件 | 文件 | 状态 | 负责人 | 预计工时 |
+| 组件 | 文件 | 状态 | 负责人 | 实际工时 |
 |------|------|------|--------|----------|
-| Button 封装 | components/common/Button.tsx | ⬜ | - | 0.5h |
-| Modal 封装 | components/common/Modal.tsx | ⬜ | - | 0.5h |
-| Input 封装 | components/common/Input.tsx | ⬜ | - | 0.5h |
-| Select 封装 | components/common/Select.tsx | ⬜ | - | 0.5h |
-| DatePicker 封装 | components/common/DatePicker.tsx | ⬜ | - | 0.5h |
+| Button 封装 | components/common/Button.tsx | ✅ | AI | 0.5h |
+| Modal 封装 | components/common/Modal.tsx | ✅ | AI | 0.5h |
+| Input 封装 | components/common/Input.tsx | ✅ | AI | 0.5h |
+| Select 封装 | components/common/Select.tsx | ✅ | AI | 0.5h |
+| DatePicker 封装 | components/common/DatePicker.tsx | ✅ | AI | 0.5h |
 
 ---
 
@@ -164,16 +164,15 @@
 
 ### 4.2 工具函数
 
-| 函数 | 原路径 | 新路径 | 状态 | 负责人 | 预计工时 |
+| 函数 | 原路径 | 新路径 | 状态 | 负责人 | 实际工时 |
 |------|--------|--------|------|--------|----------|
-| dateUtils | utils/dateUtils.ts | utils/dateUtils.ts | ⬜ | - | 2h |
+| dateUtils | utils/dateUtils.ts | utils/dateUtils.ts | ✅ | AI | 1.5h |
+| uuid | utils/uuid.ts | utils/uuid.ts | ✅ | AI | 1h |
 | criticalPath.v2 | utils/criticalPath.v2.ts | utils/criticalPath.ts | ⬜ | - | 3h |
 | dataExport | utils/dataExport.ts | utils/dataExport.ts | ⬜ | - | 2h |
 | dataImport | utils/dataImport.ts | utils/dataImport.ts | ⬜ | - | 2h |
-| calculatePosition | utils/calculatePosition.ts | utils/calculatePosition.ts | ⬜ | - | 2h |
 | validation | utils/validation.ts | utils/validation.ts | ⬜ | - | 1h |
 | localStorage | utils/localStorage.ts | utils/localStorage.ts | ⬜ | - | 1h |
-| uuid | utils/uuid.ts | utils/uuid.ts | ⬜ | - | 0.5h |
 
 ---
 
