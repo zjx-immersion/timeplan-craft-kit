@@ -59,7 +59,7 @@ import TimelinePanel from './TimelinePanel';
 import { TableView } from '../views/TableView';
 import { MatrixView } from '../views/MatrixView';
 import { VersionTableView } from '../views/VersionTableView';
-import { IterationView } from '../views/IterationView';
+import IterationView from '../iteration/IterationView'; // 使用完整的迭代矩阵视图
 import { useTimePlanStoreWithHistory } from '@/stores/timePlanStoreWithHistory';
 
 /**
