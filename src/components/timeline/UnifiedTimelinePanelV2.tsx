@@ -61,6 +61,7 @@ import { MatrixView } from '../views/MatrixView';
 import { VersionTableView } from '../views/VersionTableView';
 import IterationView from '../iteration/IterationView'; // 使用完整的迭代矩阵视图
 import { useTimePlanStoreWithHistory } from '@/stores/timePlanStoreWithHistory';
+import type { Timeline } from '@/types/timeplanSchema';
 
 /**
  * 统一时间线面板属性
@@ -150,6 +151,30 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
     }
     setIsEditingTitle(false);
   }, [editedTitle, plan, updatePlan]);
+
+  /**
+   * 添加Timeline
+   */
+  const handleAddTimeline = useCallback(() => {
+    if (!plan) return;
+
+    const newTimeline: Timeline = {
+      id: `timeline-${Date.now()}`,
+      name: '新 Timeline',
+      description: '未指定',
+      color: '#1677ff',
+      lineIds: [],
+      owner: '',
+    };
+
+    const updatedPlan = {
+      ...plan,
+      timelines: [...(plan.timelines || []), newTimeline],
+    };
+
+    updatePlan(plan.id, updatedPlan);
+    message.success('Timeline 已添加');
+  }, [plan, updatePlan]);
 
   /**
    * 保存
@@ -469,7 +494,8 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
                 <Button
                   size="small"
                   icon={<PlusOutlined />}
-                  onClick={() => message.info('添加Timeline功能开发中...')}
+                  onClick={handleAddTimeline}
+                  disabled={!editMode}
                 >
                   Timeline
                 </Button>

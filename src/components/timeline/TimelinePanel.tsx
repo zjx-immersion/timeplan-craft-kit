@@ -87,6 +87,7 @@ import BaselineEditDialog from './BaselineEditDialog';
 import BaselineRangeEditDialog from './BaselineRangeEditDialog';
 import BaselineRangeDragCreator from './BaselineRangeDragCreator';
 import NodeContextMenu from './NodeContextMenu';
+import { NodeEditDialog } from '../dialogs/NodeEditDialog';
 
 /**
  * TimelinePanel 组件属性
@@ -335,6 +336,10 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   const [isBaselineRangeDialogOpen, setIsBaselineRangeDialogOpen] = useState(false);
   const [isNewBaselineRange, setIsNewBaselineRange] = useState(false);
   const [isRangeDragMode, setIsRangeDragMode] = useState(false);
+
+  // 节点编辑状态
+  const [editingNode, setEditingNode] = useState<Line | null>(null);
+  const [nodeEditDialogOpen, setNodeEditDialogOpen] = useState(false);
 
   // Refs
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -943,9 +948,37 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
    * 编辑节点
    */
   const handleEditNode = useCallback((node: Line) => {
-    // TODO: 实现节点编辑对话框
-    message.info(`编辑节点: ${node.label}`);
+    setEditingNode(node);
+    setNodeEditDialogOpen(true);
   }, []);
+
+  /**
+   * 保存节点编辑
+   */
+  const handleSaveNode = useCallback((nodeId: string, updates: Partial<Line>) => {
+    const updatedLines = data.lines.map(line => {
+      if (line.id === nodeId) {
+        return {
+          ...line,
+          ...updates,
+          attributes: {
+            ...line.attributes,
+            ...(updates.attributes || {}),
+          },
+        };
+      }
+      return line;
+    });
+
+    setData({
+      ...data,
+      lines: updatedLines,
+    });
+
+    message.success('节点已更新');
+    setNodeEditDialogOpen(false);
+    setEditingNode(null);
+  }, [data, setData]);
 
   /**
    * 删除节点
@@ -2067,6 +2100,17 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
         }}
         onSave={handleSaveBaselineRange}
         isNewRange={isNewBaselineRange}
+      />
+
+      {/* 节点编辑对话框 */}
+      <NodeEditDialog
+        open={nodeEditDialogOpen}
+        node={editingNode}
+        onSave={handleSaveNode}
+        onClose={() => {
+          setNodeEditDialogOpen(false);
+          setEditingNode(null);
+        }}
       />
 
       {/* 连线模式指示器 */}
