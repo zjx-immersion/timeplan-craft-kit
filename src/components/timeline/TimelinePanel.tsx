@@ -940,6 +940,47 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   // ==================== 节点右键菜单事件处理 ====================
 
   /**
+   * 编辑节点
+   */
+  const handleEditNode = useCallback((node: Line) => {
+    // TODO: 实现节点编辑对话框
+    message.info(`编辑节点: ${node.label}`);
+  }, []);
+
+  /**
+   * 删除节点
+   */
+  const handleDeleteNode = useCallback((nodeId: string) => {
+    const node = data.lines.find(l => l.id === nodeId);
+    if (!node) return;
+
+    Modal.confirm({
+      title: '删除节点',
+      content: `确定要删除节点"${node.label}"吗？`,
+      okText: '删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: () => {
+        // 删除节点
+        const updatedLines = data.lines.filter(l => l.id !== nodeId);
+        
+        // 删除相关的依赖关系
+        const updatedRelations = data.relations.filter(
+          r => r.fromLineId !== nodeId && r.toLineId !== nodeId
+        );
+        
+        setData({
+          ...data,
+          lines: updatedLines,
+          relations: updatedRelations,
+        });
+        
+        message.success('节点已删除');
+      },
+    });
+  }, [data, setData]);
+
+  /**
    * 复制节点
    */
   const handleCopyNode = useCallback((node: Line) => {
