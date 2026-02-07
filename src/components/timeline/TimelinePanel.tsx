@@ -49,7 +49,7 @@ import {
   SearchOutlined,
   FullscreenOutlined,
 } from '@ant-design/icons';
-import { TimePlan, Timeline, Line, Relation } from '@/types/timeplanSchema';
+import { TimePlan, Timeline, Line, Relation, Baseline, BaselineRange } from '@/types/timeplanSchema';
 import { TimeScale } from '@/utils/dateUtils';
 import {
   getDateHeaders,
@@ -81,6 +81,11 @@ import { TimelineEditDialog } from '../dialogs/TimelineEditDialog';
 import { downloadJSON, downloadCSV, downloadExcel } from '@/utils/dataExport';
 import ConnectionPoints from './ConnectionPoints';
 import { ConnectionMode } from './ConnectionMode';
+import BaselineMarker from './BaselineMarker';
+import BaselineRangeMarker from './BaselineRangeMarker';
+import BaselineEditDialog from './BaselineEditDialog';
+import BaselineRangeEditDialog from './BaselineRangeEditDialog';
+import BaselineRangeDragCreator from './BaselineRangeDragCreator';
 
 /**
  * TimelinePanel 组件属性
@@ -319,6 +324,16 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     lineId: string | null;
     direction: 'from' | 'to';
   }>({ lineId: null, direction: 'from' });
+
+  // 基线系统状态
+  const [editingBaseline, setEditingBaseline] = useState<Baseline | null>(null);
+  const [isBaselineDialogOpen, setIsBaselineDialogOpen] = useState(false);
+  const [isNewBaseline, setIsNewBaseline] = useState(false);
+  
+  const [editingBaselineRange, setEditingBaselineRange] = useState<BaselineRange | null>(null);
+  const [isBaselineRangeDialogOpen, setIsBaselineRangeDialogOpen] = useState(false);
+  const [isNewBaselineRange, setIsNewBaselineRange] = useState(false);
+  const [isRangeDragMode, setIsRangeDragMode] = useState(false);
 
   // Refs
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -738,6 +753,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
       description: '未指定',
       color: '#1677ff',
       lineIds: [],
+      owner: '',
     };
     
     setData({
@@ -771,6 +787,154 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     setInternalShowCriticalPath(newValue);
     message.info(newValue ? '已显示关键路径' : '已关闭关键路径');
   }, [showCriticalPath]);
+
+  // ==================== 基线系统事件处理 ====================
+
+  /**
+   * 添加基线
+   */
+  const handleAddBaseline = useCallback(() => {
+    setEditingBaseline({
+      id: `baseline-${Date.now()}`,
+      date: new Date(),
+      label: '',
+      schemaId: undefined,
+      attributes: {},
+    });
+    setIsNewBaseline(true);
+    setIsBaselineDialogOpen(true);
+  }, []);
+
+  /**
+   * 编辑基线
+   */
+  const handleEditBaseline = useCallback((baseline: Baseline) => {
+    setEditingBaseline(baseline);
+    setIsNewBaseline(false);
+    setIsBaselineDialogOpen(true);
+  }, []);
+
+  /**
+   * 删除基线
+   */
+  const handleDeleteBaseline = useCallback((baselineId: string) => {
+    Modal.confirm({
+      title: '删除基线',
+      content: '确定要删除这条基线吗？',
+      okText: '删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: () => {
+        const updatedBaselines = (data.baselines || []).filter(b => b.id !== baselineId);
+        setData({
+          ...data,
+          baselines: updatedBaselines,
+        });
+        message.success('基线已删除');
+      },
+    });
+  }, [data, setData]);
+
+  /**
+   * 保存基线
+   */
+  const handleSaveBaseline = useCallback((baseline: Baseline) => {
+    const existingBaselines = data.baselines || [];
+    const exists = existingBaselines.some(b => b.id === baseline.id);
+    const updatedBaselines = exists
+      ? existingBaselines.map(b => b.id === baseline.id ? baseline : b)
+      : [...existingBaselines, baseline];
+    
+    setData({
+      ...data,
+      baselines: updatedBaselines,
+    });
+    
+    message.success(exists ? '基线已更新' : '基线已添加');
+    setIsBaselineDialogOpen(false);
+    setEditingBaseline(null);
+  }, [data, setData]);
+
+  /**
+   * 开始拖拽创建基线范围
+   */
+  const handleStartRangeDrag = useCallback(() => {
+    setIsRangeDragMode(true);
+  }, []);
+
+  /**
+   * 拖拽完成 - 创建基线范围
+   */
+  const handleRangeDragComplete = useCallback((startDate: Date, endDate: Date) => {
+    setEditingBaselineRange({
+      id: `baseline-range-${Date.now()}`,
+      startDate,
+      endDate,
+      label: '',
+      schemaId: undefined,
+      attributes: {},
+    });
+    setIsNewBaselineRange(true);
+    setIsBaselineRangeDialogOpen(true);
+    setIsRangeDragMode(false);
+  }, []);
+
+  /**
+   * 拖拽取消
+   */
+  const handleRangeDragCancel = useCallback(() => {
+    setIsRangeDragMode(false);
+  }, []);
+
+  /**
+   * 编辑基线范围
+   */
+  const handleEditBaselineRange = useCallback((range: BaselineRange) => {
+    setEditingBaselineRange(range);
+    setIsNewBaselineRange(false);
+    setIsBaselineRangeDialogOpen(true);
+  }, []);
+
+  /**
+   * 删除基线范围
+   */
+  const handleDeleteBaselineRange = useCallback((rangeId: string) => {
+    Modal.confirm({
+      title: '删除基线范围',
+      content: '确定要删除这个时间区间吗？',
+      okText: '删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: () => {
+        const updatedRanges = (data.baselineRanges || []).filter(r => r.id !== rangeId);
+        setData({
+          ...data,
+          baselineRanges: updatedRanges,
+        });
+        message.success('时间区间已删除');
+      },
+    });
+  }, [data, setData]);
+
+  /**
+   * 保存/更新基线范围
+   */
+  const handleSaveBaselineRange = useCallback((range: BaselineRange) => {
+    const existingRanges = data.baselineRanges || [];
+    const exists = existingRanges.some(r => r.id === range.id);
+    const updatedRanges = exists
+      ? existingRanges.map(r => r.id === range.id ? range : r)
+      : [...existingRanges, range];
+    
+    setData({
+      ...data,
+      baselineRanges: updatedRanges,
+    });
+    
+    message.success(exists ? '时间区间已更新' : '时间区间已添加');
+    setIsBaselineRangeDialogOpen(false);
+    setEditingBaselineRange(null);
+  }, [data, setData]);
 
   /**
    * 取消所有未保存的更改
@@ -1544,12 +1708,57 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
               }
             })()}
 
-            {/* Today 线 */}
+            {/* ==================== 基线系统渲染 ==================== */}
+            
+            {/* 1. 基线范围标记（背景层，z-index: 10） */}
+            {data.baselineRanges?.map((range) => (
+              <BaselineRangeMarker
+                key={range.id}
+                range={range}
+                viewStartDate={normalizedViewStartDate}
+                scale={scale}
+                height={data.timelines.length * ROW_HEIGHT + 52}
+                leftOffset={SIDEBAR_WIDTH}
+                isEditMode={isEditMode}
+                onEdit={() => handleEditBaselineRange(range)}
+                onDelete={() => handleDeleteBaselineRange(range.id)}
+                onUpdate={handleSaveBaselineRange}
+              />
+            ))}
+
+            {/* 2. 基线标记（前景层，z-index: 80） */}
+            {data.baselines?.map((baseline) => (
+              <BaselineMarker
+                key={baseline.id}
+                baseline={baseline}
+                viewStartDate={normalizedViewStartDate}
+                scale={scale}
+                height={data.timelines.length * ROW_HEIGHT + 52}
+                leftOffset={SIDEBAR_WIDTH}
+                isEditMode={isEditMode}
+                onEdit={() => handleEditBaseline(baseline)}
+                onDelete={() => handleDeleteBaseline(baseline.id)}
+              />
+            ))}
+
+            {/* 3. Today 线 */}
             <TodayLine
               viewStartDate={normalizedViewStartDate}
               viewEndDate={normalizedViewEndDate}
               scale={scale}
               height={data.timelines.length * ROW_HEIGHT}
+            />
+
+            {/* 4. 基线范围拖拽创建器（覆盖层，z-index: 50） */}
+            <BaselineRangeDragCreator
+              isActive={isRangeDragMode}
+              viewStartDate={normalizedViewStartDate}
+              scale={scale}
+              height={data.timelines.length * ROW_HEIGHT + 52}
+              leftOffset={SIDEBAR_WIDTH}
+              scrollContainerRef={scrollContainerRef}
+              onComplete={handleRangeDragComplete}
+              onCancel={handleRangeDragCancel}
             />
 
             {data.timelines.map((timeline) => {
@@ -1713,6 +1922,30 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
           setIsTimelineEditDialogOpen(false);
           setEditingTimeline(null);
         }}
+      />
+
+      {/* 基线编辑对话框 */}
+      <BaselineEditDialog
+        baseline={editingBaseline}
+        isOpen={isBaselineDialogOpen}
+        onClose={() => {
+          setIsBaselineDialogOpen(false);
+          setEditingBaseline(null);
+        }}
+        onSave={handleSaveBaseline}
+        isNewBaseline={isNewBaseline}
+      />
+
+      {/* 基线范围编辑对话框 */}
+      <BaselineRangeEditDialog
+        range={editingBaselineRange}
+        isOpen={isBaselineRangeDialogOpen}
+        onClose={() => {
+          setIsBaselineRangeDialogOpen(false);
+          setEditingBaselineRange(null);
+        }}
+        onSave={handleSaveBaselineRange}
+        isNewRange={isNewBaselineRange}
       />
 
       {/* 连线模式指示器 */}

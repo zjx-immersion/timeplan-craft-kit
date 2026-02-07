@@ -1,0 +1,234 @@
+/**
+ * BaselineMarker - 基线标记组件
+ * 
+ * 功能:
+ * - 在时间轴上渲染基线（垂直线）
+ * - 显示标签徽章（标签 + 日期）
+ * - 编辑模式下显示编辑/删除按钮
+ * - z-index: 80 （在时间轴和节点之间）
+ * 
+ * @version 1.0.0
+ * @date 2026-02-07
+ * @migrated-from timeline-craft-kit/src/components/timeline/BaselineMarker.tsx
+ */
+
+import React, { useState, useMemo } from 'react';
+import { Button, Tag, Tooltip } from 'antd';
+import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { format } from 'date-fns';
+import { zhCN } from 'date-fns/locale';
+import type { Baseline } from '@/types/timeplanSchema';
+import type { TimeScale } from '@/utils/dateUtils';
+import { getPositionFromDate } from '@/utils/dateUtils';
+
+/**
+ * BaselineMarker 组件属性
+ */
+export interface BaselineMarkerProps {
+  /**
+   * 基线数据
+   */
+  baseline: Baseline;
+
+  /**
+   * 视图起始日期
+   */
+  viewStartDate: Date;
+
+  /**
+   * 时间刻度
+   */
+  scale: TimeScale;
+
+  /**
+   * 高度
+   */
+  height: number;
+
+  /**
+   * 左侧偏移（侧边栏宽度）
+   * @default 200
+   */
+  leftOffset?: number;
+
+  /**
+   * 是否编辑模式
+   * @default false
+   */
+  isEditMode?: boolean;
+
+  /**
+   * 编辑回调
+   */
+  onEdit?: () => void;
+
+  /**
+   * 删除回调
+   */
+  onDelete?: () => void;
+}
+
+/**
+ * 默认颜色映射
+ */
+const defaultColors: Record<string, string> = {
+  release: '#1677ff',    // 发版 - 蓝色
+  freeze: '#ff4d4f',     // 封版 - 红色
+  milestone: '#52c41a',  // 里程碑 - 绿色
+  default: '#8c8c8c',    // 默认 - 灰色
+};
+
+/**
+ * BaselineMarker 组件
+ */
+export const BaselineMarker: React.FC<BaselineMarkerProps> = ({
+  baseline,
+  viewStartDate,
+  scale,
+  height,
+  leftOffset = 200,
+  isEditMode = false,
+  onEdit,
+  onDelete,
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  // 计算基线位置
+  const position = useMemo(() => {
+    try {
+      const pos = getPositionFromDate(baseline.date, viewStartDate, scale);
+      return leftOffset + pos;
+    } catch (error) {
+      console.error('[BaselineMarker] Error calculating position:', error);
+      return 0;
+    }
+  }, [baseline.date, viewStartDate, scale, leftOffset]);
+
+  // 获取基线颜色
+  const baselineColor = useMemo(() => {
+    if (baseline.color) {
+      return baseline.color;
+    }
+    // 尝试从 attributes 中获取类型
+    const type = baseline.attributes?.type as string | undefined;
+    return defaultColors[type || 'default'] || defaultColors.default;
+  }, [baseline.color, baseline.attributes]);
+
+  // 格式化日期
+  const formattedDate = useMemo(() => {
+    try {
+      return format(baseline.date, 'yyyy-MM-dd', { locale: zhCN });
+    } catch (error) {
+      console.error('[BaselineMarker] Error formatting date:', error);
+      return '';
+    }
+  }, [baseline.date]);
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        left: position,
+        top: 0,
+        height,
+        zIndex: 80,
+        pointerEvents: isEditMode ? 'auto' : 'none',
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* 基线垂直线 */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          width: 1,
+          height,
+          backgroundColor: baselineColor,
+          opacity: 0.8,
+        }}
+      />
+
+      {/* 标签徽章 */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 4,
+          top: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+          pointerEvents: 'auto',
+        }}
+      >
+        {/* 标签 */}
+        <Tag
+          color={baselineColor}
+          style={{
+            margin: 0,
+            fontSize: 11,
+            lineHeight: '16px',
+            padding: '0 6px',
+            whiteSpace: 'nowrap',
+            cursor: isEditMode ? 'pointer' : 'default',
+          }}
+          onClick={isEditMode ? onEdit : undefined}
+        >
+          {baseline.label || '基线'}
+        </Tag>
+
+        {/* 日期 */}
+        <div
+          style={{
+            fontSize: 10,
+            color: '#8c8c8c',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {formattedDate}
+        </div>
+
+        {/* 编辑模式：显示编辑/删除按钮 */}
+        {isEditMode && isHovered && (
+          <div
+            style={{
+              display: 'flex',
+              gap: 4,
+              marginTop: 4,
+            }}
+          >
+            <Tooltip title="编辑基线">
+              <Button
+                type="primary"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={onEdit}
+                style={{
+                  fontSize: 10,
+                  height: 20,
+                  padding: '0 6px',
+                }}
+              />
+            </Tooltip>
+            <Tooltip title="删除基线">
+              <Button
+                danger
+                size="small"
+                icon={<DeleteOutlined />}
+                onClick={onDelete}
+                style={{
+                  fontSize: 10,
+                  height: 20,
+                  padding: '0 6px',
+                }}
+              />
+            </Tooltip>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default BaselineMarker;
