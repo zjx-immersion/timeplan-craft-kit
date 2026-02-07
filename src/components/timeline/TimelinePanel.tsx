@@ -1740,17 +1740,6 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
             const isCollapsed = collapsedTimelines.has(timeline.id);
             const lines = getLinesByTimelineId(timeline.id);
 
-            // 🔍 调试信息
-            console.log('[Timeline Row]', {
-              id: timeline.id,
-              title: timeline.title,
-              name: timeline.name,
-              hasTitle: !!timeline.title,
-              hasName: !!timeline.name,
-              display: timeline.title || timeline.name,
-              linesCount: lines.length,
-            });
-
             return (
               <div 
                 key={timeline.id}
@@ -1774,17 +1763,6 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                     margin: 0,  // ✅ 确保没有额外margin
                   }}
                   onClick={() => toggleTimelineCollapse(timeline.id)}
-                  onMouseEnter={(e) => {
-                    // 🔍 调试：鼠标悬停时打印元素信息
-                    console.log('[Timeline Row Hover]', {
-                      timeline: timeline.title || timeline.name,
-                      height: e.currentTarget.offsetHeight,
-                      borderBottom: e.currentTarget.style.borderBottom,
-                      backgroundColor: e.currentTarget.style.backgroundColor,
-                      computedHeight: window.getComputedStyle(e.currentTarget).height,
-                      computedBorder: window.getComputedStyle(e.currentTarget).borderBottom,
-                    });
-                  }}
                 >
                   {/* 折叠图标 */}
                   <div style={{ marginRight: token.marginXS, flexShrink: 0 }}>
