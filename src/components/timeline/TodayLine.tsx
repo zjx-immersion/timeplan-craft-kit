@@ -12,6 +12,8 @@
  */
 
 import React, { useMemo } from 'react';
+import { format } from 'date-fns';
+import { zhCN } from 'date-fns/locale';
 import { TimeScale } from '@/utils/dateUtils';
 import { getPositionFromDate } from '@/utils/dateUtils';
 import { timelineColors } from '@/theme/timelineColors';
@@ -75,7 +77,7 @@ export const TodayLine: React.FC<TodayLineProps> = ({
         }}
       />
       
-      {/* 顶部标签 */}
+      {/* 顶部标签 - 显示"今日：日期" */}
       <div
         style={{
           position: 'absolute',
@@ -92,7 +94,7 @@ export const TodayLine: React.FC<TodayLineProps> = ({
           boxShadow: `0 1px 3px rgba(0,0,0,0.2), 0 0 8px ${timelineColors.todayGlow}`, // 发光效果
         }}
       >
-        今天
+        今日：{format(today, 'yyyy-MM-dd', { locale: zhCN })}
       </div>
       
       {/* 虚线效果 */}
