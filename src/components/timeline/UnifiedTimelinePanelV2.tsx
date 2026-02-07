@@ -164,6 +164,7 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
     const newTimeline: Timeline = {
       id: `timeline-${Date.now()}`,
       name: '新 Timeline',
+      title: '新 Timeline',  // ✅ 同时设置title字段，确保数据结构一致
       description: '未指定',
       color: '#1677ff',
       lineIds: [],

@@ -728,6 +728,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
       ...timeline,
       id: newTimelineId,
       name: `${timeline.name} (副本)`,
+      title: `${timeline.title || timeline.name} (副本)`,  // ✅ 同时更新title字段
       lineIds: copiedLines.map(l => l.id),
     };
     
@@ -1793,7 +1794,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                         lineHeight: '20px',
                       }}
                     >
-                      {timeline.title}
+                      {timeline.title || timeline.name}
                     </div>
                     <div
                       style={{
@@ -1813,7 +1814,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                   {/* Timeline 快捷菜单 */}
                   <TimelineQuickMenu
                     timelineId={timeline.id}
-                    timelineName={timeline.title}
+                    timelineName={timeline.title || timeline.name}
                     isEditMode={isEditMode}
                     onAddNode={handleAddNodeToTimeline}
                     onEditTimeline={handleEditTimeline}
