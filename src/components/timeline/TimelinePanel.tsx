@@ -86,6 +86,7 @@ import BaselineRangeMarker from './BaselineRangeMarker';
 import BaselineEditDialog from './BaselineEditDialog';
 import BaselineRangeEditDialog from './BaselineRangeEditDialog';
 import BaselineRangeDragCreator from './BaselineRangeDragCreator';
+import NodeContextMenu from './NodeContextMenu';
 
 /**
  * TimelinePanel 组件属性
@@ -935,6 +936,72 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     setIsBaselineRangeDialogOpen(false);
     setEditingBaselineRange(null);
   }, [data, setData]);
+
+  // ==================== 节点右键菜单事件处理 ====================
+
+  /**
+   * 复制节点
+   */
+  const handleCopyNode = useCallback((node: Line) => {
+    const newLine: Line = {
+      ...node,
+      id: `line-${Date.now()}`,
+      label: `${node.label} (副本)`,
+      attributes: {
+        ...node.attributes,
+        name: `${node.attributes?.name || node.label} (副本)`,
+      },
+    };
+    
+    setData({
+      ...data,
+      lines: [...data.lines, newLine],
+    });
+    
+    message.success('节点已复制');
+  }, [data, setData]);
+
+  /**
+   * 转换节点类型
+   */
+  const handleConvertNodeType = useCallback((nodeId: string, newSchemaId: string) => {
+    const updatedLines = data.lines.map(line => {
+      if (line.id === nodeId) {
+        // 转换为 milestone 或 gateway 时，移除 endDate
+        const newLine = { ...line, schemaId: newSchemaId };
+        if (newSchemaId === 'milestone-schema' || newSchemaId === 'gateway-schema') {
+          delete newLine.endDate;
+        }
+        // 转换为 bar 时，如果没有 endDate，添加默认的 7天
+        if (newSchemaId === 'bar-schema' && !newLine.endDate) {
+          newLine.endDate = addDays(newLine.startDate, 7);
+        }
+        return newLine;
+      }
+      return line;
+    });
+    
+    setData({
+      ...data,
+      lines: updatedLines,
+    });
+  }, [data, setData]);
+
+  /**
+   * 添加节点到基线（待实现）
+   */
+  const handleAddNodeToBaseline = useCallback((nodeId: string, baselineId: string) => {
+    // TODO: 实现将节点添加到基线的逻辑
+    message.info('添加到基线功能待实现');
+  }, []);
+
+  /**
+   * 查看嵌套计划
+   */
+  const handleViewNestedPlan = useCallback((nestedPlanId: string) => {
+    // TODO: 实现导航到嵌套计划
+    message.info(`查看嵌套计划: ${nestedPlanId}`);
+  }, []);
 
   /**
    * 取消所有未保存的更改
@@ -1819,22 +1886,35 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                     const isInteracting = isDraggingThis || isResizingThis;
 
                     return (
-                      <LineRenderer
+                      <NodeContextMenu
                         key={line.id}
-                        line={line}
-                        startPos={startPos}
-                        width={width}
-                        isSelected={isSelected}
-                        isInteracting={isInteracting}
+                        node={line}
                         isEditMode={isEditMode}
-                        isHovered={line.id === hoveredLineId}
-                        connectionMode={connectionMode}
-                        onMouseDown={(e) => isEditMode && handleDragStart(e, line)}
-                        onClick={() => handleLineClick(line)}
-                        onResizeStart={(e, edge) => handleResizeStart(e, line, edge)}
-                        onStartConnection={handleStartConnection}
-                        onCompleteConnection={handleCompleteConnection}
-                      />
+                        baselines={data.baselines || []}
+                        onEditNode={handleEditNode}
+                        onDeleteNode={handleDeleteNode}
+                        onCopyNode={handleCopyNode}
+                        onConvertNodeType={handleConvertNodeType}
+                        onAddRelation={handleStartConnection}
+                        onAddToBaseline={handleAddNodeToBaseline}
+                        onViewNestedPlan={handleViewNestedPlan}
+                      >
+                        <LineRenderer
+                          line={line}
+                          startPos={startPos}
+                          width={width}
+                          isSelected={isSelected}
+                          isInteracting={isInteracting}
+                          isEditMode={isEditMode}
+                          isHovered={line.id === hoveredLineId}
+                          connectionMode={connectionMode}
+                          onMouseDown={(e) => isEditMode && handleDragStart(e, line)}
+                          onClick={() => handleLineClick(line)}
+                          onResizeStart={(e, edge) => handleResizeStart(e, line, edge)}
+                          onStartConnection={handleStartConnection}
+                          onCompleteConnection={handleCompleteConnection}
+                        />
+                      </NodeContextMenu>
                     );
                   })}
                 </div>
