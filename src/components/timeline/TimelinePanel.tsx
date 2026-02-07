@@ -308,7 +308,10 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     return addMonths(new Date(), 18);
   });
   const [internalIsEditMode, setInternalIsEditMode] = useState(false);
-  const isEditMode = externalReadonly !== undefined ? !externalReadonly : internalIsEditMode;
+  // ✅ 修复：优先使用 externalIsEditMode，然后是 readonly 反转，最后是内部状态
+  const isEditMode = externalIsEditMode !== undefined 
+    ? externalIsEditMode 
+    : (externalReadonly !== undefined ? !externalReadonly : internalIsEditMode);
   const handleIsEditModeChange = useCallback((newMode: boolean) => {
     setInternalIsEditMode(newMode);
     onEditModeChange?.(newMode);
