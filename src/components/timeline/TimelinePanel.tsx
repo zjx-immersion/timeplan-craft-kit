@@ -1855,6 +1855,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
             startDate={normalizedViewStartDate}
             endDate={normalizedViewEndDate}
             scale={scale}
+            width={totalWidth}  // ✅ 传入总宽度，确保表头覆盖整个可滚动区域
           />
 
           {/* 网格背景（含节假日标记） */}

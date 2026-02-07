@@ -38,6 +38,7 @@ interface TimelineHeaderProps {
   startDate: Date;
   endDate: Date;
   scale: TimeScale;
+  width?: number;  // ✅ 新增：总宽度，确保表头延伸到滚动区域末尾
 }
 
 interface HeaderCell {
@@ -307,6 +308,7 @@ const TimelineHeader: React.FC<TimelineHeaderProps> = React.memo(({
   startDate,
   endDate,
   scale,
+  width,  // ✅ 新增：总宽度
 }) => {
   const { token } = useToken();
   
@@ -327,6 +329,8 @@ const TimelineHeader: React.FC<TimelineHeaderProps> = React.memo(({
         position: 'sticky',
         top: 0,
         zIndex: 11,
+        width: width,  // ✅ 设置明确宽度，确保表头延伸到整个滚动区域
+        minWidth: width,  // ✅ 确保不会缩小
         backgroundColor: token.colorBgContainer,
         borderBottom: `2px solid ${token.colorBorder}`,
       }}
