@@ -62,6 +62,7 @@ import { VersionTableView } from '../views/VersionTableView';
 import IterationView from '../iteration/IterationView'; // 使用完整的迭代矩阵视图
 import { useTimePlanStoreWithHistory } from '@/stores/timePlanStoreWithHistory';
 import type { Timeline } from '@/types/timeplanSchema';
+import { ImageExportDialog } from '../dialogs/ImageExportDialog';
 
 /**
  * 统一时间线面板属性
@@ -126,6 +127,8 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
   const [zoom, setZoom] = useState(initialZoom);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
+  const [imageExportDialogOpen, setImageExportDialogOpen] = useState(false);
+  const timelineContainerRef = useRef<HTMLDivElement>(null);
 
   console.log('UnifiedTimelinePanelV2 Render:', { view, editMode, scale, zoom });
 
@@ -282,16 +285,22 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
     switch (view) {
       case 'gantt':
         return (
-          <TimelinePanel
-            data={plan}
-            onDataChange={handleDataChange}
-            hideToolbar={true}
-            isEditMode={editMode}
-            scale={scale}
+          <div
+            ref={timelineContainerRef}
+            data-timeline-container="true"
+            style={{ width: '100%', height: '100%' }}
+          >
+            <TimelinePanel
+              data={plan}
+              onDataChange={handleDataChange}
+              hideToolbar={true}
+              isEditMode={editMode}
+              scale={scale}
             zoom={zoom}
             showCriticalPath={showCriticalPath}
             scrollToTodayRef={scrollToTodayRef}
           />
+          </div>
         );
 
       case 'table':
@@ -662,6 +671,15 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
               menu={{
                 items: [
                   {
+                    key: 'export-image',
+                    label: '导出为图片',
+                    icon: <DownloadOutlined />,
+                    onClick: () => setImageExportDialogOpen(true),
+                  },
+                  {
+                    type: 'divider',
+                  },
+                  {
                     key: 'export-json',
                     label: '导出为 JSON',
                     icon: <DownloadOutlined />,
@@ -713,6 +731,14 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
       <div style={{ flex: 1, overflow: 'hidden' }} data-testid={`view-content-${view}`}>
         {renderView()}
       </div>
+
+      {/* 图片导出对话框 */}
+      <ImageExportDialog
+        open={imageExportDialogOpen}
+        onClose={() => setImageExportDialogOpen(false)}
+        targetElement={timelineContainerRef.current}
+        defaultFilename={plan ? `${plan.title}-export` : 'timeplan-export'}
+      />
     </div>
   );
 };

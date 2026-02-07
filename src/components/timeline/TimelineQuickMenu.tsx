@@ -18,6 +18,7 @@ import {
   DeleteOutlined,
   CopyOutlined,
   BgColorsOutlined,
+  CalendarClockOutlined,
 } from '@ant-design/icons';
 
 /**
@@ -63,6 +64,11 @@ export interface TimelineQuickMenuProps {
    * 设置背景色回调
    */
   onBackgroundColorChange?: (timelineId: string, color: string) => void;
+
+  /**
+   * 整体时间调整回调
+   */
+  onTimeShift?: (timelineId: string) => void;
 }
 
 /**
@@ -77,6 +83,7 @@ export const TimelineQuickMenu: React.FC<TimelineQuickMenuProps> = ({
   onDeleteTimeline,
   onCopyTimeline,
   onBackgroundColorChange,
+  onTimeShift,
 }) => {
   // 构建菜单项
   const menuItems: MenuProps['items'] = [];
@@ -129,6 +136,16 @@ export const TimelineQuickMenu: React.FC<TimelineQuickMenuProps> = ({
         label: '复制 Timeline',
         icon: <CopyOutlined />,
         onClick: () => onCopyTimeline(timelineId),
+      });
+    }
+
+    // 整体时间调整
+    if (onTimeShift) {
+      menuItems.push({
+        key: 'time-shift',
+        label: '整体时间调整',
+        icon: <CalendarClockOutlined />,
+        onClick: () => onTimeShift(timelineId),
       });
     }
 

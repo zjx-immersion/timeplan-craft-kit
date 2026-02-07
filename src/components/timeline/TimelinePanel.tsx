@@ -88,6 +88,7 @@ import BaselineRangeEditDialog from './BaselineRangeEditDialog';
 import BaselineRangeDragCreator from './BaselineRangeDragCreator';
 import NodeContextMenu from './NodeContextMenu';
 import { NodeEditDialog } from '../dialogs/NodeEditDialog';
+import { TimelineTimeShiftDialog } from '../dialogs/TimelineTimeShiftDialog';
 
 /**
  * TimelinePanel 组件属性
@@ -341,6 +342,10 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   const [editingNode, setEditingNode] = useState<Line | null>(null);
   const [nodeEditDialogOpen, setNodeEditDialogOpen] = useState(false);
 
+  // 时间平移状态
+  const [timeShiftDialogOpen, setTimeShiftDialogOpen] = useState(false);
+  const [timeShiftTimelineId, setTimeShiftTimelineId] = useState<string | null>(null);
+
   // Refs
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -591,6 +596,47 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     });
     
     message.success('Timeline 已删除');
+  }, [data, setData]);
+
+  /**
+   * 打开时间平移对话框
+   */
+  const handleOpenTimeShift = useCallback((timelineId: string) => {
+    setTimeShiftTimelineId(timelineId);
+    setTimeShiftDialogOpen(true);
+  }, []);
+
+  /**
+   * 确认时间平移
+   */
+  const handleConfirmTimeShift = useCallback((timelineId: string, offsetDays: number, keepRelations: boolean) => {
+    const updatedLines = data.lines.map(line => {
+      if (line.timelineId === timelineId) {
+        const newLine = { ...line };
+        
+        // 调整开始日期
+        if (newLine.startDate) {
+          newLine.startDate = addDays(new Date(newLine.startDate), offsetDays).toISOString();
+        }
+        
+        // 调整结束日期（如果有）
+        if (newLine.endDate) {
+          newLine.endDate = addDays(new Date(newLine.endDate), offsetDays).toISOString();
+        }
+        
+        return newLine;
+      }
+      return line;
+    });
+
+    setData({
+      ...data,
+      lines: updatedLines,
+    });
+
+    message.success(`Timeline时间已调整 ${offsetDays > 0 ? '延后' : '提前'} ${Math.abs(offsetDays)} 天`);
+    setTimeShiftDialogOpen(false);
+    setTimeShiftTimelineId(null);
   }, [data, setData]);
 
   /**
@@ -1675,6 +1721,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                     onEditTimeline={handleEditTimeline}
                     onDeleteTimeline={handleDeleteTimeline}
                     onCopyTimeline={handleCopyTimeline}
+                    onTimeShift={handleOpenTimeShift}
                   />
                 </div>
               </div>
@@ -2111,6 +2158,18 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
           setNodeEditDialogOpen(false);
           setEditingNode(null);
         }}
+      />
+
+      {/* 时间平移对话框 */}
+      <TimelineTimeShiftDialog
+        open={timeShiftDialogOpen}
+        onClose={() => {
+          setTimeShiftDialogOpen(false);
+          setTimeShiftTimelineId(null);
+        }}
+        timelines={data.timelines}
+        lines={data.lines}
+        onConfirm={handleConfirmTimeShift}
       />
 
       {/* 连线模式指示器 */}
