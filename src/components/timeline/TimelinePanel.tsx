@@ -1846,7 +1846,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
           style={{
             flex: 1,
             position: 'relative',
-            backgroundColor: '#fafafa',
+            backgroundColor: '#fff',  // ✅ 修复：与左侧背景色一致，统一为白色
             minWidth: totalWidth,
           }}
         >
@@ -2067,7 +2067,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                       position: 'relative',
                       height: ROW_HEIGHT,  // ✅ 固定高度120px，与左侧一致
                       borderBottom: `1px solid ${token.colorBorderSecondary}`,
-                      backgroundColor: '#fff',
+                      backgroundColor: 'transparent',  // ✅ 修复：使用透明背景，让网格线透过来
                       boxSizing: 'border-box',  // ✅ 确保border包含在高度内，与左侧一致
                       margin: 0,  // ✅ 确保没有额外margin
                       padding: 0,  // ✅ 确保没有额外padding（内容使用绝对定位）
