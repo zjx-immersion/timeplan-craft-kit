@@ -684,24 +684,62 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
 
   /**
    * 复制 Timeline
+   * ✅ 修复：复制Timeline及其所有Lines和Relations
    */
   const handleCopyTimeline = useCallback((timelineId: string) => {
     const timeline = data.timelines.find(t => t.id === timelineId);
     if (!timeline) return;
     
-    // 创建副本
+    // 1. 获取该Timeline下的所有Lines
+    const timelineLines = data.lines.filter(line => line.timelineId === timelineId);
+    
+    // 2. 创建新Timeline ID
+    const newTimelineId = `timeline-${Date.now()}`;
+    
+    // 3. 创建Line ID映射（旧ID -> 新ID）
+    const lineIdMap = new Map<string, string>();
+    const copiedLines: Line[] = timelineLines.map(line => {
+      const newLineId = `line-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      lineIdMap.set(line.id, newLineId);
+      
+      return {
+        ...line,
+        id: newLineId,
+        timelineId: newTimelineId,
+      };
+    });
+    
+    // 4. 复制该Timeline内部的Relations（只复制起点和终点都在同一Timeline内的关系）
+    const timelineLineIds = new Set(timelineLines.map(l => l.id));
+    const copiedRelations: Relation[] = (data.relations || [])
+      .filter(rel => 
+        timelineLineIds.has(rel.fromLineId) && 
+        timelineLineIds.has(rel.toLineId)
+      )
+      .map(rel => ({
+        ...rel,
+        id: `rel-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        fromLineId: lineIdMap.get(rel.fromLineId) || rel.fromLineId,
+        toLineId: lineIdMap.get(rel.toLineId) || rel.toLineId,
+      }));
+    
+    // 5. 创建新Timeline
     const newTimeline: Timeline = {
       ...timeline,
-      id: `timeline-${Date.now()}`,
+      id: newTimelineId,
       name: `${timeline.name} (副本)`,
+      lineIds: copiedLines.map(l => l.id),
     };
     
+    // 6. 更新数据
     setData({
       ...data,
       timelines: [...data.timelines, newTimeline],
+      lines: [...data.lines, ...copiedLines],
+      relations: [...(data.relations || []), ...copiedRelations],
     });
     
-    message.success('Timeline 已复制');
+    message.success(`Timeline 已复制（包含 ${copiedLines.length} 个元素和 ${copiedRelations.length} 条依赖关系）`);
   }, [data, setData]);
 
   /**
