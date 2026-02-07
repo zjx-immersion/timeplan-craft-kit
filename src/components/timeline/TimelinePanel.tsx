@@ -1937,21 +1937,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
               })
             )}
 
-            {/* 水平网格线 - ✅ 修复：确保与Timeline行底部对齐 */}
-            {data.timelines.map((_, index) => (
-              <div
-                key={index}
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  top: (index + 1) * ROW_HEIGHT - 1,  // ✅ 修复：在每行底部，与borderBottom对齐
-                  height: 1,
-                  backgroundColor: token.colorBorderSecondary,
-                  pointerEvents: 'none',  // ✅ 不阻挡交互
-                }}
-              />
-            ))}
+            {/* ✅ 水平分隔线已移除：使用Timeline行的borderBottom代替，避免重复渲染 */}
           </div>
 
           {/* Timeline 行内容 */}
