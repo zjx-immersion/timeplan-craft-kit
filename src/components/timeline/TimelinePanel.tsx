@@ -1702,7 +1702,15 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
             const lines = getLinesByTimelineId(timeline.id);
 
             return (
-              <div key={timeline.id}>
+              <div 
+                key={timeline.id}
+                style={{
+                  height: ROW_HEIGHT,  // ✅ 外层容器也固定高度，确保完全对齐
+                  boxSizing: 'border-box',
+                  margin: 0,
+                  padding: 0,
+                }}
+              >
                 <div
                   style={{
                     height: ROW_HEIGHT,  // ✅ 固定高度120px
@@ -1713,6 +1721,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                     cursor: 'pointer',
                     backgroundColor: token.colorBgContainer,
                     boxSizing: 'border-box',  // ✅ 确保border不影响高度
+                    margin: 0,  // ✅ 确保没有额外margin
                   }}
                   onClick={() => toggleTimelineCollapse(timeline.id)}
                 >
@@ -2009,15 +2018,23 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                 <div
                   key={timeline.id}
                   style={{
-                    position: 'relative',
-                    height: ROW_HEIGHT,  // ✅ 固定高度120px，与左侧一致
-                    borderBottom: `1px solid ${token.colorBorderSecondary}`,
-                    backgroundColor: '#fff',
-                    boxSizing: 'border-box',  // ✅ 确保border包含在高度内，与左侧一致
-                    margin: 0,  // ✅ 确保没有额外margin
-                    padding: 0,  // ✅ 确保没有额外padding（内容使用绝对定位）
+                    height: ROW_HEIGHT,  // ✅ 外层容器也固定高度，与左侧结构完全一致
+                    boxSizing: 'border-box',
+                    margin: 0,
+                    padding: 0,
                   }}
                 >
+                  <div
+                    style={{
+                      position: 'relative',
+                      height: ROW_HEIGHT,  // ✅ 固定高度120px，与左侧一致
+                      borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                      backgroundColor: '#fff',
+                      boxSizing: 'border-box',  // ✅ 确保border包含在高度内，与左侧一致
+                      margin: 0,  // ✅ 确保没有额外margin
+                      padding: 0,  // ✅ 确保没有额外padding（内容使用绝对定位）
+                    }}
+                  >
                   {/* 渲染该 Timeline 的所有 Lines */}
                   {lines.map((line) => {
                     const isDraggingThis = draggingNodeId === line.id;
@@ -2095,6 +2112,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                       </NodeContextMenu>
                     );
                   })}
+                  </div>
                 </div>
               );
             })}
