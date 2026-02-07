@@ -10,8 +10,7 @@
 import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Result } from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
-import { TimelinePanelEnhanced } from '@/components/timeline';
+import { UnifiedTimelinePanelV2 } from '@/components/timeline/UnifiedTimelinePanelV2';
 import { useTimePlanStoreWithHistory } from '@/stores/timePlanStoreWithHistory';
 
 /**
@@ -61,25 +60,7 @@ const EnhancedTimePlanView: React.FC = () => {
   }
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* 顶部导航 */}
-      <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0', background: '#fff' }}>
-        <Button
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate('/plans')}
-        >
-          返回列表
-        </Button>
-        <span style={{ marginLeft: 16, fontSize: 16, fontWeight: 500 }}>
-          {plan.title}
-        </span>
-      </div>
-
-      {/* 增强版时间线面板 */}
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        <TimelinePanelEnhanced planId={planId} />
-      </div>
-    </div>
+    <UnifiedTimelinePanelV2 planId={planId} />
   );
 };
 

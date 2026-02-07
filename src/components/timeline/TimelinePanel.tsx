@@ -20,7 +20,7 @@
  */
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Button, Space, Tooltip, Segmented, theme, message, Input, Dropdown, type MenuProps } from 'antd';
+import { Button, Space, Tooltip, Segmented, theme, message, Input, Dropdown, Modal, type MenuProps } from 'antd';
 import {
   EditOutlined,
   PlusOutlined,
@@ -49,7 +49,7 @@ import {
   SearchOutlined,
   FullscreenOutlined,
 } from '@ant-design/icons';
-import { TimePlan, Timeline, Line } from '@/types/timeplanSchema';
+import { TimePlan, Timeline, Line, Relation } from '@/types/timeplanSchema';
 import { TimeScale } from '@/utils/dateUtils';
 import {
   getDateHeaders,
@@ -138,6 +138,11 @@ interface TimelinePanelProps {
   readonly?: boolean;
 
   /**
+   * 是否编辑模式（外部控制）
+   */
+  isEditMode?: boolean;
+
+  /**
    * 视图切换回调
    */
   onViewChange?: (view: string) => void;
@@ -151,6 +156,11 @@ interface TimelinePanelProps {
    * 时间刻度切换回调
    */
   onScaleChange?: (scale: TimeScale) => void;
+
+  /**
+   * 滚动到今天的回调函数引用
+   */
+  scrollToTodayRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 /**
@@ -183,9 +193,11 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   zoom: externalZoom,
   showCriticalPath: externalShowCriticalPath,
   readonly: externalReadonly,
+  isEditMode: externalIsEditMode,
   onViewChange,
   onEditModeChange,
   onScaleChange,
+  scrollToTodayRef,
 }) => {
   const { token } = theme.useToken();
 
@@ -410,6 +422,13 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
       behavior: 'smooth',
     });
   }, [normalizedViewStartDate, scale]);
+
+  // 将scrollToToday暴露给外部
+  useEffect(() => {
+    if (scrollToTodayRef) {
+      scrollToTodayRef.current = scrollToToday;
+    }
+  }, [scrollToToday, scrollToTodayRef]);
 
   /**
    * 缩放 - 放大（增加精度）
