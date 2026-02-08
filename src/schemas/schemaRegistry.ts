@@ -10,7 +10,7 @@
  */
 
 import { LineSchema } from '@/types/timeplanSchema';
-import { BarSchema, MilestoneSchema, GatewaySchema } from './defaultSchemas';
+import { LinePlanSchema, MilestoneSchema, GatewaySchema } from './defaultSchemas';
 
 /**
  * Schema 注册表类
@@ -88,7 +88,7 @@ export const schemaRegistry = new SchemaRegistry();
 export function initializeDefaultSchemas(): void {
   console.log('[SchemaRegistry] 初始化默认 Schema...');
   
-  schemaRegistry.register(BarSchema);
+  schemaRegistry.register(LinePlanSchema);
   schemaRegistry.register(MilestoneSchema);
   schemaRegistry.register(GatewaySchema);
   

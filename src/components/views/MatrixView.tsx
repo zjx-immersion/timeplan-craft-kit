@@ -100,7 +100,8 @@ export const MatrixView: React.FC<MatrixViewProps> = ({
   // ✅ 参考原项目：获取节点类型图标和颜色（基于schemaId）
   const getTypeIcon = (schemaId: string) => {
     switch (schemaId) {
-      case 'bar-schema': 
+      case 'lineplan-schema':
+      case 'bar-schema': // 兼容旧版
         return <MinusOutlined style={{ fontSize: 12 }} />;
       case 'milestone-schema': 
         return <FlagOutlined style={{ fontSize: 12 }} />;
@@ -113,7 +114,9 @@ export const MatrixView: React.FC<MatrixViewProps> = ({
 
   const getTypeColor = (schemaId: string) => {
     switch (schemaId) {
-      case 'bar-schema': return 'blue';
+      case 'lineplan-schema':
+      case 'bar-schema': // 兼容旧版
+        return 'blue';
       case 'milestone-schema': return 'green';
       case 'gateway-schema': return 'orange';
       default: return 'default';
@@ -122,7 +125,9 @@ export const MatrixView: React.FC<MatrixViewProps> = ({
 
   const getTypeName = (schemaId: string) => {
     switch (schemaId) {
-      case 'bar-schema': return '任务';
+      case 'lineplan-schema':
+      case 'bar-schema': // 兼容旧版
+        return '计划单元';
       case 'milestone-schema': return '里程碑';
       case 'gateway-schema': return '关口';
       default: return '其他';

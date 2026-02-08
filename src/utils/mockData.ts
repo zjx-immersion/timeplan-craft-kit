@@ -128,7 +128,7 @@ export function generateMockTimePlan(includeData: boolean = true): TimePlan {
       title: '统一的软件管理方案和dpam工具POC',
       startDate: addDays(baseDate, 0),
       endDate: addDays(baseDate, 60),
-      schemaId: 'bar-schema',
+      schemaId: 'lineplan-schema',
       attributes: {
         progress: 85,
         status: 'in-progress',
@@ -158,7 +158,7 @@ export function generateMockTimePlan(includeData: boolean = true): TimePlan {
       title: 'NVOS/Zone支持NixPkg',
       startDate: addDays(baseDate, 100),
       endDate: addDays(baseDate, 150),
-      schemaId: 'bar-schema',
+      schemaId: 'lineplan-schema',
       attributes: {
         progress: 30,
         status: 'in-progress',
@@ -191,7 +191,7 @@ export function generateMockTimePlan(includeData: boolean = true): TimePlan {
       title: 'V0.1高昂接口协议',
       startDate: addDays(baseDate, -20),
       endDate: addDays(baseDate, 30),
-      schemaId: 'bar-schema',
+      schemaId: 'lineplan-schema',
       attributes: {
         progress: 100,
         status: 'completed',
@@ -206,7 +206,7 @@ export function generateMockTimePlan(includeData: boolean = true): TimePlan {
       title: 'ZoneVDF simulator协作调试',
       startDate: addDays(baseDate, 60),
       endDate: addDays(baseDate, 110),
-      schemaId: 'bar-schema',
+      schemaId: 'lineplan-schema',
       attributes: {
         progress: 60,
         status: 'in-progress',
@@ -238,7 +238,7 @@ export function generateMockTimePlan(includeData: boolean = true): TimePlan {
       title: 'NTsapi技术标准',
       startDate: addDays(baseDate, 80),
       endDate: addDays(baseDate, 140),
-      schemaId: 'bar-schema',
+      schemaId: 'lineplan-schema',
       attributes: {
         progress: 45,
         status: 'in-progress',
@@ -253,7 +253,7 @@ export function generateMockTimePlan(includeData: boolean = true): TimePlan {
       title: '对接认证管理平台',
       startDate: addDays(baseDate, 160),
       endDate: addDays(baseDate, 220),
-      schemaId: 'bar-schema',
+      schemaId: 'lineplan-schema',
       attributes: {
         progress: 0,
         status: 'not-started',
@@ -285,7 +285,7 @@ export function generateMockTimePlan(includeData: boolean = true): TimePlan {
       title: 'V0.2力变型POC',
       startDate: addDays(baseDate, -40),
       endDate: addDays(baseDate, 0),
-      schemaId: 'bar-schema',
+      schemaId: 'lineplan-schema',
       attributes: {
         progress: 100,
         status: 'completed',
@@ -300,7 +300,7 @@ export function generateMockTimePlan(includeData: boolean = true): TimePlan {
       title: 'V0.2流水线包服务',
       startDate: addDays(baseDate, 20),
       endDate: addDays(baseDate, 80),
-      schemaId: 'bar-schema',
+      schemaId: 'lineplan-schema',
       attributes: {
         progress: 70,
         status: 'in-progress',
@@ -328,7 +328,7 @@ export function generateMockTimePlan(includeData: boolean = true): TimePlan {
       title: 'V1.0发布平台API',
       startDate: addDays(baseDate, 140),
       endDate: addDays(baseDate, 210),
-      schemaId: 'bar-schema',
+      schemaId: 'lineplan-schema',
       attributes: {
         progress: 20,
         status: 'not-started',
@@ -347,7 +347,7 @@ export function generateMockTimePlan(includeData: boolean = true): TimePlan {
       title: '平台自测试用',
       startDate: addDays(baseDate, 40),
       endDate: addDays(baseDate, 90),
-      schemaId: 'bar-schema',
+      schemaId: 'lineplan-schema',
       attributes: {
         progress: 55,
         status: 'in-progress',
@@ -375,7 +375,7 @@ export function generateMockTimePlan(includeData: boolean = true): TimePlan {
       title: 'CI/Zone全车测试',
       startDate: addDays(baseDate, 160),
       endDate: addDays(baseDate, 240),
-      schemaId: 'bar-schema',
+      schemaId: 'lineplan-schema',
       attributes: {
         progress: 0,
         status: 'not-started',
@@ -394,7 +394,7 @@ export function generateMockTimePlan(includeData: boolean = true): TimePlan {
       title: 'MCU(Cortex-MT) PoC',
       startDate: addDays(baseDate, 60),
       endDate: addDays(baseDate, 120),
-      schemaId: 'bar-schema',
+      schemaId: 'lineplan-schema',
       attributes: {
         progress: 40,
         status: 'in-progress',
@@ -422,7 +422,7 @@ export function generateMockTimePlan(includeData: boolean = true): TimePlan {
       title: 'MPU(A55) PoC',
       startDate: addDays(baseDate, 220),
       endDate: addDays(baseDate, 280),
-      schemaId: 'bar-schema',
+      schemaId: 'lineplan-schema',
       attributes: {
         progress: 0,
         status: 'not-started',

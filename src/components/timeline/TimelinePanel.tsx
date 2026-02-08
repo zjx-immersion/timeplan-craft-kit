@@ -888,26 +888,26 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   /**
    * 添加节点到Timeline
    */
-  const handleAddNodeToTimeline = useCallback((timelineId: string, type: 'bar' | 'milestone' | 'gateway') => {
+  const handleAddNodeToTimeline = useCallback((timelineId: string, type: 'lineplan' | 'milestone' | 'gateway') => {
     // 获取当前滚动位置，在该位置创建节点
     const scrollLeft = scrollContainerRef.current?.scrollLeft || 0;
     const position = scrollLeft + 200; // 在可视区域左侧200px处创建
     
     // 根据类型创建对应的schemaId
-    const schemaId = type === 'bar' ? 'bar-schema' :
+    const schemaId = type === 'lineplan' ? 'lineplan-schema' :
                     type === 'milestone' ? 'milestone-schema' :
-                    type === 'gateway' ? 'gateway-schema' : 'bar-schema';
+                    type === 'gateway' ? 'gateway-schema' : 'lineplan-schema';
     
     // 创建新Line
     const today = new Date();
-    const lineName = type === 'bar' ? '新计划单元' : type === 'milestone' ? '新里程碑' : '新网关';
+    const lineName = type === 'lineplan' ? '新计划单元' : type === 'milestone' ? '新里程碑' : '新网关';
     const newLine: Line = {
       id: `line-${Date.now()}`,
       timelineId,
       schemaId,
       label: lineName,
       startDate: today,
-      endDate: type === 'bar' ? addDays(today, 7) : undefined,
+      endDate: type === 'lineplan' ? addDays(today, 7) : undefined,
       attributes: {
         name: lineName,
       },
@@ -945,7 +945,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   /**
    * 添加节点（到当前选中的Timeline或第一个Timeline）
    */
-  const handleAddNode = useCallback((type: 'bar' | 'milestone' | 'gateway') => {
+  const handleAddNode = useCallback((type: 'lineplan' | 'milestone' | 'gateway') => {
     // 获取第一个Timeline作为目标
     const targetTimeline = data.timelines[0];
     
@@ -1232,8 +1232,8 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
         if (newSchemaId === 'milestone-schema' || newSchemaId === 'gateway-schema') {
           delete newLine.endDate;
         }
-        // 转换为 bar 时，如果没有 endDate，添加默认的 7天
-        if (newSchemaId === 'bar-schema' && !newLine.endDate) {
+        // 转换为 lineplan 时，如果没有 endDate，添加默认的 7天
+        if ((newSchemaId === 'lineplan-schema' || newSchemaId === 'bar-schema') && !newLine.endDate) {
           newLine.endDate = addDays(newLine.startDate, 7);
         }
         return newLine;
@@ -1607,9 +1607,9 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                   items: [
                     {
                       key: 'add-bar',
-                      label: '添加计划单元 (Bar)',
+                      label: '添加计划单元',
                       icon: <MinusOutlined />,
-                      onClick: () => handleAddNode('bar'),
+                      onClick: () => handleAddNode('lineplan'),
                       disabled: !isEditMode,
                     },
                     {

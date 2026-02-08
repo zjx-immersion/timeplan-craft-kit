@@ -12,16 +12,16 @@
 import { LineSchema } from '@/types/timeplanSchema';
 
 /**
- * Bar Schema - 计划单元（横条）
+ * LinePlan Schema - 计划单元
  * 
- * 用于表示有起止时间的计划单元
+ * 用于表示有起止时间的计划单元（原bar-schema）
  */
-export const BarSchema: LineSchema = {
-  id: 'bar-schema',
+export const LinePlanSchema: LineSchema = {
+  id: 'lineplan-schema',
   name: '计划单元',
-  description: '有起止时间的计划单元（横条）',
-  version: '1.0.0',
-  visualType: 'bar',
+  description: '有起止时间的计划单元',
+  version: '2.0.0',
+  visualType: 'lineplan',
   
   attributes: [
     {
@@ -560,10 +560,15 @@ export const GatewaySchema: LineSchema = {
  * 所有默认 Schema
  */
 export const DEFAULT_SCHEMAS: LineSchema[] = [
-  BarSchema,
+  LinePlanSchema,
   MilestoneSchema,
   GatewaySchema,
 ];
+
+/**
+ * @deprecated 使用 LinePlanSchema 替代
+ */
+export const BarSchema = LinePlanSchema;
 
 /**
  * 根据 Visual Type 获取默认 Schema
