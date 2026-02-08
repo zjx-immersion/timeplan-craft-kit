@@ -1159,8 +1159,15 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
    * 删除节点（✅ V11修复：真正删除，支持撤销）
    */
   const handleDeleteNode = useCallback((nodeId: string) => {
+    console.log('[TimelinePanel] 🗑️ handleDeleteNode called:', { nodeId, isEditMode, hasNode: !!data.lines.find(l => l.id === nodeId) });
+    
     const node = data.lines.find(l => l.id === nodeId);
-    if (!node) return;
+    if (!node) {
+      console.warn('[TimelinePanel] ⚠️ Node not found:', nodeId);
+      return;
+    }
+
+    console.log('[TimelinePanel] 📋 Node to delete:', { id: node.id, label: node.label, type: node.type });
 
     Modal.confirm({
       title: '删除节点',
@@ -1169,8 +1176,11 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
       okType: 'danger',
       cancelText: '取消',
       onOk: () => {
+        console.log('[TimelinePanel] ✅ User confirmed deletion');
+        
         // ✅ V11修复：使用deleteLineFromPlan工具函数，确保完整删除
         // 包括：从lines中删除、从timeline的lineIds中删除、删除相关relations
+        const beforeCount = data.lines.length;
         const updatedPlan: TimePlan = {
           ...data,
           lines: data.lines.filter(l => l.id !== nodeId),
@@ -1182,6 +1192,14 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
             r => r.fromLineId !== nodeId && r.toLineId !== nodeId
           ),
         };
+        const afterCount = updatedPlan.lines.length;
+        
+        console.log('[TimelinePanel] 📊 Delete stats:', {
+          before: beforeCount,
+          after: afterCount,
+          deleted: beforeCount - afterCount,
+          remainingLines: updatedPlan.lines.map(l => l.id),
+        });
         
         // ✅ 通过setData更新，自动记录到历史（支持撤销）
         setData(updatedPlan);
@@ -1190,6 +1208,9 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
         setSelectedLineId(null);
         
         message.success('节点已删除（可通过撤销恢复）');
+      },
+      onCancel: () => {
+        console.log('[TimelinePanel] ❌ User cancelled deletion');
       },
     });
   }, [data, setData]);
