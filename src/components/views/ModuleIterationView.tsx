@@ -107,23 +107,52 @@ export const ModuleIterationView: React.FC<ModuleIterationViewProps> = ({
     return { ids: depIds, names: depNames };
   };
 
-  // 按产品线和模块分组（只显示有module属性的lines）
+  // 按产品线和模块分组（支持所有lines，自动推断分组）
   const groupedData = useMemo<ProductLineGroup[]>(() => {
-    if (!data.lines || data.lines.length === 0) return [];
+    console.log('[ModuleIterationView] 开始分组数据:', {
+      totalLines: data.lines?.length || 0,
+      totalTimelines: data.timelines?.length || 0,
+      planLabel: data.label,
+    });
 
-    // 过滤：只保留有module属性的lines（MR拆解数据）
-    const mrLines = data.lines.filter(line => 
-      line.attributes?.module && line.attributes?.productLine
-    );
-
-    if (mrLines.length === 0) return [];
+    if (!data.lines || data.lines.length === 0) {
+      console.warn('[ModuleIterationView] 没有lines数据');
+      return [];
+    }
 
     // 先按产品线分组
     const productLineMap = new Map<string, Map<string, MRItem[]>>();
 
-    mrLines.forEach(line => {
-      const productLine = line.attributes?.productLine!;
-      const module = line.attributes?.module!;
+    data.lines.forEach((line, index) => {
+      // 自动推断产品线和模块
+      // 优先使用 attributes 中的值，否则使用 timeline 的 category
+      let productLine = line.attributes?.productLine;
+      let module = line.attributes?.module;
+
+      // 如果没有 productLine，使用 timeline 的 category 或 id
+      if (!productLine) {
+        const timeline = data.timelines?.find(t => t.id === line.timelineId);
+        productLine = timeline?.attributes?.category || timeline?.label || '未分类产品线';
+      }
+
+      // 如果没有 module，使用 timeline 的 label 或从 line label 中提取
+      if (!module) {
+        const timeline = data.timelines?.find(t => t.id === line.timelineId);
+        module = timeline?.label || '未分类模块';
+      }
+
+      // 调试日志：前5个line的分组信息
+      if (index < 5) {
+        console.log(`[ModuleIterationView] Line[${index}]:`, {
+          id: line.id,
+          label: line.label,
+          timelineId: line.timelineId,
+          productLine,
+          module,
+          hasModuleAttr: !!line.attributes?.module,
+          hasProductLineAttr: !!line.attributes?.productLine,
+        });
+      }
 
       if (!productLineMap.has(productLine)) {
         productLineMap.set(productLine, new Map());
@@ -147,6 +176,11 @@ export const ModuleIterationView: React.FC<ModuleIterationViewProps> = ({
 
     // 转换为数组格式
     const result: ProductLineGroup[] = [];
+    console.log('[ModuleIterationView] 产品线分组完成:', {
+      productLineCount: productLineMap.size,
+      productLines: Array.from(productLineMap.keys()),
+    });
+
     productLineMap.forEach((moduleMap, productLine) => {
       const modules: ModuleGroup[] = [];
       moduleMap.forEach((mrs, moduleName) => {
@@ -295,14 +329,7 @@ export const ModuleIterationView: React.FC<ModuleIterationViewProps> = ({
         }}
       >
         <Empty
-          description={
-            <div>
-              <p>暂无模块规划数据</p>
-              <p style={{ fontSize: 12, color: '#999' }}>
-                提示：此视图仅显示包含 module 和 productLine 属性的任务
-              </p>
-            </div>
-          }
+          description="暂无计划数据"
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         />
       </div>
