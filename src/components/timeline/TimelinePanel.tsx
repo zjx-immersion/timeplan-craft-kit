@@ -20,7 +20,7 @@
  */
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Button, Space, Tooltip, Segmented, theme, message, Input, Dropdown, Modal, type MenuProps } from 'antd';
+import { Button, Space, Tooltip, Segmented, theme, message, Input, Dropdown, Modal, App, type MenuProps } from 'antd';
 import {
   EditOutlined,
   PlusOutlined,
@@ -216,6 +216,11 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   scrollToTodayRef,
 }) => {
   const { token } = theme.useToken();
+
+  /**
+   * ✅ V11.1修复：使用App.useApp()获取modal实例（避免context问题）
+   */
+  const { modal } = App.useApp();
 
   // ==================== 标题编辑状态 ====================
 
@@ -861,7 +866,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
    * 删除连线
    */
   const handleRelationDelete = useCallback((relationId: string) => {
-    Modal.confirm({
+    modal.confirm({
       title: '删除连线',
       content: '确定要删除这条依赖连线吗？',
       okText: '删除',
@@ -878,7 +883,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
         console.log('[TimelinePanel] 🗑️ 删除连线:', relationId);
       },
     });
-  }, [data, setData]);
+  }, [data, setData, modal]);
 
   /**
    * 添加节点到Timeline
@@ -999,7 +1004,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
    * 删除基线
    */
   const handleDeleteBaseline = useCallback((baselineId: string) => {
-    Modal.confirm({
+    modal.confirm({
       title: '删除基线',
       content: '确定要删除这条基线吗？',
       okText: '删除',
@@ -1014,7 +1019,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
         message.success('基线已删除');
       },
     });
-  }, [data, setData]);
+  }, [data, setData, modal]);
 
   /**
    * 保存基线
@@ -1080,7 +1085,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
    * 删除基线范围
    */
   const handleDeleteBaselineRange = useCallback((rangeId: string) => {
-    Modal.confirm({
+    modal.confirm({
       title: '删除基线范围',
       content: '确定要删除这个时间区间吗？',
       okText: '删除',
@@ -1095,7 +1100,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
         message.success('时间区间已删除');
       },
     });
-  }, [data, setData]);
+  }, [data, setData, modal]);
 
   /**
    * 保存/更新基线范围
@@ -1162,7 +1167,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     const node = data.lines.find(l => l.id === nodeId);
     if (!node) return;
 
-    Modal.confirm({
+    modal.confirm({
       title: '删除节点',
       content: `确定要删除节点"${node.label}"吗？此操作可以通过撤销恢复。`,
       okText: '删除',
@@ -1192,7 +1197,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
         message.success('节点已删除（可通过撤销恢复）');
       },
     });
-  }, [data, setData]);
+  }, [data, setData, modal]);
 
   /**
    * 复制节点

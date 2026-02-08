@@ -6,6 +6,41 @@
 
 ---
 
+## 🎉 最新更新 - V11.1 修复完成 (2026-02-08)
+
+回退到 v0.1.1-rc 版本后，进行了以下关键修复：
+
+### ✅ V11.1.1 - 紧急修复 (App导入缺失)
+**问题**: 使用 `App.useApp()` 但未导入 App，导致甘特图空白
+- 修复 `TimelinePanel.tsx` 第23行：添加 `App` 到 antd 导入列表
+- 错误: `ReferenceError: App is not defined`
+- 状态: ✅ 已修复
+
+### ✅ 删除功能修复
+- 修复 `Modal.confirm` → `modal.confirm`（使用 `App.useApp()`）
+- 修复删除节点 (`handleDeleteNode`)
+- 修复删除连线 (`handleRelationDelete`)
+- 修复删除基线 (`handleDeleteBaseline`)
+- 修复删除基线范围 (`handleDeleteBaselineRange`)
+- **所有删除功能现在在 React 19 下正常工作** ✅
+
+### ✅ 矩阵视图重构
+- 参考原项目实现，从 "产品线 × Timeline" 改为 **"Timeline × 月份"**
+- 单元格显示节点列表（bar、milestone、gateway）
+- 支持节点类型图标和颜色标识
+- 支持悬停提示和点击事件
+- 日期范围自动计算（12个月）
+- 响应式布局，支持横向和纵向滚动
+
+### 问题状态
+- ✅ **甘特图空白（App未导入）** → 已修复 (V11.1.1)
+- ✅ **删除line/gateway/milestone失败** → 已修复
+- ✅ **矩阵视图无数据** → 已重构并修复
+- ✅ Header和工具栏重复 → 回退后已解决
+- ✅ 数据未渲染 → 回退后已解决
+
+---
+
 ## 🆕 v0.1.0 版本更新 (2026-02-08)
 
 ### 核心修复（10个版本迭代）
