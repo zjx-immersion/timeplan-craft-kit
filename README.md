@@ -1,14 +1,55 @@
 # Timeline Craft Kit - Timeplan Implementation
 
-> **版本**: v0.1.0  
-> **状态**: ✅ **核心功能完成，持续优化中**  
+> **版本**: v0.1.3  
+> **状态**: ✅ **核心功能完成，生产就绪**  
 > **技术栈**: React 19 + TypeScript + Ant Design + Zustand + date-fns
 
 ---
 
-## 🆕 v0.1.0 版本更新 (2026-02-08)
+## 🆕 v0.1.3 版本更新 (2026-02-08)
 
-### 核心修复（10个版本迭代）
+### 🔥 紧急修复（V11系列 - React 19兼容性）
+
+#### ✅ V11: 核心功能完善
+- **HEADER_HEIGHT常量**: 定义头部高度常量（72px）
+- **标签透明度**: 今日/基线标签背景色增加透明度（0.92）
+- **删除功能增强**: 
+  - 真正的数据删除（清理lines/timelines/relations）
+  - 支持撤销/重做
+  - 调试日志完善
+- **保存功能**: 
+  - 保存按钮实现
+  - 键盘快捷键（Ctrl+S保存、Ctrl+Z撤销、Ctrl+Y重做）
+  - 变更检测和提示
+
+#### ✅ V11.1: Modal.confirm修复 ⭐
+- **问题**: React 19下Modal.confirm静态方法无法访问context
+- **现象**: 删除对话框无响应，点击按钮无效
+- **修复**: 
+  - 使用`App.useApp()`获取modal实例
+  - 用`<App>`包裹TimelinePanel组件
+  - 修复4个确认对话框（删除节点/连线/基线/基线范围）
+- **技术**: 解决"Static function can not consume context"警告
+
+#### ✅ V11.2: initialData.title修复
+- **问题**: 页面空白，`Cannot read properties of undefined (reading 'title')`
+- **原因**: localStorage数据缺少title字段
+- **修复**: 
+  - 使用可选链：`initialData?.title`
+  - 提供默认值：`initialData?.title || '未命名计划'`
+  - 修复6处unsafe属性访问
+- **技术**: 可选链（`?.`）+ 空值合并（`||`）
+
+#### ✅ V11.3: data.lines修复
+- **问题**: 页面空白，`Cannot read properties of undefined (reading 'lines')`
+- **原因**: data对象缺少lines/timelines/relations等数组字段
+- **修复**: 
+  - 创建`safeData`包装器（useMemo）
+  - 为所有数组字段提供默认空数组
+  - 修复11处依赖数组中的unsafe访问
+- **技术**: 安全数据包装器 + 防御性编程
+
+### 核心修复（V1-V10：功能完善）
 
 #### ✅ V1-V4: 单元测试覆盖
 - 实现日期计算算法单元测试 (`dateUtils.test.ts`)
@@ -50,11 +91,19 @@
 
 ### 文档输出
 
+#### V1-V10修复文档
 - ✅ `docs/FIXES-SUMMARY.md` - 完整修复历史
 - ✅ `docs/V7-ALIGNMENT-FIX.md` - 关键对齐修复详解
 - ✅ `docs/V8-BAR-BOUNDARY-FIX.md` - Bar边界修复
 - ✅ `docs/V9-DRAG-DATE-DISPLAY.md` - 拖拽显示增强
 - ✅ `docs/V10-MAGNETIC-SNAP-FIX.md` - 磁吸效果优化
+
+#### V11系列修复文档（React 19兼容性）
+- ✅ `docs/V11-TEST-FEEDBACK-FIXES.md` - V11核心功能修复
+- ✅ `docs/V11.1-MODAL-FIX.md` - Modal.confirm React 19兼容性修复
+- ✅ `docs/V11.2-UNDEFINED-TITLE-FIX.md` - initialData.title安全访问修复
+- ✅ `docs/V11.3-DATA-SAFETY-FIX.md` - data.lines安全包装器修复
+- ✅ `docs/HOW-TO-REFRESH.md` - 浏览器缓存问题排查指南
 
 ---
 
