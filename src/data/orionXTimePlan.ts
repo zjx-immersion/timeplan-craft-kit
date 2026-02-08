@@ -1257,13 +1257,80 @@ const relations: Relation[] = [
     id: 'rel-p-to-pl-001',
     type: 'dependency',
     fromLineId: 'line-p-001-gate', // 视觉算法评审
-    toLineId: 'line-pl-001',        // 行为决策算法
+    toLineId: 'line-pl-001-mr1',   // 决策状态机设计
     properties: {
       dependencyType: 'finish-to-start',
-      lag: -60, // 可以并行
+      lag: -25, // 可以提前开始
     },
     attributes: {
       critical: false,
+    },
+  },
+
+  // 规划决策内部 MR 依赖
+  {
+    id: 'rel-pl-mr-001',
+    type: 'dependency',
+    fromLineId: 'line-pl-001-mr1', // 决策状态机
+    toLineId: 'line-pl-001-mr2',   // 强化学习
+    properties: {
+      dependencyType: 'finish-to-start',
+      lag: 2,
+    },
+    attributes: {
+      critical: true,
+    },
+  },
+  {
+    id: 'rel-pl-mr-002',
+    type: 'dependency',
+    fromLineId: 'line-pl-001-mr2', // 强化学习
+    toLineId: 'line-pl-001-mr3',   // 决策评估
+    properties: {
+      dependencyType: 'finish-to-start',
+      lag: 1,
+    },
+    attributes: {
+      critical: true,
+    },
+  },
+  {
+    id: 'rel-pl-mr-003',
+    type: 'dependency',
+    fromLineId: 'line-pl-001-mr3', // 决策评估
+    toLineId: 'line-pl-001-gate',  // 决策算法评审
+    properties: {
+      dependencyType: 'finish-to-start',
+      lag: 2,
+    },
+    attributes: {
+      critical: true,
+    },
+  },
+  {
+    id: 'rel-pl-mr-004',
+    type: 'dependency',
+    fromLineId: 'line-pl-002-mr1', // 全局路径规划
+    toLineId: 'line-pl-002-mr2',   // 局部路径规划
+    properties: {
+      dependencyType: 'finish-to-start',
+      lag: 1,
+    },
+    attributes: {
+      critical: true,
+    },
+  },
+  {
+    id: 'rel-pl-mr-005',
+    type: 'dependency',
+    fromLineId: 'line-pl-002-mr2', // 局部路径规划
+    toLineId: 'line-pl-002-milestone', // 规划算法完成
+    properties: {
+      dependencyType: 'finish-to-start',
+      lag: 2,
+    },
+    attributes: {
+      critical: true,
     },
   },
 
