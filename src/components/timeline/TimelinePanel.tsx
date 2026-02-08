@@ -220,7 +220,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   // ==================== 标题编辑状态 ====================
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [editedTitle, setEditedTitle] = useState(initialData.title);
+  const [editedTitle, setEditedTitle] = useState(initialData?.title || '未命名计划');
 
   // ==================== 关键路径状态 ====================
   
@@ -228,17 +228,17 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   const showCriticalPath = externalShowCriticalPath !== undefined ? externalShowCriticalPath : internalShowCriticalPath;
 
   const handleSaveTitle = useCallback(() => {
-    if (editedTitle.trim() && editedTitle !== initialData.title) {
+    if (editedTitle.trim() && editedTitle !== (initialData?.title || '')) {
       onTitleChange?.(editedTitle.trim());
       message.success('标题已更新');
     }
     setIsEditingTitle(false);
-  }, [editedTitle, initialData.title, onTitleChange]);
+  }, [editedTitle, initialData?.title, onTitleChange]);
 
   const handleCancelEditTitle = useCallback(() => {
-    setEditedTitle(initialData.title);
+    setEditedTitle(initialData?.title || '未命名计划');
     setIsEditingTitle(false);
-  }, [initialData.title]);
+  }, [initialData?.title]);
 
   // ==================== 撤销/重做状态管理 ====================
 
@@ -281,7 +281,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   // ==================== 状态管理 ====================
 
   // 视图相关状态
-  const [internalScale, setInternalScale] = useState<TimeScale>(initialData.viewConfig?.scale || 'month');
+  const [internalScale, setInternalScale] = useState<TimeScale>(initialData?.viewConfig?.scale || 'month');
   const scale = externalScale || internalScale;
   const handleScaleChange = useCallback((newScale: TimeScale) => {
     setInternalScale(newScale);
@@ -295,7 +295,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   }, [onViewChange]);
   const [viewStartDate, setViewStartDate] = useState(() => {
     // 优先使用数据自带的 viewConfig
-    if (initialData.viewConfig?.startDate) {
+    if (initialData?.viewConfig?.startDate) {
       return initialData.viewConfig.startDate instanceof Date
         ? initialData.viewConfig.startDate
         : new Date(initialData.viewConfig.startDate);
@@ -305,7 +305,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   });
   const [viewEndDate, setViewEndDate] = useState(() => {
     // 优先使用数据自带的 viewConfig
-    if (initialData.viewConfig?.endDate) {
+    if (initialData?.viewConfig?.endDate) {
       return initialData.viewConfig.endDate instanceof Date
         ? initialData.viewConfig.endDate
         : new Date(initialData.viewConfig.endDate);
