@@ -357,6 +357,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '架构师',
       description: '详细架构方案设计',
+      module: 'E1架构',
+      productLine: '电子架构',
     },
   },
   {
@@ -371,6 +373,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '架构团队',
       description: 'E1架构评审门禁',
+      module: 'E1架构',
+      productLine: '电子架构',
     },
   },
   // E2 架构开发
@@ -388,6 +392,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '架构团队',
       description: 'E2架构开发',
+      module: 'E2架构',
+      productLine: '电子架构',
     },
   },
   {
@@ -402,6 +408,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '架构团队',
       description: 'E2架构开发完成',
+      module: 'E2架构',
+      productLine: '电子架构',
     },
   },
   // E3 信号架构改造
@@ -419,6 +427,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '架构团队',
       description: '信号架构改造',
+      module: 'E3架构',
+      productLine: '电子架构',
     },
   },
   {
@@ -433,6 +443,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '架构团队',
       description: 'E3评审门禁',
+      module: 'E3架构',
+      productLine: '电子架构',
     },
   },
   // E4 满足VP造车
@@ -450,6 +462,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '架构团队',
       description: 'E4架构满足VP',
+      module: 'E4架构',
+      productLine: '电子架构',
     },
   },
   {
@@ -464,6 +478,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '架构团队',
       description: '最终数据判定',
+      module: 'E4架构',
+      productLine: '电子架构',
     },
   },
 
@@ -572,6 +588,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '李工',
       description: '多线激光雷达融合',
+      module: '雷达感知',
+      productLine: '感知算法',
     },
   },
   {
@@ -586,6 +604,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '感知团队',
       description: '雷达算法交付',
+      module: '雷达感知',
+      productLine: '感知算法',
     },
   },
   // 感知算法集成测试
@@ -603,6 +623,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '感知团队',
       description: '感知模块集成测试',
+      module: '感知集成',
+      productLine: '感知算法',
     },
   },
   {
@@ -617,6 +639,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '感知团队',
       description: '感知算法验收门禁',
+      module: '感知集成',
+      productLine: '感知算法',
     },
   },
   // FDJ 感知算法终版
@@ -634,6 +658,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '感知团队',
       description: '感知算法最终优化',
+      module: '感知集成',
+      productLine: '感知算法',
     },
   },
   {
@@ -648,6 +674,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '感知团队',
       description: '感知算法正式发布',
+      module: '感知集成',
+      productLine: '感知算法',
     },
   },
 
@@ -789,6 +817,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '规划团队',
       description: '决策规划模块集成',
+      module: '规划集成',
+      productLine: '规划决策',
     },
   },
   {
@@ -803,6 +833,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '规划团队',
       description: 'FDJ门禁',
+      module: '规划集成',
+      productLine: '规划决策',
     },
   },
 
@@ -824,6 +856,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '赵工',
       description: 'MPC横向控制',
+      module: '横向控制',
+      productLine: '控制执行',
     },
   },
   {
@@ -838,6 +872,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '控制团队',
       description: '横向控制门禁',
+      module: '横向控制',
+      productLine: '控制执行',
     },
   },
   // 纵向控制算法
@@ -855,6 +891,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '孙工',
       description: 'PID纵向控制',
+      module: '纵向控制',
+      productLine: '控制执行',
     },
   },
   {
@@ -869,6 +907,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '控制团队',
       description: '控制算法交付',
+      module: '纵向控制',
+      productLine: '控制执行',
     },
   },
   // 控制模块集成测试
@@ -886,6 +926,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '控制团队',
       description: '控制模块集成',
+      module: '控制集成',
+      productLine: '控制执行',
     },
   },
   {
@@ -900,6 +942,44 @@ const lines: Line[] = [
       priority: '高',
       owner: '控制团队',
       description: 'FDJ门禁',
+      module: '控制集成',
+      productLine: '控制执行',
+    },
+  },
+
+  // 规划决策集成测试
+  {
+    id: 'line-pl-003',
+    timelineId: 'tl-planning',
+    label: '规划决策集成测试',
+    startDate: new Date('2026-09-25'),
+    endDate: new Date('2026-10-31'),
+    schemaId: LinePlanSchema.id,
+    attributes: {
+      color: '#8b5cf6',
+      progress: 0,
+      status: '未开始',
+      priority: '高',
+      owner: '规划团队',
+      description: '决策规划模块集成',
+      module: '规划集成',
+      productLine: '规划决策',
+    },
+  },
+  {
+    id: 'line-pl-003-gate',
+    timelineId: 'tl-planning',
+    label: 'FDJ 规划决策完成',
+    startDate: new Date('2026-11-05'),
+    schemaId: GatewaySchema.id,
+    attributes: {
+      color: '#8b5cf6',
+      status: '待决策',
+      priority: '高',
+      owner: '规划团队',
+      description: 'FDJ门禁',
+      module: '规划集成',
+      productLine: '规划决策',
     },
   },
 
@@ -921,6 +1001,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '集成团队',
       description: '感知算法模块集成',
+      module: '感知集成',
+      productLine: '软件集成',
     },
   },
   {
@@ -935,6 +1017,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '集成团队',
       description: '感知集成门禁',
+      module: '感知集成',
+      productLine: '软件集成',
     },
   },
   // 规划决策模块集成
@@ -952,6 +1036,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '集成团队',
       description: '规划决策模块集成',
+      module: '规划集成',
+      productLine: '软件集成',
     },
   },
   {
@@ -966,6 +1052,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '集成团队',
       description: '规划模块集成完成',
+      module: '规划集成',
+      productLine: '软件集成',
     },
   },
   // 控制模块集成
@@ -983,6 +1071,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '集成团队',
       description: '控制执行模块集成',
+      module: '控制集成',
+      productLine: '软件集成',
     },
   },
   {
@@ -997,6 +1087,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '集成团队',
       description: '软件交付基线门禁',
+      module: '控制集成',
+      productLine: '软件集成',
     },
   },
 
@@ -1018,6 +1110,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '测试团队',
       description: 'VP1样车准备和集成',
+      module: 'VP1验证',
+      productLine: '整车测试',
     },
   },
   {
@@ -1032,6 +1126,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '测试团队',
       description: 'VP1样车就绪',
+      module: 'VP1验证',
+      productLine: '整车测试',
     },
   },
   // VP1验证测试
@@ -1049,6 +1145,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '测试团队',
       description: 'VP1功能验证',
+      module: 'VP1验证',
+      productLine: '整车测试',
     },
   },
   {
@@ -1063,6 +1161,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '测试团队',
       description: 'VP1验收门禁',
+      module: 'VP1验证',
+      productLine: '整车测试',
     },
   },
   // VP2样车准备
@@ -1080,6 +1180,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '测试团队',
       description: 'VP2样车准备',
+      module: 'VP2验证',
+      productLine: '整车测试',
     },
   },
   {
@@ -1094,6 +1196,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '测试团队',
       description: 'VP2样车就绪',
+      module: 'VP2验证',
+      productLine: '整车测试',
     },
   },
   // VP2验证测试
@@ -1111,6 +1215,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '测试团队',
       description: 'VP2功能和性能验证',
+      module: 'VP2验证',
+      productLine: '整车测试',
     },
   },
   {
@@ -1125,6 +1231,8 @@ const lines: Line[] = [
       priority: '高',
       owner: '测试团队',
       description: 'VP2验收门禁',
+      module: 'VP2验证',
+      productLine: '整车测试',
     },
   },
 ];

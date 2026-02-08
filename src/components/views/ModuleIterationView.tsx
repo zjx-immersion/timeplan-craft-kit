@@ -107,16 +107,23 @@ export const ModuleIterationView: React.FC<ModuleIterationViewProps> = ({
     return { ids: depIds, names: depNames };
   };
 
-  // 按产品线和模块分组
+  // 按产品线和模块分组（只显示有module属性的lines）
   const groupedData = useMemo<ProductLineGroup[]>(() => {
     if (!data.lines || data.lines.length === 0) return [];
+
+    // 过滤：只保留有module属性的lines（MR拆解数据）
+    const mrLines = data.lines.filter(line => 
+      line.attributes?.module && line.attributes?.productLine
+    );
+
+    if (mrLines.length === 0) return [];
 
     // 先按产品线分组
     const productLineMap = new Map<string, Map<string, MRItem[]>>();
 
-    data.lines.forEach(line => {
-      const productLine = line.attributes?.productLine || '未分类';
-      const module = line.attributes?.module || '未分类模块';
+    mrLines.forEach(line => {
+      const productLine = line.attributes?.productLine!;
+      const module = line.attributes?.module!;
 
       if (!productLineMap.has(productLine)) {
         productLineMap.set(productLine, new Map());
@@ -288,7 +295,14 @@ export const ModuleIterationView: React.FC<ModuleIterationViewProps> = ({
         }}
       >
         <Empty
-          description="暂无模块数据"
+          description={
+            <div>
+              <p>暂无模块规划数据</p>
+              <p style={{ fontSize: 12, color: '#999' }}>
+                提示：此视图仅显示包含 module 和 productLine 属性的任务
+              </p>
+            </div>
+          }
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         />
       </div>
