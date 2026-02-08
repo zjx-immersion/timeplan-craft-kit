@@ -6,7 +6,26 @@
 
 ---
 
-## 🎉 最新更新 - V11.1 修复完成 (2026-02-08)
+## 🎉 最新更新 - V11.2 类型重命名 (2026-02-08)
+
+### ✅ V11.2 - 类型系统重构
+**重命名**: `bar-schema` → `lineplan-schema`
+- 更新Schema定义：BarSchema → LinePlanSchema
+- 更新所有组件中的类型引用
+- 更新测试数据和mock数据（26处）
+- UI更新：标签从"任务"改为"计划单元"
+- 保持向后兼容：支持旧版bar-schema数据
+
+**类型体系**:
+- ✅ lineplan-schema (计划单元) - 新
+- ✅ milestone-schema (里程碑)
+- ✅ gateway-schema (关口)
+- ✅ Baseline (基线)
+- ✅ BaselineRange (时间范围基线)
+
+---
+
+## 🎉 V11.1 修复完成 (2026-02-08)
 
 回退到 v0.1.1-rc 版本后，进行了以下关键修复：
 
