@@ -66,6 +66,7 @@ import {
   format,
   addDays,
   startOfWeek,
+  startOfDay,
 } from 'date-fns';
 // addDays已在上面导入
 import { isHoliday, isNonWorkingDay, getHolidayName } from '@/utils/holidayUtils';
@@ -187,7 +188,7 @@ const SIDEBAR_WIDTH = 200;
 /**
  * 视图类型
  */
-type ViewType = 'gantt' | 'table' | 'matrix' | 'iteration' | 'baseline' | 'version';
+type ViewType = 'gantt' | 'table' | 'matrix' | 'iteration' | 'baseline' | 'version' | 'versionPlan';
 
 /**
  * TimelinePanel 主组件
@@ -294,8 +295,8 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
         ? initialData.viewConfig.startDate
         : new Date(initialData.viewConfig.startDate);
     }
-    // 否则使用默认范围
-    return subMonths(new Date(), 6);
+    // ✅ 固定范围：2024年1月1日
+    return new Date(2024, 0, 1);
   });
   const [viewEndDate, setViewEndDate] = useState(() => {
     // 优先使用数据自带的 viewConfig
@@ -304,22 +305,15 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
         ? initialData.viewConfig.endDate
         : new Date(initialData.viewConfig.endDate);
     }
-    
-    // ✅ 修复：动态计算结束日期，确保覆盖所有节点 + 6个月缓冲
-    if (initialData.lines && initialData.lines.length > 0) {
-      const allEndDates = initialData.lines
-        .map(line => new Date(line.endDate || line.startDate))
-        .filter(date => !isNaN(date.getTime()));
-      
-      if (allEndDates.length > 0) {
-        const maxDate = new Date(Math.max(...allEndDates.map(d => d.getTime())));
-        return addMonths(maxDate, 6); // 最后节点后延伸6个月
-      }
-    }
-    
-    // 否则使用默认范围（大幅增加到24个月）
-    return addMonths(new Date(), 24);
+    // ✅ 固定范围：2028年12月31日
+    return new Date(2028, 11, 31);
   });
+  
+  // ✅ 移除自动调整范围的逻辑，所有视图都使用2024-2028固定范围
+  // useEffect(() => {
+  //   // 不再需要，所有scale都使用固定的2024-2028范围
+  // }, [scale]);
+  
   const [internalIsEditMode, setInternalIsEditMode] = useState(false);
   // ✅ 修复：优先使用 externalIsEditMode，然后是 readonly 反转，最后是内部状态
   const isEditMode = externalIsEditMode !== undefined 
@@ -329,6 +323,28 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     setInternalIsEditMode(newMode);
     onEditModeChange?.(newMode);
   }, [onEditModeChange]);
+
+  // ✅ V10: 注入磁吸脉冲动画CSS
+  useEffect(() => {
+    const styleId = 'magnetic-pulse-animation';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `
+        @keyframes magneticPulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.3);
+            opacity: 0.7;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
 
   // 选择相关状态
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
@@ -545,12 +561,14 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     resizeVisualDates,
     resizeSnappedDates,
     resizeMousePosition,
-    isResizing
+    isResizing,
+    magneticSnapInfo, // ✅ 磁吸信息用于显示视觉反馈
   } = useBarResize({
     viewStartDate: normalizedViewStartDate,
     scale,
     onNodeResize: handleLineResize,
     isEditMode,
+    allLines: data.lines, // ✅ 传入所有lines用于磁吸
   });
 
   // ==================== 其他辅助函数 ====================
@@ -639,6 +657,22 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     });
     
     message.success('Timeline 已删除');
+  }, [data, setData]);
+
+  /**
+   * ✅ 更换Timeline背景颜色
+   */
+  const handleBackgroundColorChange = useCallback((timelineId: string, color: string) => {
+    const updatedTimelines = data.timelines.map(t =>
+      t.id === timelineId ? { ...t, color } : t
+    );
+    
+    setData({
+      ...data,
+      timelines: updatedTimelines,
+    });
+    
+    message.success('背景颜色已更新');
   }, [data, setData]);
 
   /**
@@ -1280,6 +1314,30 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   }, [setData]);
 
   /**
+   * ✅ 键盘Delete删除选中节点
+   */
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 只有在编辑模式且有选中节点时才响应Delete键
+      if (!isEditMode || !selectedLineId) return;
+      
+      // 检查是否在输入框中（避免干扰表单输入）
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+      
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        handleDeleteNode(selectedLineId);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isEditMode, selectedLineId, handleDeleteNode]);
+
+  /**
    * 切换全屏
    */
   const handleToggleFullscreen = useCallback(() => {
@@ -1714,6 +1772,8 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
             position: 'sticky',
             left: 0,
             zIndex: 100,  // ✅ 提高到最高层级，确保不被连线覆盖
+            alignSelf: 'flex-start', // ✅ 确保sidebar从顶部开始
+            minHeight: '100%', // ✅ 确保sidebar至少与容器一样高，显示完整右边框
           }}
         >
           {/* 表头占位（与右侧时间轴表头等高） */}
@@ -1736,9 +1796,27 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
           </div>
 
           {/* Timeline 列表 */}
-          {data.timelines.map((timeline) => {
+          {data.timelines.map((timeline, index) => {
             const isCollapsed = collapsedTimelines.has(timeline.id);
             const lines = getLinesByTimelineId(timeline.id);
+            
+            // ✅ 默认颜色列表（参考截图2）
+            const defaultColors = [
+              '#52c41a', // 绿色
+              '#1890ff', // 蓝色
+              '#9254de', // 紫色
+              '#13c2c2', // 青色
+              '#fa8c16', // 橙色
+              '#eb2f96', // 粉色
+              '#fadb14', // 黄色
+            ];
+            
+            // ✅ 获取Timeline背景颜色（使用timeline.color或默认颜色）
+            const timelineColor = timeline.color || defaultColors[index % defaultColors.length];
+            
+            // ✅ 获取负责人和分类信息
+            const owner = timeline.owner || timeline.description || '';
+            const category = timeline.attributes?.category || 'ECU开发计划';
 
             return (
               <div 
@@ -1758,31 +1836,48 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                     padding: `0 ${token.paddingSM}px`,  // ✅ 关键：垂直padding为0
                     borderBottom: `1px solid ${token.colorBorderSecondary}`,
                     cursor: 'pointer',
-                    backgroundColor: token.colorBgContainer,
+                    backgroundColor: '#fff',  // ✅ 左侧列表保持白色背景
                     boxSizing: 'border-box',  // ✅ 确保border不影响高度
                     margin: 0,  // ✅ 确保没有额外margin
+                    transition: 'background-color 0.2s',
                   }}
                   onClick={() => toggleTimelineCollapse(timeline.id)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = `${token.colorBgTextHover}`; // 悬停时浅灰色
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#fff'; // 恢复白色
+                  }}
                 >
-                  {/* 折叠图标 */}
-                  <div style={{ marginRight: token.marginXS, flexShrink: 0 }}>
-                    {isCollapsed ? <RightOutlined style={{ fontSize: 12 }} /> : <DownOutlined style={{ fontSize: 12 }} />}
-                  </div>
-
-                  {/* 颜色标签 */}
+                  {/* ✅ 序号图标（圆形，带数字） */}
                   <div
                     style={{
-                      width: 16,
-                      height: 16,
-                      borderRadius: 3,
-                      backgroundColor: timeline.color || token.colorPrimary,
+                      width: 32,
+                      height: 32,
+                      borderRadius: '50%',
+                      backgroundColor: timelineColor,
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 14,
+                      fontWeight: 600,
                       marginRight: token.marginSM,
                       flexShrink: 0,
+                      boxShadow: `0 2px 4px ${timelineColor}40`,
                     }}
-                  />
+                  >
+                    {index + 1}
+                  </div>
+
+                  {/* ✅ 折叠图标（小型） */}
+                  <div style={{ marginRight: token.marginXS, flexShrink: 0, color: token.colorTextSecondary }}>
+                    {isCollapsed ? <RightOutlined style={{ fontSize: 10 }} /> : <DownOutlined style={{ fontSize: 10 }} />}
+                  </div>
 
                   {/* Timeline 信息 */}
                   <div style={{ flex: 1, overflow: 'hidden', minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    {/* ✅ 标题 */}
                     <div
                       style={{
                         fontSize: 15,
@@ -1796,6 +1891,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                     >
                       {timeline.title || timeline.name}
                     </div>
+                    {/* ✅ 副标题（负责人 | 分类） */}
                     <div
                       style={{
                         fontSize: 12,
@@ -1807,7 +1903,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                         marginTop: 2,
                       }}
                     >
-                      @ {timeline.description || '未指定负责人'}
+                      {owner} {owner && category && '|'} {category}
                     </div>
                   </div>
 
@@ -1820,6 +1916,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                     onEditTimeline={handleEditTimeline}
                     onDeleteTimeline={handleDeleteTimeline}
                     onCopyTimeline={handleCopyTimeline}
+                    onBackgroundColorChange={handleBackgroundColorChange}
                     onTimeShift={handleOpenTimeShift}
                   />
                 </div>
@@ -1952,37 +2049,21 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
             }}
           >
             {/* 依赖关系线 */}
-            {(() => {
-              console.log('[TimelinePanel] 🔗 Relations Debug:');
-              console.log('  - hasRelations:', !!data.relations);
-              console.log('  - relationsCount:', data.relations?.length || 0);
-              console.log('  - linesCount:', data.lines?.length || 0);
-              console.log('  - timelinesCount:', data.timelines?.length || 0);
-              console.log('  - scale:', scale);
-              
-              if (data.relations && data.relations.length > 0) {
-                console.log('  - ✅ Relations数据存在，开始渲染');
-                console.log('  - Relations详情:', data.relations);
-                return (
-                  <RelationRenderer
-                    relations={data.relations}
-                    lines={data.lines}
-                    timelines={data.timelines}
-                    viewStartDate={normalizedViewStartDate}
-                    scale={scale}
-                    rowHeight={ROW_HEIGHT}
-                    selectedRelationId={selectedRelationId}
-                    isEditMode={isEditMode}
-                    criticalPathNodeIds={criticalPathNodeIds}
-                    onRelationClick={handleRelationClick}
-                    onRelationDelete={handleRelationDelete}
-                  />
-                );
-              } else {
-                console.warn('  - ❌ 没有Relations数据，跳过渲染');
-                return null;
-              }
-            })()}
+            {data.relations && data.relations.length > 0 && (
+              <RelationRenderer
+                relations={data.relations}
+                lines={data.lines}
+                timelines={data.timelines}
+                viewStartDate={normalizedViewStartDate}
+                scale={scale}
+                rowHeight={ROW_HEIGHT}
+                selectedRelationId={selectedRelationId}
+                isEditMode={isEditMode}
+                criticalPathNodeIds={criticalPathNodeIds}
+                onRelationClick={handleRelationClick}
+                onRelationDelete={handleRelationDelete}
+              />
+            )}
 
             {/* ==================== 基线系统渲染 ==================== */}
             
@@ -2025,6 +2106,54 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
               height={data.timelines.length * ROW_HEIGHT}
             />
 
+            {/* ✅ V10 磁吸提示 - 局部效果（仅在调整的line上显示） */}
+            {magneticSnapInfo && isResizing && resizingNodeId && (() => {
+              // 查找正在调整大小的line的timeline索引
+              const resizingLine = data.lines.find(l => l.id === resizingNodeId);
+              if (!resizingLine) return null;
+              
+              const timelineIndex = data.timelines.findIndex(t => t.id === resizingLine.timelineId);
+              if (timelineIndex === -1) return null;
+              
+              const topOffset = timelineIndex * ROW_HEIGHT + HEADER_HEIGHT + ROW_HEIGHT / 2;
+              
+              return (
+                <>
+                  {/* 磁吸点指示器 */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: magneticSnapInfo.position - 8,
+                      top: topOffset - 8,
+                      width: 16,
+                      height: 16,
+                      backgroundColor: '#52c41a',  // ✅ 绿色表示对齐成功
+                      borderRadius: '50%',
+                      border: '2px solid #fff',
+                      boxShadow: '0 2px 8px rgba(82, 196, 26, 0.6)',
+                      zIndex: 100,
+                      pointerEvents: 'none',
+                      animation: 'magneticPulse 1s ease-in-out infinite',
+                    }}
+                  />
+                  {/* 磁吸提示短线（局部） */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: magneticSnapInfo.position,
+                      top: topOffset - 20,
+                      width: 2,
+                      height: 40,
+                      backgroundColor: '#52c41a',
+                      opacity: 0.5,
+                      zIndex: 99,
+                      pointerEvents: 'none',
+                    }}
+                  />
+                </>
+              );
+            })()}
+
             {/* 4. 基线范围拖拽创建器（覆盖层，z-index: 50） */}
             <BaselineRangeDragCreator
               isActive={isRangeDragMode}
@@ -2037,8 +2166,12 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
               onCancel={handleRangeDragCancel}
             />
 
-            {data.timelines.map((timeline) => {
+            {data.timelines.map((timeline, index) => {
               const lines = getLinesByTimelineId(timeline.id);
+              
+              // ✅ 获取timeline颜色（与左侧一致）
+              const defaultColors = ['#52c41a', '#1890ff', '#722ed1', '#13c2c2', '#fa8c16', '#eb2f96', '#faad14'];
+              const timelineColor = timeline.color || defaultColors[index % defaultColors.length];
 
               return (
                 <div
@@ -2055,10 +2188,11 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                       position: 'relative',
                       height: ROW_HEIGHT,  // ✅ 固定高度120px，与左侧一致
                       borderBottom: `1px solid ${token.colorBorderSecondary}`,
-                      backgroundColor: 'transparent',  // ✅ 修复：使用透明背景，让网格线透过来
+                      backgroundColor: `${timelineColor}08`,  // ✅ 右侧甘特图区域背景色（8%透明度）
                       boxSizing: 'border-box',  // ✅ 确保border包含在高度内，与左侧一致
                       margin: 0,  // ✅ 确保没有额外margin
                       padding: 0,  // ✅ 确保没有额外padding（内容使用绝对定位）
+                      transition: 'background-color 0.2s',  // ✅ 平滑过渡
                     }}
                   >
                   {/* 渲染该 Timeline 的所有 Lines */}
@@ -2066,42 +2200,32 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                     const isDraggingThis = draggingNodeId === line.id;
                     const isResizingThis = resizingNodeId === line.id;
 
-                    // 使用视觉日期展现平滑移动效果
-                    const displayStartDate = isDraggingThis && dragVisualDates.start
-                      ? dragVisualDates.start
-                      : isResizingThis && resizeVisualDates.start
-                        ? resizeVisualDates.start
+                    // ✅ 修复：使用snappedDates而不是visualDates，确保按天对齐
+                    const displayStartDate = isDraggingThis && dragSnappedDates.start
+                      ? dragSnappedDates.start
+                      : isResizingThis && resizeSnappedDates.start
+                        ? resizeSnappedDates.start
                         : new Date(line.startDate);
 
-                    const displayEndDate = isDraggingThis && dragVisualDates.end
-                      ? dragVisualDates.end
-                      : isResizingThis && resizeVisualDates.end
-                        ? resizeVisualDates.end
+                    const displayEndDate = isDraggingThis && dragSnappedDates.end
+                      ? dragSnappedDates.end
+                      : isResizingThis && resizeSnappedDates.end
+                        ? resizeSnappedDates.end
                         : line.endDate ? new Date(line.endDate) : new Date(line.startDate);
 
-                    const startPos = isDraggingThis || isResizingThis
-                      ? getPositionFromDatePrecise(
-                        displayStartDate,
-                        normalizedViewStartDate,
-                        scale
-                      )
-                      : getPositionFromDate(
-                        displayStartDate,
-                        normalizedViewStartDate,
-                        scale
-                      );
+                    // ✅ 修复：统一使用Precise计算，确保对齐
+                    const startPos = getPositionFromDate(
+                      displayStartDate,
+                      normalizedViewStartDate,
+                      scale
+                    );
 
-                    const width = isDraggingThis || isResizingThis
-                      ? getBarWidthTruePrecise(
-                        displayStartDate,
-                        displayEndDate,
-                        scale
-                      )
-                      : getBarWidthPrecise(
-                        displayStartDate,
-                        displayEndDate,
-                        scale
-                      );
+                    const width = getBarWidthPrecise(
+                      displayStartDate,
+                      displayEndDate,
+                      scale
+                    );
+                    
                     const isSelected = line.id === selectedLineId;
                     const isInteracting = isDraggingThis || isResizingThis;
 
@@ -2207,7 +2331,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
             </div>
             <div style={{ fontSize: 11, opacity: 0.9 }}>
               {isDragActive
-                ? `${format(dragSnappedDates.start!, 'yyyy-MM-dd')}`
+                ? `${format(dragSnappedDates.start!, 'yyyy-MM-dd')} ~ ${format(dragSnappedDates.end!, 'yyyy-MM-dd')}`
                 : `${format(resizeSnappedDates.start!, 'yyyy-MM-dd')} ~ ${format(resizeSnappedDates.end!, 'yyyy-MM-dd')}`
               }
             </div>

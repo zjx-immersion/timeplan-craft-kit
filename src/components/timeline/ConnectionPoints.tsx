@@ -120,8 +120,8 @@ export const ConnectionPoints: React.FC<ConnectionPointsProps> = ({
       position: 'absolute',
       top: '50%',
       transform: 'translateY(-50%)',
-      width: 16,
-      height: 16,
+      width: 10,  // ✅ 缩小到10px
+      height: 10,
       borderRadius: '50%',
       border: '2px solid',
       cursor: 'pointer',
@@ -135,9 +135,9 @@ export const ConnectionPoints: React.FC<ConnectionPointsProps> = ({
 
     // 位置
     if (isLeft) {
-      baseStyle.left = -8;
+      baseStyle.left = -5;  // ✅ 调整位置
     } else {
-      baseStyle.right = -8;
+      baseStyle.right = -5;
     }
 
     // 状态样式
@@ -172,15 +172,15 @@ export const ConnectionPoints: React.FC<ConnectionPointsProps> = ({
   const getInnerDotStyle = (): React.CSSProperties => {
     if (canBeTarget || isSourceNode) {
       return {
-        width: 8,
-        height: 8,
+        width: 4,  // ✅ 缩小内圈到4px
+        height: 4,
         borderRadius: '50%',
         backgroundColor: '#fff',
       };
     }
     return {
-      width: 8,
-      height: 8,
+      width: 4,
+      height: 4,
       borderRadius: '50%',
       backgroundColor: 'rgba(24, 144, 255, 0.6)',
     };

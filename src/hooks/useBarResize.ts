@@ -16,7 +16,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Line } from '@/types/timeplanSchema';
 import { TimeScale } from '@/utils/dateUtils';
-import { getDateFromPosition, getPositionFromDate, snapToGrid, getPixelsPerDay, addDays } from '@/utils/dateUtils';
+import { getDateFromPosition, getPositionFromDate, getPixelsPerDay, addDays } from '@/utils/dateUtils';
+import { differenceInDays, startOfDay } from 'date-fns';
 
 interface ResizeState {
   isResizing: boolean;
@@ -34,15 +35,57 @@ interface UseBarResizeProps {
   scale: TimeScale;
   onNodeResize: (nodeId: string, newStartDate: Date, newEndDate: Date) => void;
   isEditMode: boolean;
+  allLines?: Line[]; // ✅ 新增：所有lines用于磁吸
 }
 
 const MINIMUM_BAR_WIDTH_PX = 20;
+const MAGNETIC_SNAP_THRESHOLD_DAYS = 1; // ✅ 磁吸阈值：1天内自动吸附
+
+/**
+ * ✅ 查找附近的元素并返回吸附日期
+ */
+const findMagneticSnapDate = (
+  targetDate: Date,
+  currentLineId: string,
+  allLines: Line[],
+  edge: 'left' | 'right'
+): Date | null => {
+  if (!allLines || allLines.length === 0) return null;
+
+  let closestDate: Date | null = null;
+  let minDistance = MAGNETIC_SNAP_THRESHOLD_DAYS + 1;
+
+  allLines.forEach(line => {
+    if (line.id === currentLineId) return; // 跳过自己
+
+    const lineStartDate = new Date(line.startDate);
+    const lineEndDate = line.endDate ? new Date(line.endDate) : lineStartDate;
+
+    // 检查与其他元素的开始和结束日期的距离
+    const startDistance = Math.abs(differenceInDays(targetDate, lineStartDate));
+    const endDistance = Math.abs(differenceInDays(targetDate, lineEndDate));
+
+    if (startDistance < minDistance) {
+      minDistance = startDistance;
+      closestDate = lineStartDate;
+    }
+
+    if (endDistance < minDistance) {
+      minDistance = endDistance;
+      closestDate = lineEndDate;
+    }
+  });
+
+  // 如果在阈值内，返回吸附日期
+  return minDistance <= MAGNETIC_SNAP_THRESHOLD_DAYS ? closestDate : null;
+};
 
 export const useBarResize = ({
   viewStartDate,
   scale,
   onNodeResize,
   isEditMode,
+  allLines = [], // ✅ 接收所有lines
 }: UseBarResizeProps) => {
   const [resizeState, setResizeState] = useState<ResizeState>({
     isResizing: false,
@@ -62,6 +105,8 @@ export const useBarResize = ({
   const [visualDates, setVisualDates] = useState<{ start?: Date; end?: Date }>({});
   // 吸附日期：用于持久化（带吸附）
   const [snappedDates, setSnappedDates] = useState<{ start?: Date; end?: Date }>({});
+  // ✅ 磁吸状态：用于显示视觉反馈
+  const [magneticSnapInfo, setMagneticSnapInfo] = useState<{ date: Date; position: number } | null>(null);
 
   const handleResizeStart = useCallback((
     e: React.MouseEvent,
@@ -108,37 +153,59 @@ export const useBarResize = ({
     setMousePosition({ x: clientX, y: clientY });
 
     const pixelsPerDay = getPixelsPerDay(scale);
-    const daysOffset = deltaX / pixelsPerDay;
+    const daysOffset = Math.round(deltaX / pixelsPerDay);  // ✅ 四舍五入到整数天
 
     if (resizeState.edge === 'left') {
-      const newVisualStart = addDays(resizeState.originalStartDate, daysOffset);
-      const minVisualStart = addDays(resizeState.originalEndDate, -(MINIMUM_BAR_WIDTH_PX / pixelsPerDay));
-      const visualStart = newVisualStart > minVisualStart ? minVisualStart : newVisualStart;
+      // ✅ V5 修复：直接按整数天计算，使用startOfDay对齐（不用snapToGrid）
+      let snappedStart = addDays(resizeState.originalStartDate, daysOffset);
+      snappedStart = startOfDay(snappedStart);  // ✅ 只对齐到天的开始，不跨月/年
+      
+      // 确保不超过结束日期（至少保持1天）
+      const minStart = addDays(resizeState.originalEndDate, -1);
+      if (snappedStart > minStart) {
+        snappedStart = minStart;
+      }
 
-      // 吸附日期
-      const newSnappedPosition = resizeState.originalStartPosition + deltaX;
-      const minSnappedPosition = resizeState.originalEndPosition - MINIMUM_BAR_WIDTH_PX;
-      const clampedPosition = Math.min(newSnappedPosition, minSnappedPosition);
-      const snappedStart = snapToGrid(getDateFromPosition(clampedPosition, viewStartDate, scale), scale);
+      // ✅ 磁吸到附近元素
+      const magneticDate = findMagneticSnapDate(snappedStart, resizeState.nodeId!, allLines, 'left');
+      if (magneticDate) {
+        snappedStart = magneticDate;
+        // ✅ 设置磁吸视觉反馈
+        const magneticPosition = getPositionFromDate(magneticDate, viewStartDate, scale);
+        setMagneticSnapInfo({ date: magneticDate, position: magneticPosition });
+      } else {
+        setMagneticSnapInfo(null);
+      }
 
-      setVisualDates({ start: visualStart, end: resizeState.originalEndDate });
+      setVisualDates({ start: snappedStart, end: resizeState.originalEndDate });
       setSnappedDates({ start: snappedStart, end: resizeState.originalEndDate });
 
     } else if (resizeState.edge === 'right') {
-      const newVisualEnd = addDays(resizeState.originalEndDate, daysOffset);
-      const minVisualEnd = addDays(resizeState.originalStartDate, (MINIMUM_BAR_WIDTH_PX / pixelsPerDay));
-      const visualEnd = newVisualEnd < minVisualEnd ? minVisualEnd : newVisualEnd;
+      // ✅ V5 修复：直接按整数天计算，使用startOfDay对齐（不用snapToGrid）
+      let snappedEnd = addDays(resizeState.originalEndDate, daysOffset);
+      snappedEnd = startOfDay(snappedEnd);  // ✅ 只对齐到天的开始，不跨月/年
+      
+      // 确保不小于开始日期（至少保持1天）
+      const minEnd = addDays(resizeState.originalStartDate, 1);
+      if (snappedEnd < minEnd) {
+        snappedEnd = minEnd;
+      }
 
-      // 吸附日期
-      const newSnappedPosition = resizeState.originalEndPosition + deltaX;
-      const minSnappedPosition = resizeState.originalStartPosition + MINIMUM_BAR_WIDTH_PX;
-      const clampedPosition = Math.max(newSnappedPosition, minSnappedPosition);
-      const snappedEnd = snapToGrid(getDateFromPosition(clampedPosition, viewStartDate, scale), scale);
+      // ✅ 磁吸到附近元素
+      const magneticDate = findMagneticSnapDate(snappedEnd, resizeState.nodeId!, allLines, 'right');
+      if (magneticDate) {
+        snappedEnd = magneticDate;
+        // ✅ 设置磁吸视觉反馈
+        const magneticPosition = getPositionFromDate(magneticDate, viewStartDate, scale);
+        setMagneticSnapInfo({ date: magneticDate, position: magneticPosition });
+      } else {
+        setMagneticSnapInfo(null);
+      }
 
-      setVisualDates({ start: resizeState.originalStartDate, end: visualEnd });
+      setVisualDates({ start: resizeState.originalStartDate, end: snappedEnd });
       setSnappedDates({ start: resizeState.originalStartDate, end: snappedEnd });
     }
-  }, [resizeState, viewStartDate, scale]);
+  }, [resizeState, viewStartDate, scale, allLines]);
 
   const handleResizeEnd = useCallback(() => {
     if (!resizeState.isResizing || !nodeRef.current) return;
@@ -161,6 +228,7 @@ export const useBarResize = ({
     nodeRef.current = null;
     setVisualDates({});
     setSnappedDates({});
+    setMagneticSnapInfo(null); // ✅ 清除磁吸反馈
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
   }, [resizeState, snappedDates, onNodeResize]);
@@ -189,5 +257,6 @@ export const useBarResize = ({
     resizeVisualDates: visualDates,
     resizeSnappedDates: snappedDates,
     isResizing: resizeState.isResizing,
+    magneticSnapInfo, // ✅ 返回磁吸信息
   };
 };

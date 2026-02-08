@@ -7,8 +7,9 @@
  * @date 2026-02-03
  */
 
-import React, { useEffect } from 'react';
-import { Modal, Form, Input, DatePicker, Select, ColorPicker, InputNumber, Button } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Modal, Form, Input, DatePicker, Select, ColorPicker, InputNumber, Button, Tag } from 'antd';
+import { PlusOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import type { Color } from 'antd/es/color-picker';
 import { Line } from '@/types/timeplanSchema';
 import dayjs from 'dayjs';
@@ -33,6 +34,14 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   onClose,
 }) => {
   const [form] = Form.useForm();
+  
+  // ✅ Milestone: 交付产品+特性需求列表
+  const [deliverables, setDeliverables] = useState<string[]>([]);
+  const [newDeliverable, setNewDeliverable] = useState('');
+  
+  // ✅ Gateway: 质量门禁+评审要求列表
+  const [qualityGates, setQualityGates] = useState<string[]>([]);
+  const [newQualityGate, setNewQualityGate] = useState('');
 
   // 当节点变化时，更新表单
   useEffect(() => {
@@ -49,6 +58,12 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
         description: node.attributes?.description || '',
         notes: node.notes || '',
       });
+      
+      // ✅ 加载milestone的交付产品列表
+      setDeliverables(node.attributes?.deliverables || []);
+      
+      // ✅ 加载gateway的质量门禁列表
+      setQualityGates(node.attributes?.qualityGates || []);
     }
   }, [node, open, form]);
 
@@ -71,6 +86,8 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           assignee: values.assignee,
           progress: values.progress,
           description: values.description,
+          deliverables: deliverables, // ✅ Milestone: 交付产品列表
+          qualityGates: qualityGates, // ✅ Gateway: 质量门禁列表
         },
         notes: values.notes,
       };
@@ -224,6 +241,96 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             showCount
           />
         </Form.Item>
+
+        {/* ✅ Milestone特殊字段：交付产品+特性需求列表 */}
+        {nodeType === 'milestone' && (
+          <Form.Item label="交付产品与特性需求">
+            <div style={{ marginBottom: 8 }}>
+              <Input
+                placeholder="输入产品或特性需求，按Enter添加"
+                value={newDeliverable}
+                onChange={(e) => setNewDeliverable(e.target.value)}
+                onPressEnter={(e) => {
+                  e.preventDefault();
+                  if (newDeliverable.trim()) {
+                    setDeliverables([...deliverables, newDeliverable.trim()]);
+                    setNewDeliverable('');
+                  }
+                }}
+                suffix={
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      if (newDeliverable.trim()) {
+                        setDeliverables([...deliverables, newDeliverable.trim()]);
+                        setNewDeliverable('');
+                      }
+                    }}
+                  />
+                }
+              />
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {deliverables.map((item, index) => (
+                <Tag
+                  key={index}
+                  closable
+                  onClose={() => setDeliverables(deliverables.filter((_, i) => i !== index))}
+                  color="blue"
+                >
+                  {item}
+                </Tag>
+              ))}
+            </div>
+          </Form.Item>
+        )}
+
+        {/* ✅ Gateway特殊字段：质量门禁+评审要求列表 */}
+        {nodeType === 'gateway' && (
+          <Form.Item label="质量门禁与评审要求">
+            <div style={{ marginBottom: 8 }}>
+              <Input
+                placeholder="输入质量门禁或评审要求，按Enter添加"
+                value={newQualityGate}
+                onChange={(e) => setNewQualityGate(e.target.value)}
+                onPressEnter={(e) => {
+                  e.preventDefault();
+                  if (newQualityGate.trim()) {
+                    setQualityGates([...qualityGates, newQualityGate.trim()]);
+                    setNewQualityGate('');
+                  }
+                }}
+                suffix={
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      if (newQualityGate.trim()) {
+                        setQualityGates([...qualityGates, newQualityGate.trim()]);
+                        setNewQualityGate('');
+                      }
+                    }}
+                  />
+                }
+              />
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {qualityGates.map((item, index) => (
+                <Tag
+                  key={index}
+                  closable
+                  onClose={() => setQualityGates(qualityGates.filter((_, i) => i !== index))}
+                  color="orange"
+                >
+                  {item}
+                </Tag>
+              ))}
+            </div>
+          </Form.Item>
+        )}
 
         {/* 备注 */}
         <Form.Item

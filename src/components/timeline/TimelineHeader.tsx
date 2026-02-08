@@ -237,10 +237,11 @@ const getChildHeaders = (startDate: Date, endDate: Date, scale: TimeScale): Head
       const weeks = eachWeekOfInterval({ start: startDate, end: endDate }, { weekStartsOn: 1 });
       weeks.forEach((weekStart) => {
         const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
+        
         cells.push({
           date: weekStart,
           label: `${format(weekStart, 'd')}-${format(weekEnd, 'd')}`,
-          width: 7 * pixelsPerDay, // 精确7天
+          width: 7 * pixelsPerDay,  // ✅ 参考原项目：精确7天
         });
       });
       break;
@@ -251,10 +252,11 @@ const getChildHeaders = (startDate: Date, endDate: Date, scale: TimeScale): Head
       let current = startOfWeek(startDate, { weekStartsOn: 1 });
       while (current <= endDate) {
         const periodEnd = addDays(current, 13);
+        
         cells.push({
           date: current,
           label: `${format(current, 'M/d')}-${format(periodEnd, 'd')}`,
-          width: 14 * pixelsPerDay, // 精确14天
+          width: 14 * pixelsPerDay,  // ✅ 参考原项目：精确14天
         });
         current = addDays(current, 14);
       }
@@ -265,12 +267,13 @@ const getChildHeaders = (startDate: Date, endDate: Date, scale: TimeScale): Head
       // 子级：月份（1, 2, 3...12）
       const months = eachMonthOfInterval({ start: startDate, end: endDate });
       months.forEach((month) => {
-        // ✅ 使用该月的实际天数
+        // ✅ 参考原项目：使用该月的实际天数（28-31天）
         const daysInMonth = getDaysInMonth(month);
+        
         cells.push({
           date: month,
           label: format(month, 'M'),  // ✅ 只显示数字：1, 2, 3...12
-          width: daysInMonth * pixelsPerDay,
+          width: daysInMonth * pixelsPerDay,  // ✅ 使用实际天数：28-31天
         });
       });
       break;

@@ -88,6 +88,18 @@ export const TimelineQuickMenu: React.FC<TimelineQuickMenuProps> = ({
   // 构建菜单项
   const menuItems: MenuProps['items'] = [];
 
+  // ✅ 预定义颜色列表
+  const colorOptions = [
+    { key: '#52c41a', label: '绿色', color: '#52c41a' },
+    { key: '#1890ff', label: '蓝色', color: '#1890ff' },
+    { key: '#9254de', label: '紫色', color: '#9254de' },
+    { key: '#13c2c2', label: '青色', color: '#13c2c2' },
+    { key: '#fa8c16', label: '橙色', color: '#fa8c16' },
+    { key: '#eb2f96', label: '粉色', color: '#eb2f96' },
+    { key: '#fadb14', label: '黄色', color: '#fadb14' },
+    { key: '#f5222d', label: '红色', color: '#f5222d' },
+  ];
+
   // 编辑模式菜单
   if (isEditMode) {
     // 添加节点子菜单
@@ -136,6 +148,33 @@ export const TimelineQuickMenu: React.FC<TimelineQuickMenuProps> = ({
         label: '复制 Timeline',
         icon: <CopyOutlined />,
         onClick: () => onCopyTimeline(timelineId),
+      });
+    }
+
+    // ✅ 更换背景颜色子菜单
+    if (onBackgroundColorChange) {
+      menuItems.push({
+        key: 'change-color',
+        label: '更换背景颜色',
+        icon: <BgColorsOutlined />,
+        children: colorOptions.map(({ key, label, color }) => ({
+          key,
+          label: (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div
+                style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  backgroundColor: color,
+                  border: '1px solid rgba(0,0,0,0.1)',
+                }}
+              />
+              <span>{label}</span>
+            </div>
+          ),
+          onClick: () => onBackgroundColorChange(timelineId, color),
+        })),
       });
     }
 

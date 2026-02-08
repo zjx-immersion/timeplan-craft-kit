@@ -113,12 +113,11 @@ export const normalizeViewStartDate = (date: Date, scale: TimeScale): Date => {
     case 'biweekly':
       return startOfWeek(date, { weekStartsOn: 1 });
     case 'month':
-      // ✅ 月视图：规范化到年初，显示完整12个月
-      return startOfYear(date);
+      // ✅ V7修复：月视图规范化到月初（参考原项目）
+      // 确保时间刻度和节点位置使用相同基准
+      return startOfMonth(date);
     case 'quarter':
-      // ✅ 季度视图：规范化到当前年份前2年的年初，显示更长时间跨度
-      const currentYear = date.getFullYear();
-      return new Date(currentYear - 2, 0, 1);  // 往前推2年
+      return startOfQuarter(date);
     default:
       return startOfMonth(date);
   }
@@ -136,12 +135,10 @@ export const normalizeViewEndDate = (date: Date, scale: TimeScale): Date => {
       // 结束于包含该日期的周的结束
       return addDays(startOfWeek(date, { weekStartsOn: 1 }), 6);
     case 'month':
-      // ✅ 月视图：规范化到年末，显示完整12个月
-      return endOfYear(date);
+      // ✅ V7修复：月视图规范化到月末（参考原项目）
+      return endOfMonth(date);
     case 'quarter':
-      // ✅ 季度视图：规范化到当前年份后2年的年末，显示更长时间跨度
-      const currentYear = date.getFullYear();
-      return new Date(currentYear + 2, 11, 31);  // 往后推2年
+      return endOfQuarter(date);
     default:
       return endOfMonth(date);
   }

@@ -196,8 +196,8 @@ const IterationMatrix: React.FC<IterationMatrixProps> = ({
               style={{
                 flexShrink: 0,
                 background: '#fff',
-                borderRight: '1px solid #d9d9d9',
                 width: TEAM_HEADER_WIDTH,
+                boxSizing: 'border-box',
               }}
             >
               <div style={{
@@ -222,11 +222,12 @@ const IterationMatrix: React.FC<IterationMatrixProps> = ({
               style={{
                 flexShrink: 0,
                 background: '#fff',
-                borderRight: '1px solid #d9d9d9',
+                borderRight: '1px solid #d9d9d9', // ✅ 保留右边框作为与迭代列的分隔
                 position: 'sticky',
                 left: 0,
                 zIndex: 30,
                 width: MODULE_NAME_WIDTH,
+                boxSizing: 'border-box',
               }}
             >
               <div style={{
@@ -247,14 +248,15 @@ const IterationMatrix: React.FC<IterationMatrixProps> = ({
             </div>
             
             {/* 迭代列 */}
-            {iterations.map((iter) => (
+            {iterations.map((iter, index) => (
               <div
                 key={iter.id}
                 style={{
                   flexShrink: 0,
-                  borderRight: '1px solid #d9d9d9',
+                  borderLeft: index === 0 ? 'none' : '1px solid #d9d9d9', // ✅ 使用borderLeft代替borderRight，确保对齐
                   background: '#fff',
                   width: CELL_WIDTH,
+                  boxSizing: 'border-box', // ✅ 边框包含在宽度内
                 }}
               >
                 <div style={{ padding: '8px 12px', textAlign: 'center' }}>
@@ -279,9 +281,9 @@ const IterationMatrix: React.FC<IterationMatrixProps> = ({
               <div 
                 style={{
                   flexShrink: 0,
-                  borderRight: '1px solid #d9d9d9',
                   background: '#fff',
                   width: TEAM_HEADER_WIDTH,
+                  boxSizing: 'border-box',
                 }}
               />
               
@@ -289,7 +291,7 @@ const IterationMatrix: React.FC<IterationMatrixProps> = ({
               <div 
                 style={{
                   flexShrink: 0,
-                  borderRight: '1px solid #d9d9d9',
+                  borderRight: '1px solid #d9d9d9', // ✅ 保留右边框
                   background: '#fff',
                   position: 'sticky',
                   left: 0,
@@ -298,6 +300,7 @@ const IterationMatrix: React.FC<IterationMatrixProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  boxSizing: 'border-box',
                 }}
               >
                 <span style={{
@@ -315,7 +318,7 @@ const IterationMatrix: React.FC<IterationMatrixProps> = ({
                 </span>
               </div>
               
-              {iterations.map((iter) => {
+              {iterations.map((iter, index) => {
                 const markers = iterationMarkers.get(iter.id) || [];
                 // 根据单元格宽度动态调整显示的标记数量
                 // 1档(150px): 显示1个, 2-3档(300-450px): 显示2个, 4-5档(600-795px): 显示3个
@@ -326,9 +329,10 @@ const IterationMatrix: React.FC<IterationMatrixProps> = ({
                     key={iter.id}
                     style={{
                       flexShrink: 0,
-                      borderRight: '1px solid #d9d9d9',
+                      borderLeft: index === 0 ? 'none' : '1px solid #d9d9d9', // ✅ 统一使用borderLeft
                       position: 'relative',
                       width: CELL_WIDTH,
+                      boxSizing: 'border-box',
                     }}
                   >
                     <IterationMarkers markers={markers} maxVisible={maxVisible} />
@@ -368,7 +372,6 @@ const IterationMatrix: React.FC<IterationMatrixProps> = ({
                   style={{
                     flexShrink: 0,
                     background: '#fafafa',
-                    borderRight: '1px solid #d9d9d9',
                     borderBottom: '1px solid #d9d9d9',
                     display: 'flex',
                     alignItems: 'center',
@@ -377,6 +380,7 @@ const IterationMatrix: React.FC<IterationMatrixProps> = ({
                     fontWeight: 600,
                     width: TEAM_HEADER_WIDTH,
                     height: totalTeamHeight,
+                    boxSizing: 'border-box',
                   }}
                 >
                   <span style={{ fontSize: '14px' }}>{team.name}</span>
@@ -420,7 +424,7 @@ const IterationMatrix: React.FC<IterationMatrixProps> = ({
                           style={{
                             flexShrink: 0,
                             background: '#fff',
-                            borderRight: '1px solid #d9d9d9',
+                            borderRight: '1px solid #d9d9d9', // ✅ 保留右边框
                             display: 'flex',
                             alignItems: 'center',
                             padding: '8px 16px',
@@ -429,13 +433,14 @@ const IterationMatrix: React.FC<IterationMatrixProps> = ({
                             zIndex: 10,
                             width: MODULE_NAME_WIDTH,
                             minHeight: rowHeight,
+                            boxSizing: 'border-box',
                           }}
                         >
                           <span style={{ fontSize: '14px', fontWeight: 500 }}>{module.name}</span>
                         </div>
                     
                         {/* 迭代单元格 */}
-                        {iterations.map((iter) => {
+                        {iterations.map((iter, iterIndex) => {
                           const task = tasks.find(t => t.moduleId === module.id && t.iterationId === iter.id);
                           const cellMRs = task ? mrs.filter(mr => task.mrIds.includes(mr.id)) : [];
                           const hasMRs = cellMRs.length > 0;
@@ -446,13 +451,14 @@ const IterationMatrix: React.FC<IterationMatrixProps> = ({
                               key={iter.id}
                               style={{
                                 flexShrink: 0,
-                                borderRight: '1px solid #d9d9d9',
+                                borderLeft: iterIndex === 0 ? 'none' : '1px solid #d9d9d9', // ✅ 统一使用borderLeft
                                 position: 'relative',
                                 width: CELL_WIDTH,
                                 minHeight: rowHeight,
                                 cursor: !hasMRs ? 'pointer' : draggedMR ? 'move' : 'default',
                                 background: isDragOver ? '#e6f7ff' : '#fff',
                                 transition: 'background-color 0.2s',
+                                boxSizing: 'border-box', // ✅ 边框包含在宽度内
                               }}
                               onClick={(e) => {
                                 // 只有在空单元格时才触发添加

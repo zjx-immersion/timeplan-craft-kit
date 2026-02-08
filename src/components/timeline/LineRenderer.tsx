@@ -73,11 +73,12 @@ const BarRenderer: React.FC<LineRendererProps> = ({
         position: 'absolute',
         left: startPos,
         top: '50%',
-        transform: isInteracting 
-          ? 'translateY(-50%) scale(1.08)' 
-          : (isSelected ? 'translateY(-50%) scale(1.02)' : 'translateY(-50%)'),
+        // ✅ V8修复：移除scale变换，避免视觉边界超出实际日期范围
+        transform: 'translateY(-50%)',
         width,
         height: 20,
+        // ✅ V8修复：使用border-box确保border包含在width内
+        boxSizing: 'border-box',
         // 🎨 颜色：选中时更亮，hover时有提示
         backgroundColor: isInteracting 
           ? timelineColors.barDragging
@@ -108,7 +109,7 @@ const BarRenderer: React.FC<LineRendererProps> = ({
         opacity: isInteracting ? 0.7 : (isSelected ? 0.85 : 0.6),  // ✅ 选中时降低透明度
       }}
     >
-      {/* 左侧调整手柄 */}
+      {/* ✅ 左侧调整手柄 - 放在连线点右侧 */}
       {isEditMode && isSelected && onResizeStart && (
         <div
           onMouseDown={(e) => {
@@ -117,12 +118,26 @@ const BarRenderer: React.FC<LineRendererProps> = ({
           }}
           style={{
             position: 'absolute',
-            left: -4,
-            top: 0,
-            bottom: 0,
-            width: 8,
+            left: 8,  // ✅ 向右移动，为连线点留空间
+            top: -4,
+            bottom: -4,
+            width: 12,  // ✅ 缩小宽度
             cursor: 'ew-resize',
-            zIndex: 20,
+            zIndex: 15,  // ✅ 降低zIndex，让连线点(zIndex: 20)显示在上面
+            backgroundColor: '#1890ff',
+            borderRadius: '4px',
+            boxShadow: '0 0 8px rgba(24, 144, 255, 0.8)',
+            border: '2px solid rgba(255, 255, 255, 0.9)',
+            transition: 'all 0.2s',
+            pointerEvents: 'auto',  // ✅ 确保可以点击
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.width = '16px';
+            e.currentTarget.style.boxShadow = '0 0 12px rgba(24, 144, 255, 1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.width = '12px';
+            e.currentTarget.style.boxShadow = '0 0 8px rgba(24, 144, 255, 0.8)';
           }}
         />
       )}
@@ -150,7 +165,7 @@ const BarRenderer: React.FC<LineRendererProps> = ({
         {line.label || line.title}
       </div>
       
-      {/* 右侧调整手柄 */}
+      {/* ✅ 右侧调整手柄 - 放在连线点左侧 */}
       {isEditMode && isSelected && onResizeStart && (
         <div
           onMouseDown={(e) => {
@@ -159,12 +174,26 @@ const BarRenderer: React.FC<LineRendererProps> = ({
           }}
           style={{
             position: 'absolute',
-            right: -4,
-            top: 0,
-            bottom: 0,
-            width: 8,
+            right: 8,  // ✅ 向左移动，为连线点留空间
+            top: -4,
+            bottom: -4,
+            width: 12,  // ✅ 缩小宽度
             cursor: 'ew-resize',
-            zIndex: 20,
+            zIndex: 15,  // ✅ 降低zIndex，让连线点(zIndex: 20)显示在上面
+            backgroundColor: '#1890ff',
+            borderRadius: '4px',
+            boxShadow: '0 0 8px rgba(24, 144, 255, 0.8)',
+            border: '2px solid rgba(255, 255, 255, 0.9)',
+            transition: 'all 0.2s',
+            pointerEvents: 'auto',  // ✅ 确保可以点击
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.width = '16px';
+            e.currentTarget.style.boxShadow = '0 0 12px rgba(24, 144, 255, 1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.width = '12px';
+            e.currentTarget.style.boxShadow = '0 0 8px rgba(24, 144, 255, 0.8)';
           }}
         />
       )}
@@ -200,10 +229,10 @@ const MilestoneRenderer: React.FC<LineRendererProps> = ({
   onStartConnection,
   onCompleteConnection,
 }) => {
-  const size = 12;  // ✅ 更小的菱形：16px → 12px
-  // 🎨 Milestone 使用黄色（源项目：#FCD34D）
+  const size = 24;  // ✅ 增大尺寸到24px
+  const hitAreaSize = 48;  // ✅ 可点击区域48px
+  // 🎨 Milestone 使用黄色
   const color = line.attributes?.color || line.color || timelineColors.milestone;
-  const hoverColor = timelineColors.milestoneHover;
   
   const [isHovering, setIsHovering] = React.useState(false);
   
@@ -215,41 +244,43 @@ const MilestoneRenderer: React.FC<LineRendererProps> = ({
       onMouseLeave={() => setIsHovering(false)}
       style={{
         position: 'absolute',
-        left: startPos - size / 2,
+        left: startPos - hitAreaSize / 2,  // ✅ 使用大的可点击区域
         top: '50%',
-        transform: isInteracting 
-          ? 'translateY(-50%) scale(1.12)' 
-          : (isSelected ? 'translateY(-50%) scale(1.05)' : 'translateY(-50%)'),
-        width: size,
-        height: size,
+        transform: 'translateY(-50%)',
+        width: hitAreaSize,
+        height: hitAreaSize,
         cursor: isEditMode ? (isInteracting ? 'grabbing' : 'grab') : 'pointer',
         zIndex: isSelected ? 12 : (isInteracting ? 10 : 2),
-        opacity: isInteracting ? 0.7 : 0.95,
-        transition: isInteracting ? 'none' : `${timelineTransitions.normal}, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)`,
-        filter: isSelected ? 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))' : 'none',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transition: isInteracting ? 'none' : `${timelineTransitions.normal}`,
       }}
     >
-      {/* 菱形 - ✅ 改为空心 */}
-      <div
-        style={{
-          width: size,
-          height: size,
-          backgroundColor: 'transparent',
-          border: isCriticalPath
-            ? `3px solid #ef4444` // 关键路径：红色加粗边框
-            : (isSelected
-                ? `3px solid ${timelineColors.selected}`  // ✅ 选中时更粗
-                : `2px solid ${color}`),
-          transform: 'rotate(45deg)',
-          // 🎯 选中时使用增强ring效果
-          // 🎯 关键路径：红色阴影
-          boxShadow: isCriticalPath
-            ? `0 0 8px rgba(239, 68, 68, 0.5), 0 0 16px rgba(239, 68, 68, 0.3)`
-            : (isSelected 
-                ? `0 0 0 2px ${timelineColors.selected}, 0 0 0 5px ${timelineColors.selectedRing}`
-                : (isHovering && isEditMode ? '0 0 0 1px rgba(0,0,0,0.1)' : 'none')),
-        }}
-      />
+      {/* ✅ 选中时的外圈（参考截图3） */}
+      {isSelected && (
+        <div
+          style={{
+            position: 'absolute',
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            border: '2px solid #13c2c2',  // ✅ 青色边框
+            backgroundColor: 'rgba(19, 194, 194, 0.1)',  // ✅ 淡青色背景
+            zIndex: -1,
+          }}
+        />
+      )}
+      {/* ✅ 倒三角形 - 使用SVG，空心、边粗 */}
+      <svg width={size} height={size} viewBox="0 0 24 24" style={{ position: 'relative', zIndex: 1 }}>
+        <polygon
+          points="12,20 2,4 22,4"  // ✅ 放大后的坐标
+          fill="transparent"
+          stroke={isCriticalPath ? '#ef4444' : color}
+          strokeWidth={isCriticalPath ? 3 : 3}  // ✅ 统一粗边
+          strokeLinejoin="round"
+        />
+      </svg>
       
       {/* ✅ 标签 - 显示在Milestone上方，居中对齐 */}
       <div
@@ -303,10 +334,10 @@ const GatewayRenderer: React.FC<LineRendererProps> = ({
   onStartConnection,
   onCompleteConnection,
 }) => {
-  const size = 14;  // ✅ 更小的六边形：18px → 14px
-  // 🎨 Gateway 使用紫色（源项目：#A855F7）
+  const size = 24;  // ✅ 增大尺寸到24px
+  const hitAreaSize = 48;  // ✅ 可点击区域48px
+  // 🎨 Gateway 使用紫色
   const color = line.attributes?.color || line.color || timelineColors.gateway;
-  const hoverColor = timelineColors.gatewayHover;
   
   const [isHovering, setIsHovering] = React.useState(false);
   
@@ -318,46 +349,41 @@ const GatewayRenderer: React.FC<LineRendererProps> = ({
       onMouseLeave={() => setIsHovering(false)}
       style={{
         position: 'absolute',
-        left: startPos - size / 2,
+        left: startPos - hitAreaSize / 2,  // ✅ 使用大的可点击区域
         top: '50%',
-        transform: isInteracting 
-          ? 'translateY(-50%) scale(1.12)' 
-          : (isSelected ? 'translateY(-50%) scale(1.05)' : 'translateY(-50%)'),
-        width: size,
-        height: size,
+        transform: 'translateY(-50%)',
+        width: hitAreaSize,
+        height: hitAreaSize,
         cursor: isEditMode ? (isInteracting ? 'grabbing' : 'grab') : 'pointer',
         zIndex: isSelected ? 12 : (isInteracting ? 10 : 1),
-        opacity: isInteracting ? 0.7 : 0.95,
-        transition: isInteracting ? 'none' : `${timelineTransitions.normal}, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)`,
-        filter: isCriticalPath 
-          ? 'drop-shadow(0 0 8px rgba(239, 68, 68, 0.5)) drop-shadow(0 0 16px rgba(239, 68, 68, 0.3))'
-          : (isSelected ? 'drop-shadow(0 4px 16px rgba(0,0,0,0.2))' : 'none'),
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transition: isInteracting ? 'none' : `${timelineTransitions.normal}`,
       }}
     >
-      {/* 六边形使用SVG - ✅ 改为空心 */}
-      <svg width={size} height={size} viewBox="0 0 24 24">
-        <polygon
-          points="12,2 21,7 21,17 12,22 3,17 3,7"
-          fill="transparent"
-          stroke={isCriticalPath ? '#ef4444' : (isSelected ? timelineColors.selected : color)}
-          strokeWidth={isCriticalPath ? 3 : (isSelected ? 3 : 2)}
+      {/* ✅ 选中时的外圈（参考截图3） */}
+      {isSelected && (
+        <div
+          style={{
+            position: 'absolute',
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            border: '2px solid #13c2c2',  // ✅ 青色边框
+            backgroundColor: 'rgba(19, 194, 194, 0.1)',  // ✅ 淡青色背景
+            zIndex: -1,
+          }}
         />
-        {/* 选中时的增强ring效果 */}
-        {isSelected && (
-          <rect
-            x="-3"
-            y="-3"
-            width="30"
-            height="30"
-            fill="none"
-            stroke={timelineColors.selectedRing}
-            strokeWidth="3"
-            rx="2"
-            style={{
-              filter: `drop-shadow(0 0 6px ${timelineColors.selectedRing})`,
-            }}
-          />
-        )}
+      )}
+      {/* ✅ 菱形 - 使用SVG，实心 */}
+      <svg width={size} height={size} viewBox="0 0 24 24" style={{ position: 'relative', zIndex: 1 }}>
+        <polygon
+          points="12,0 24,12 12,24 0,12"  // ✅ 放大后的坐标
+          fill={isCriticalPath ? '#ef4444' : color}
+          stroke="transparent"
+          strokeWidth={0}
+        />
       </svg>
       
       {/* ✅ 标签 - 显示在Gateway上方，居中对齐 */}

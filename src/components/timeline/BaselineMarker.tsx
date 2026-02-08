@@ -150,79 +150,113 @@ export const BaselineMarker: React.FC<BaselineMarkerProps> = ({
         }}
       />
 
-      {/* 标签徽章 */}
+      {/* ✅ 标签徽章 - 改为橙色横向布局（参考截图1） */}
       <div
         style={{
           position: 'absolute',
           left: 4,
           top: 0,
           display: 'flex',
-          flexDirection: 'column',
-          gap: 2,
+          alignItems: 'center',
+          gap: 0,
           pointerEvents: 'auto',
         }}
       >
-        {/* 标签 */}
-        <Tag
-          color={baselineColor}
+        {/* ✅ 橙色标签卡片 */}
+        <div
           style={{
-            margin: 0,
-            fontSize: 11,
-            lineHeight: '16px',
-            padding: '0 6px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '6px 12px',
+            backgroundColor: '#fa8c16',  // ✅ 橙色背景
+            color: '#fff',
+            fontSize: 13,
+            fontWeight: 600,
+            borderRadius: 4,
             whiteSpace: 'nowrap',
             cursor: isEditMode ? 'pointer' : 'default',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
           }}
           onClick={isEditMode ? onEdit : undefined}
         >
-          {baseline.label || '基线'}
-        </Tag>
-
-        {/* 日期 */}
-        <div
-          style={{
-            fontSize: 10,
-            color: '#8c8c8c',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {formattedDate}
+          {/* 标签名称 + 日期 */}
+          <span>{baseline.label || '基线'}</span>
+          <span style={{ opacity: 0.9 }}>{formattedDate}</span>
         </div>
 
-        {/* 编辑模式：显示编辑/删除按钮 */}
+        {/* ✅ 编辑模式：hover显示编辑/删除图标按钮（紧贴标签右侧，参考截图1） */}
         {isEditMode && isHovered && (
           <div
             style={{
               display: 'flex',
-              gap: 4,
-              marginTop: 4,
+              gap: 4,  // ✅ 紧凑间距
+              marginLeft: 4,  // ✅ 与标签间距
             }}
           >
-            <Tooltip title="编辑基线">
-              <Button
-                type="primary"
-                size="small"
-                icon={<EditOutlined />}
-                onClick={onEdit}
-                style={{
-                  fontSize: 10,
-                  height: 20,
-                  padding: '0 6px',
+            {/* ✅ 编辑图标 - 白色背景（参考截图1） */}
+            <Tooltip title="编辑">
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit?.();
                 }}
-              />
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 4,
+                  backgroundColor: '#fff',  // ✅ 白色背景
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                  border: '1px solid #d9d9d9',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f5f5f5';
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#fff';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                <EditOutlined style={{ fontSize: 16, color: '#faad14' }} />  {/* ✅ 橙色图标 */}
+              </div>
             </Tooltip>
-            <Tooltip title="删除基线">
-              <Button
-                danger
-                size="small"
-                icon={<DeleteOutlined />}
-                onClick={onDelete}
-                style={{
-                  fontSize: 10,
-                  height: 20,
-                  padding: '0 6px',
+            {/* ✅ 删除图标 - 白色背景（参考截图1） */}
+            <Tooltip title="删除">
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete?.();
                 }}
-              />
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 4,
+                  backgroundColor: '#fff',  // ✅ 白色背景
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                  border: '1px solid #d9d9d9',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#fff1f0';
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#fff';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                <DeleteOutlined style={{ fontSize: 16, color: '#ff4d4f' }} />  {/* ✅ 红色图标 */}
+              </div>
             </Tooltip>
           </div>
         )}

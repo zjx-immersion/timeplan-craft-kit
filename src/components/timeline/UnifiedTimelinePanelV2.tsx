@@ -59,6 +59,7 @@ import TimelinePanel from './TimelinePanel';
 import { TableView } from '../views/TableView';
 import { MatrixView } from '../views/MatrixView';
 import { VersionTableView } from '../views/VersionTableView';
+import { VersionPlanView } from '../views/VersionPlanView'; // ✅ 版本计划视图
 import IterationView from '../iteration/IterationView'; // 使用完整的迭代矩阵视图
 import { useTimePlanStoreWithHistory } from '@/stores/timePlanStoreWithHistory';
 import type { Timeline } from '@/types/timeplanSchema';
@@ -129,8 +130,6 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
   const [editedTitle, setEditedTitle] = useState('');
   const [imageExportDialogOpen, setImageExportDialogOpen] = useState(false);
   const timelineContainerRef = useRef<HTMLDivElement>(null);
-
-  console.log('UnifiedTimelinePanelV2 Render:', { view, editMode, scale, zoom });
 
   // 获取当前 plan
   const plan = plans.find(p => p.id === planId);
@@ -239,7 +238,6 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
    * 视图切换处理
    */
   const handleViewChange = useCallback((newView: ViewType) => {
-    console.log('View changing to:', newView);
     setView(newView);
   }, []);
 
@@ -282,7 +280,6 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
    * 渲染视图内容
    */
   const renderView = () => {
-    console.log('Rendering View Type:', view);
     switch (view) {
       case 'gantt':
         return (
@@ -326,6 +323,14 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
           <VersionTableView
             baseVersion={plan}
             compareVersion={plan}
+          />
+        );
+
+      case 'versionPlan':
+        return (
+          <VersionPlanView
+            data={plan}
+            onDataChange={handleDataChange}
           />
         );
 
@@ -453,6 +458,17 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
             }}
           >
             版本对比
+          </Button>
+          <Button
+            size="small"
+            icon={<CalendarOutlined />}
+            type={view === 'versionPlan' ? 'primary' : 'default'}
+            onClick={() => handleViewChange('versionPlan')}
+            style={{
+              color: view === 'versionPlan' ? '#FFFFFF' : undefined,
+            }}
+          >
+            版本计划
           </Button>
           <Button
             size="small"

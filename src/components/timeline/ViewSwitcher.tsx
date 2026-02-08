@@ -23,7 +23,7 @@ import {
 /**
  * 视图类型
  */
-export type ViewType = 'gantt' | 'table' | 'matrix' | 'version' | 'iteration';
+export type ViewType = 'gantt' | 'table' | 'matrix' | 'version' | 'versionPlan' | 'iteration';
 
 /**
  * 视图切换器属性

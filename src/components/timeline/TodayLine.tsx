@@ -59,7 +59,7 @@ export const TodayLine: React.FC<TodayLineProps> = ({
         top: 0,
         bottom: 0,
         width: 2,
-        zIndex: 5,
+        zIndex: 200, // ✅ 提高层级，确保在所有内容之上（sidebar: 100, header: 101）
         pointerEvents: 'none',
       }}
     >
@@ -84,14 +84,15 @@ export const TodayLine: React.FC<TodayLineProps> = ({
           left: '50%',
           top: -24,
           transform: 'translateX(-50%)',
-          padding: '2px 8px',
+          padding: '3px 10px',
           backgroundColor: timelineColors.today,
           color: '#fff',
-          fontSize: 11,
-          fontWeight: 500,
-          borderRadius: 3,
+          fontSize: 12,
+          fontWeight: 600,
+          borderRadius: 4,
           whiteSpace: 'nowrap',
-          boxShadow: `0 1px 3px rgba(0,0,0,0.2), 0 0 8px ${timelineColors.todayGlow}`, // 发光效果
+          boxShadow: `0 2px 4px rgba(0,0,0,0.25), 0 0 10px ${timelineColors.todayGlow}`, // 增强发光效果
+          border: '1px solid rgba(255, 255, 255, 0.3)', // 添加边框增强可见性
         }}
       >
         今日：{format(today, 'yyyy-MM-dd', { locale: zhCN })}
