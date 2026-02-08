@@ -60,7 +60,8 @@ import { TableView } from '../views/TableView';
 import { MatrixView } from '../views/MatrixView';
 import { VersionTableView } from '../views/VersionTableView';
 import { VersionPlanView } from '../views/VersionPlanView'; // ✅ 版本计划视图
-import IterationView from '../iteration/IterationView'; // 使用完整的迭代矩阵视图
+import IterationView from '../iteration/IterationView'; // 原时间迭代视图
+import { ModuleIterationView } from '../views/ModuleIterationView'; // ✅ 模块迭代视图
 import { useTimePlanStoreWithHistory } from '@/stores/timePlanStoreWithHistory';
 import type { Timeline } from '@/types/timeplanSchema';
 import { ImageExportDialog } from '../dialogs/ImageExportDialog';
@@ -479,7 +480,18 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
               color: view === 'iteration' ? '#FFFFFF' : undefined,
             }}
           >
-            迭代规划
+            时间迭代
+          </Button>
+          <Button
+            size="small"
+            icon={<NodeIndexOutlined />}
+            type={view === 'moduleIteration' ? 'primary' : 'default'}
+            onClick={() => handleViewChange('moduleIteration')}
+            style={{
+              color: view === 'moduleIteration' ? '#FFFFFF' : undefined,
+            }}
+          >
+            模块规划
           </Button>
         </Space>
       </div>
