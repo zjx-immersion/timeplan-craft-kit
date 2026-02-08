@@ -343,6 +343,16 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
           />
         );
 
+      case 'moduleIteration':
+        return (
+          <ModuleIterationView
+            data={plan}
+            onLineClick={(line) => {
+              message.info(`点击了: ${line.label}`);
+            }}
+          />
+        );
+
       default:
         return null;
     }
