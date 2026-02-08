@@ -78,9 +78,13 @@ interface TableRow {
   timelineId: string;
   timelineName: string;
   label: string;
+  type: string; // 类型（计划单元/里程碑/关口）
+  schemaId: string; // schema ID
   owner?: string;
   startDate: string;
   endDate: string;
+  duration?: number; // 时长（天）
+  dependencies?: string[]; // 依赖关系
   progress: number;
   status?: string;
   priority?: string;
@@ -109,6 +113,38 @@ export const TableView: React.FC<TableViewProps> = ({
     showTotal: (total) => `共 ${total} 条`,
   });
 
+  // 辅助函数：获取类型显示名称
+  const getTypeLabel = (schemaId: string): string => {
+    if (schemaId === 'lineplan-schema' || schemaId === 'bar-schema') return '计划单元';
+    if (schemaId === 'milestone-schema') return '里程碑';
+    if (schemaId === 'gateway-schema') return '关口';
+    return '未知';
+  };
+
+  // 辅助函数：获取类型图标
+  const getTypeIcon = (schemaId: string) => {
+    if (schemaId === 'lineplan-schema' || schemaId === 'bar-schema') return <ClockCircleOutlined style={{ color: '#1890ff' }} />;
+    if (schemaId === 'milestone-schema') return <FlagOutlined style={{ color: '#52c41a' }} />;
+    if (schemaId === 'gateway-schema') return <BorderOutlined style={{ color: '#faad14' }} />;
+    return null;
+  };
+
+  // 辅助函数：计算时长
+  const calculateDuration = (line: Line): number | undefined => {
+    if (!line.endDate || !line.startDate) return undefined;
+    return differenceInDays(new Date(line.endDate), new Date(line.startDate));
+  };
+
+  // 辅助函数：获取依赖关系
+  const getDependencies = (lineId: string): string[] => {
+    return (data.relations || [])
+      .filter(rel => rel.toLineId === lineId)
+      .map(rel => {
+        const fromLine = data.lines?.find(l => l.id === rel.fromLineId);
+        return fromLine?.label || rel.fromLineId;
+      });
+  };
+
   /**
    * 将 TimePlan 数据转换为表格行
    */
@@ -127,10 +163,14 @@ export const TableView: React.FC<TableViewProps> = ({
         timelineId: line.timelineId,
         timelineName: timeline?.name || 'Unknown',
         label: line.label,
+        type: getTypeLabel(line.schemaId),
+        schemaId: line.schemaId,
         // 从 attributes 中提取属性
         owner: line.attributes?.owner || '-',
         startDate: line.startDate ? format(new Date(line.startDate), 'yyyy-MM-dd') : '-',
         endDate: line.endDate ? format(new Date(line.endDate), 'yyyy-MM-dd') : '-',
+        duration: calculateDuration(line),
+        dependencies: getDependencies(line.id),
         progress: line.attributes?.progress || 0,
         status: line.attributes?.status,
         priority: line.attributes?.priority,
@@ -184,10 +224,33 @@ export const TableView: React.FC<TableViewProps> = ({
       fixed: 'left',
       sorter: (a, b) => a.label.localeCompare(b.label),
       render: (text, record) => (
-        <Tooltip title={text}>
-          <span>{text}</span>
-        </Tooltip>
+        <Space>
+          {getTypeIcon(record.schemaId)}
+          <Tooltip title={text}>
+            <span>{text}</span>
+          </Tooltip>
+        </Space>
       ),
+    },
+    {
+      title: '类型',
+      dataIndex: 'type',
+      key: 'type',
+      width: 100,
+      fixed: 'left',
+      filters: [
+        { text: '计划单元', value: '计划单元' },
+        { text: '里程碑', value: '里程碑' },
+        { text: '关口', value: '关口' },
+      ],
+      onFilter: (value, record) => record.type === value,
+      render: (type, record) => {
+        let color = 'default';
+        if (record.schemaId === 'lineplan-schema' || record.schemaId === 'bar-schema') color = 'blue';
+        if (record.schemaId === 'milestone-schema') color = 'green';
+        if (record.schemaId === 'gateway-schema') color = 'orange';
+        return <Tag color={color}>{type}</Tag>;
+      },
     },
     {
       title: '负责人',
@@ -214,6 +277,42 @@ export const TableView: React.FC<TableViewProps> = ({
       key: 'endDate',
       width: 120,
       sorter: (a, b) => a.endDate.localeCompare(b.endDate),
+    },
+    {
+      title: '时长(天)',
+      dataIndex: 'duration',
+      key: 'duration',
+      width: 100,
+      sorter: (a, b) => (a.duration || 0) - (b.duration || 0),
+      render: (duration?: number) => duration !== undefined ? `${duration}天` : '-',
+    },
+    {
+      title: '依赖关系',
+      dataIndex: 'dependencies',
+      key: 'dependencies',
+      width: 150,
+      render: (deps: string[]) => {
+        if (!deps || deps.length === 0) return '-';
+        if (deps.length === 1) {
+          return (
+            <Space size={4}>
+              <LinkOutlined style={{ color: '#1890ff', fontSize: 12 }} />
+              <Tooltip title={deps[0]}>
+                <span style={{ color: '#1890ff', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}>
+                  {deps[0]}
+                </span>
+              </Tooltip>
+            </Space>
+          );
+        }
+        return (
+          <Tooltip title={deps.join(', ')}>
+            <Tag color="blue" icon={<LinkOutlined />}>
+              {deps.length} 个依赖
+            </Tag>
+          </Tooltip>
+        );
+      },
     },
     {
       title: '进度',
@@ -279,19 +378,6 @@ export const TableView: React.FC<TableViewProps> = ({
         const config = priorityConfig[priority || ''] || { color: 'default', text: priority || '-' };
         return <Tag color={config.color}>{config.text}</Tag>;
       },
-    },
-    {
-      title: '标签',
-      dataIndex: 'tags',
-      key: 'tags',
-      width: 150,
-      render: (tags?: string[]) => (
-        <>
-          {tags?.map((tag, index) => (
-            <Tag key={index}>{tag}</Tag>
-          ))}
-        </>
-      ),
     },
     {
       title: '操作',
