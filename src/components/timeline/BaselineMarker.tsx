@@ -169,7 +169,7 @@ export const BaselineMarker: React.FC<BaselineMarkerProps> = ({
             alignItems: 'center',
             gap: 8,
             padding: '6px 12px',
-            backgroundColor: '#fa8c16',  // ✅ 橙色背景
+            backgroundColor: 'rgba(250, 140, 22, 0.92)',  // ✅ V11修复：添加透明度（#fa8c16 -> rgba with 0.92 alpha）
             color: '#fff',
             fontSize: 13,
             fontWeight: 600,

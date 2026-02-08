@@ -181,6 +181,11 @@ interface TimelinePanelProps {
 const ROW_HEIGHT = 120; // 源项目：timeline-craft-kit 使用 120px
 
 /**
+ * 头部高度常量
+ */
+const HEADER_HEIGHT = 72; // TimelineHeader的高度（2行header，每行36px）
+
+/**
  * 侧边栏宽度
  */
 const SIDEBAR_WIDTH = 200;
@@ -1151,7 +1156,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   }, [data, setData]);
 
   /**
-   * 删除节点
+   * 删除节点（✅ V11修复：真正删除，支持撤销）
    */
   const handleDeleteNode = useCallback((nodeId: string) => {
     const node = data.lines.find(l => l.id === nodeId);
@@ -1159,26 +1164,32 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
 
     Modal.confirm({
       title: '删除节点',
-      content: `确定要删除节点"${node.label}"吗？`,
+      content: `确定要删除节点"${node.label}"吗？此操作可以通过撤销恢复。`,
       okText: '删除',
       okType: 'danger',
       cancelText: '取消',
       onOk: () => {
-        // 删除节点
-        const updatedLines = data.lines.filter(l => l.id !== nodeId);
-        
-        // 删除相关的依赖关系
-        const updatedRelations = data.relations.filter(
-          r => r.fromLineId !== nodeId && r.toLineId !== nodeId
-        );
-        
-        setData({
+        // ✅ V11修复：使用deleteLineFromPlan工具函数，确保完整删除
+        // 包括：从lines中删除、从timeline的lineIds中删除、删除相关relations
+        const updatedPlan: TimePlan = {
           ...data,
-          lines: updatedLines,
-          relations: updatedRelations,
-        });
+          lines: data.lines.filter(l => l.id !== nodeId),
+          timelines: data.timelines.map(t => ({
+            ...t,
+            lineIds: t.lineIds.filter(id => id !== nodeId)
+          })),
+          relations: data.relations.filter(
+            r => r.fromLineId !== nodeId && r.toLineId !== nodeId
+          ),
+        };
         
-        message.success('节点已删除');
+        // ✅ 通过setData更新，自动记录到历史（支持撤销）
+        setData(updatedPlan);
+        
+        // ✅ 清除选中状态
+        setSelectedLineId(null);
+        
+        message.success('节点已删除（可通过撤销恢复）');
       },
     });
   }, [data, setData]);
@@ -1336,6 +1347,46 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isEditMode, selectedLineId, handleDeleteNode]);
+
+  /**
+   * ✅ V11新增：全局快捷键支持（Ctrl+S保存、Ctrl+Z撤销、Ctrl+Shift+Z重做）
+   */
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 检查是否在输入框中（避免干扰表单输入）
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+
+      // Ctrl+S 保存
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        if (hasChanges) {
+          handleSave();
+        }
+      }
+
+      // Ctrl+Z 撤销
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        if (canUndo) {
+          undo();
+        }
+      }
+
+      // Ctrl+Shift+Z 或 Ctrl+Y 重做
+      if ((e.ctrlKey || e.metaKey) && ((e.shiftKey && e.key === 'z') || e.key === 'y')) {
+        e.preventDefault();
+        if (canRedo) {
+          redo();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [hasChanges, handleSave, canUndo, undo, canRedo, redo]);
 
   /**
    * 切换全屏

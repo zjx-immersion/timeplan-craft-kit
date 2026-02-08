@@ -85,7 +85,7 @@ export const TodayLine: React.FC<TodayLineProps> = ({
           top: -24,
           transform: 'translateX(-50%)',
           padding: '3px 10px',
-          backgroundColor: timelineColors.today,
+          backgroundColor: 'rgba(248, 113, 113, 0.92)', // ✅ V11修复：添加透明度（#F87171 -> rgba with 0.92 alpha）
           color: '#fff',
           fontSize: 12,
           fontWeight: 600,
