@@ -63,15 +63,15 @@ export const VersionTableView: React.FC<VersionTableViewProps> = ({
 }) => {
   // ✅ 辅助函数：获取类型显示名称
   const getTypeLabel = (schemaId: string): string => {
-    if (schemaId === 'bar-schema') return '任务';
+    if (schemaId === 'lineplan-schema' || schemaId === 'bar-schema') return '计划单元';
     if (schemaId === 'milestone-schema') return '里程碑';
-    if (schemaId === 'gateway-schema') return '门禁';
+    if (schemaId === 'gateway-schema') return '关口';
     return '未知';
   };
 
   // ✅ 辅助函数：获取类型图标
   const getTypeIcon = (schemaId: string) => {
-    if (schemaId === 'bar-schema') return <ClockCircleOutlined style={{ color: '#1890ff' }} />;
+    if (schemaId === 'lineplan-schema' || schemaId === 'bar-schema') return <ClockCircleOutlined style={{ color: '#1890ff' }} />;
     if (schemaId === 'milestone-schema') return <FlagOutlined style={{ color: '#52c41a' }} />;
     if (schemaId === 'gateway-schema') return <BorderOutlined style={{ color: '#faad14' }} />;
     return <CheckCircleOutlined />;
@@ -167,11 +167,11 @@ export const VersionTableView: React.FC<VersionTableViewProps> = ({
       title: '类型',
       dataIndex: 'type',
       key: 'type',
-      width: 90,
+      width: 100,
       fixed: 'left',
       render: (type, record) => {
         let color = 'default';
-        if (record.schemaId === 'bar-schema') color = 'blue';
+        if (record.schemaId === 'lineplan-schema' || record.schemaId === 'bar-schema') color = 'blue';
         if (record.schemaId === 'milestone-schema') color = 'green';
         if (record.schemaId === 'gateway-schema') color = 'orange';
         return <Tag color={color}>{type}</Tag>;
@@ -311,19 +311,6 @@ export const VersionTableView: React.FC<VersionTableViewProps> = ({
           render: (progress) => progress !== undefined ? `${progress}%` : '-',
         },
       ],
-    },
-    {
-      title: '状态',
-      key: 'status',
-      width: 120,
-      fixed: 'right',
-      render: (_, record) => (
-        <Space direction="vertical" size={0}>
-          {record.hasChanges && <Tag color="warning">已变更</Tag>}
-          {!record.baseStartDate && <Tag color="success">新增</Tag>}
-          {!record.compareStartDate && <Tag color="error">删除</Tag>}
-        </Space>
-      ),
     },
   ];
 

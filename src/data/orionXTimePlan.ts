@@ -1,18 +1,24 @@
 /**
- * Orion X 智能驾驶平台 2026 年度计划（完整版 v3）
+ * Orion X 智能驾驶平台 2026 年度计划（完整版 v4）
+ * 
+ * v4 改进（2026-02-08）：
+ * 1. 类型重命名：bar-schema → lineplan-schema
+ * 2. 更细粒度的任务拆解（适用于迭代规划视图）
+ * 3. 增加更多模块间依赖关系
+ * 4. 完善Timeline描述和分类
  * 
  * v3 改进：
- * 1. 符合 schema 定义：bar 有 endDate，milestone/gateway 只有 startDate
+ * 1. 符合 schema 定义：lineplan 有 endDate，milestone/gateway 只有 startDate
  * 2. 确保每个 timeline 内的 line 时间不重叠
- * 3. 每个 bar 后都添加 gateway 或 milestone
+ * 3. 每个 lineplan 后都添加 gateway 或 milestone
  * 4. 完整的跨 timeline 依赖关系
  * 5. 修复 timeline.lineIds 字段，确保正确关联所有 line
  * 
- * @date 2026-01-27
+ * @date 2026-02-08
  */
 
 import { TimePlan, Timeline, Line, Relation, Baseline } from '@/types/timeplanSchema';
-import { BarSchema, MilestoneSchema, GatewaySchema } from '@/schemas/defaultSchemas';
+import { LinePlanSchema, MilestoneSchema, GatewaySchema } from '@/schemas/defaultSchemas';
 
 // ============================================================================
 // Timeline 定义
@@ -35,7 +41,8 @@ const timelines: Timeline[] = [
       'line-pm-006',
     ],
     attributes: {
-      category: 'ECU开发计划',
+      category: '项目管理',
+      productLine: '整车项目',
     },
   },
   // 2. 电子电器架构
@@ -47,6 +54,8 @@ const timelines: Timeline[] = [
     order: 2,
     lineIds: [
       'line-ee-001',
+      'line-ee-001-mr2',
+      'line-ee-001-mr3',
       'line-ee-001-gate',
       'line-ee-002',
       'line-ee-002-gate',
@@ -69,7 +78,10 @@ const timelines: Timeline[] = [
     description: '视觉、雷达、融合算法开发',
     order: 3,
     lineIds: [
-      'line-p-001',
+      'line-p-001-mr1',
+      'line-p-001-mr2',
+      'line-p-001-mr3',
+      'line-p-001-mr4',
       'line-p-001-gate',
       'line-p-002',
       'line-p-002-milestone',
@@ -90,9 +102,12 @@ const timelines: Timeline[] = [
     description: '路径规划和决策算法',
     order: 4,
     lineIds: [
-      'line-pl-001',
+      'line-pl-001-mr1',
+      'line-pl-001-mr2',
+      'line-pl-001-mr3',
       'line-pl-001-gate',
-      'line-pl-002',
+      'line-pl-002-mr1',
+      'line-pl-002-mr2',
       'line-pl-002-milestone',
       'line-pl-003',
       'line-pl-003-gate',
@@ -258,21 +273,59 @@ const lines: Line[] = [
   // ========================================================================
   // Timeline 2: 电子电器架构（E0-E4 + FDJ）
   // ========================================================================
-  // E0 架构概念设计
+  // E0 架构概念设计（拆分为3个MR）
   {
     id: 'line-ee-001',
     timelineId: 'tl-ee-arch',
-    label: 'E0 架构概念设计',
+    label: 'E0.1 域控架构方案设计',
     startDate: new Date('2026-01-15'),
-    endDate: new Date('2026-02-28'),
-    schemaId: BarSchema.id,
+    endDate: new Date('2026-01-31'),
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#3b82f6',
       progress: 0,
       status: '未开始',
       priority: '高',
-      owner: '架构师',
-      description: '电子架构概念设计',
+      owner: '架构师A',
+      description: '域控制器架构方案设计',
+      module: 'E0架构',
+      productLine: '电子架构',
+    },
+  },
+  {
+    id: 'line-ee-001-mr2',
+    timelineId: 'tl-ee-arch',
+    label: 'E0.2 传感器配置方案',
+    startDate: new Date('2026-02-03'),
+    endDate: new Date('2026-02-17'),
+    schemaId: LinePlanSchema.id,
+    attributes: {
+      color: '#3b82f6',
+      progress: 0,
+      status: '未开始',
+      priority: '高',
+      owner: '架构师B',
+      description: '传感器配置和布局方案',
+      module: 'E0架构',
+      productLine: '电子架构',
+    },
+  },
+  {
+    id: 'line-ee-001-mr3',
+    timelineId: 'tl-ee-arch',
+    label: 'E0.3 系统通信架构',
+    startDate: new Date('2026-02-19'),
+    endDate: new Date('2026-02-28'),
+    schemaId: LinePlanSchema.id,
+    attributes: {
+      color: '#3b82f6',
+      progress: 0,
+      status: '未开始',
+      priority: '高',
+      owner: '架构师C',
+      description: 'CAN/Ethernet通信架构',
+      module: 'E0架构',
+      productLine: '电子架构',
     },
   },
   {
@@ -296,7 +349,7 @@ const lines: Line[] = [
     label: 'E1 架构方案设计',
     startDate: new Date('2026-03-10'),
     endDate: new Date('2026-04-30'),
-    schemaId: BarSchema.id,
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#3b82f6',
       progress: 0,
@@ -327,7 +380,7 @@ const lines: Line[] = [
     label: 'E2 架构开发（0-10）',
     startDate: new Date('2026-05-10'),
     endDate: new Date('2026-07-15'),
-    schemaId: BarSchema.id,
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#3b82f6',
       progress: 0,
@@ -358,7 +411,7 @@ const lines: Line[] = [
     label: 'E3 信号架构改造',
     startDate: new Date('2026-07-25'),
     endDate: new Date('2026-09-10'),
-    schemaId: BarSchema.id,
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#3b82f6',
       progress: 0,
@@ -389,7 +442,7 @@ const lines: Line[] = [
     label: 'E4 满足VP造车',
     startDate: new Date('2026-09-20'),
     endDate: new Date('2026-10-31'),
-    schemaId: BarSchema.id,
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#3b82f6',
       progress: 0,
@@ -415,23 +468,79 @@ const lines: Line[] = [
   },
 
   // ========================================================================
-  // Timeline 3: 感知算法
+  // Timeline 3: 感知算法（细粒度拆解）
   // ========================================================================
-  // 视觉感知算法
+  // 视觉感知算法（拆分为4个MR）
   {
-    id: 'line-p-001',
+    id: 'line-p-001-mr1',
     timelineId: 'tl-perception',
-    label: '视觉感知算法开发',
+    label: 'P1.1 图像预处理模块',
     startDate: new Date('2026-02-01'),
-    endDate: new Date('2026-04-30'),
-    schemaId: BarSchema.id,
+    endDate: new Date('2026-02-20'),
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#10b981',
       progress: 0,
       status: '未开始',
       priority: '高',
       owner: '张工',
-      description: 'Transformer目标检测',
+      description: '图像去畸变、增强、ROI提取',
+      module: '视觉感知',
+      productLine: '感知算法',
+    },
+  },
+  {
+    id: 'line-p-001-mr2',
+    timelineId: 'tl-perception',
+    label: 'P1.2 目标检测算法',
+    startDate: new Date('2026-02-22'),
+    endDate: new Date('2026-03-20'),
+    schemaId: LinePlanSchema.id,
+    attributes: {
+      color: '#10b981',
+      progress: 0,
+      status: '未开始',
+      priority: '高',
+      owner: '张工',
+      description: 'YOLO/Transformer目标检测',
+      module: '视觉感知',
+      productLine: '感知算法',
+    },
+  },
+  {
+    id: 'line-p-001-mr3',
+    timelineId: 'tl-perception',
+    label: 'P1.3 多帧跟踪融合',
+    startDate: new Date('2026-03-22'),
+    endDate: new Date('2026-04-15'),
+    schemaId: LinePlanSchema.id,
+    attributes: {
+      color: '#10b981',
+      progress: 0,
+      status: '未开始',
+      priority: '高',
+      owner: '张工',
+      description: 'Kalman滤波多帧跟踪',
+      module: '视觉感知',
+      productLine: '感知算法',
+    },
+  },
+  {
+    id: 'line-p-001-mr4',
+    timelineId: 'tl-perception',
+    label: 'P1.4 环境语义理解',
+    startDate: new Date('2026-04-17'),
+    endDate: new Date('2026-04-30'),
+    schemaId: LinePlanSchema.id,
+    attributes: {
+      color: '#10b981',
+      progress: 0,
+      status: '未开始',
+      priority: '中',
+      owner: '张工',
+      description: '车道线、交通标志识别',
+      module: '视觉感知',
+      productLine: '感知算法',
     },
   },
   {
@@ -455,7 +564,7 @@ const lines: Line[] = [
     label: '激光雷达点云处理',
     startDate: new Date('2026-05-10'),
     endDate: new Date('2026-07-31'),
-    schemaId: BarSchema.id,
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#10b981',
       progress: 0,
@@ -486,7 +595,7 @@ const lines: Line[] = [
     label: '感知算法集成测试',
     startDate: new Date('2026-08-10'),
     endDate: new Date('2026-09-30'),
-    schemaId: BarSchema.id,
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#10b981',
       progress: 0,
@@ -517,7 +626,7 @@ const lines: Line[] = [
     label: 'FDJ 感知算法终版',
     startDate: new Date('2026-10-10'),
     endDate: new Date('2026-11-15'),
-    schemaId: BarSchema.id,
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#10b981',
       progress: 0,
@@ -543,23 +652,61 @@ const lines: Line[] = [
   },
 
   // ========================================================================
-  // Timeline 4: 规划决策
+  // Timeline 4: 规划决策（细粒度拆解）
   // ========================================================================
-  // 行为决策算法开发
+  // 行为决策算法开发（拆分为3个MR）
   {
-    id: 'line-pl-001',
+    id: 'line-pl-001-mr1',
     timelineId: 'tl-planning',
-    label: '行为决策算法开发',
+    label: 'PL1.1 决策状态机设计',
     startDate: new Date('2026-04-01'),
-    endDate: new Date('2026-06-30'),
-    schemaId: BarSchema.id,
+    endDate: new Date('2026-04-30'),
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#8b5cf6',
       progress: 0,
       status: '未开始',
       priority: '高',
       owner: '王工',
-      description: '决策树和强化学习',
+      description: '有限状态机和场景切换',
+      module: '行为决策',
+      productLine: '规划决策',
+    },
+  },
+  {
+    id: 'line-pl-001-mr2',
+    timelineId: 'tl-planning',
+    label: 'PL1.2 强化学习策略',
+    startDate: new Date('2026-05-05'),
+    endDate: new Date('2026-05-31'),
+    schemaId: LinePlanSchema.id,
+    attributes: {
+      color: '#8b5cf6',
+      progress: 0,
+      status: '未开始',
+      priority: '高',
+      owner: '王工',
+      description: 'DQN/PPO策略训练',
+      module: '行为决策',
+      productLine: '规划决策',
+    },
+  },
+  {
+    id: 'line-pl-001-mr3',
+    timelineId: 'tl-planning',
+    label: 'PL1.3 决策评估验证',
+    startDate: new Date('2026-06-03'),
+    endDate: new Date('2026-06-30'),
+    schemaId: LinePlanSchema.id,
+    attributes: {
+      color: '#8b5cf6',
+      progress: 0,
+      status: '未开始',
+      priority: '高',
+      owner: '王工',
+      description: '决策算法测试和优化',
+      module: '行为决策',
+      productLine: '规划决策',
     },
   },
   {
@@ -576,21 +723,41 @@ const lines: Line[] = [
       description: '决策算法门禁',
     },
   },
-  // 路径规划算法开发
+  // 路径规划算法开发（拆分为2个MR）
   {
-    id: 'line-pl-002',
+    id: 'line-pl-002-mr1',
     timelineId: 'tl-planning',
-    label: '路径规划算法开发',
+    label: 'PL2.1 全局路径规划',
     startDate: new Date('2026-07-10'),
-    endDate: new Date('2026-09-15'),
-    schemaId: BarSchema.id,
+    endDate: new Date('2026-08-10'),
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#8b5cf6',
       progress: 0,
       status: '未开始',
       priority: '高',
       owner: '刘工',
-      description: 'A*和RRT路径规划',
+      description: 'A*全局路径规划',
+      module: '路径规划',
+      productLine: '规划决策',
+    },
+  },
+  {
+    id: 'line-pl-002-mr2',
+    timelineId: 'tl-planning',
+    label: 'PL2.2 局部路径规划',
+    startDate: new Date('2026-08-12'),
+    endDate: new Date('2026-09-15'),
+    schemaId: LinePlanSchema.id,
+    attributes: {
+      color: '#8b5cf6',
+      progress: 0,
+      status: '未开始',
+      priority: '高',
+      owner: '刘工',
+      description: 'RRT局部避障规划',
+      module: '路径规划',
+      productLine: '规划决策',
     },
   },
   {
@@ -614,7 +781,7 @@ const lines: Line[] = [
     label: '规划决策集成测试',
     startDate: new Date('2026-09-25'),
     endDate: new Date('2026-10-31'),
-    schemaId: BarSchema.id,
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#8b5cf6',
       progress: 0,
@@ -649,7 +816,7 @@ const lines: Line[] = [
     label: '横向控制算法开发',
     startDate: new Date('2026-05-01'),
     endDate: new Date('2026-07-15'),
-    schemaId: BarSchema.id,
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#ef4444',
       progress: 0,
@@ -680,7 +847,7 @@ const lines: Line[] = [
     label: '纵向控制算法开发',
     startDate: new Date('2026-07-25'),
     endDate: new Date('2026-09-30'),
-    schemaId: BarSchema.id,
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#ef4444',
       progress: 0,
@@ -711,7 +878,7 @@ const lines: Line[] = [
     label: '控制模块集成测试',
     startDate: new Date('2026-10-10'),
     endDate: new Date('2026-11-15'),
-    schemaId: BarSchema.id,
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#ef4444',
       progress: 0,
@@ -746,7 +913,7 @@ const lines: Line[] = [
     label: '感知模块集成',
     startDate: new Date('2026-08-01'),
     endDate: new Date('2026-08-31'),
-    schemaId: BarSchema.id,
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#f59e0b',
       progress: 0,
@@ -777,7 +944,7 @@ const lines: Line[] = [
     label: '规划决策模块集成',
     startDate: new Date('2026-09-10'),
     endDate: new Date('2026-10-10'),
-    schemaId: BarSchema.id,
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#f59e0b',
       progress: 0,
@@ -808,7 +975,7 @@ const lines: Line[] = [
     label: '控制模块集成',
     startDate: new Date('2026-10-20'),
     endDate: new Date('2026-11-15'),
-    schemaId: BarSchema.id,
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#f59e0b',
       progress: 0,
@@ -843,7 +1010,7 @@ const lines: Line[] = [
     label: 'VP1 样车准备',
     startDate: new Date('2026-09-01'),
     endDate: new Date('2026-09-30'),
-    schemaId: BarSchema.id,
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#06b6d4',
       progress: 0,
@@ -874,7 +1041,7 @@ const lines: Line[] = [
     label: 'VP1 验证测试',
     startDate: new Date('2026-10-10'),
     endDate: new Date('2026-10-31'),
-    schemaId: BarSchema.id,
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#06b6d4',
       progress: 0,
@@ -905,7 +1072,7 @@ const lines: Line[] = [
     label: 'VP2 样车准备',
     startDate: new Date('2026-11-10'),
     endDate: new Date('2026-11-30'),
-    schemaId: BarSchema.id,
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#06b6d4',
       progress: 0,
@@ -936,7 +1103,7 @@ const lines: Line[] = [
     label: 'VP2 验证测试',
     startDate: new Date('2026-12-10'),
     endDate: new Date('2026-12-31'),
-    schemaId: BarSchema.id,
+    schemaId: LinePlanSchema.id,
     attributes: {
       color: '#06b6d4',
       progress: 0,
@@ -991,10 +1158,92 @@ const relations: Relation[] = [
     id: 'rel-ee-to-p-001',
     type: 'dependency',
     fromLineId: 'line-ee-001-gate', // E0评审
-    toLineId: 'line-p-001',          // 视觉算法开发
+    toLineId: 'line-p-001-mr1',      // 图像预处理模块
     properties: {
       dependencyType: 'finish-to-start',
-      lag: -3,
+      lag: -10, // 可以并行开始
+    },
+    attributes: {
+      critical: true,
+    },
+  },
+
+  // E0 内部 MR 依赖
+  {
+    id: 'rel-ee-mr-001',
+    type: 'dependency',
+    fromLineId: 'line-ee-001',     // 域控架构
+    toLineId: 'line-ee-001-mr2',   // 传感器配置
+    properties: {
+      dependencyType: 'finish-to-start',
+      lag: 1,
+    },
+    attributes: {
+      critical: true,
+    },
+  },
+  {
+    id: 'rel-ee-mr-002',
+    type: 'dependency',
+    fromLineId: 'line-ee-001-mr2', // 传感器配置
+    toLineId: 'line-ee-001-mr3',   // 系统通信
+    properties: {
+      dependencyType: 'finish-to-start',
+      lag: 1,
+    },
+    attributes: {
+      critical: true,
+    },
+  },
+
+  // 感知算法内部 MR 依赖
+  {
+    id: 'rel-p-mr-001',
+    type: 'dependency',
+    fromLineId: 'line-p-001-mr1',  // 图像预处理
+    toLineId: 'line-p-001-mr2',    // 目标检测
+    properties: {
+      dependencyType: 'finish-to-start',
+      lag: 1,
+    },
+    attributes: {
+      critical: true,
+    },
+  },
+  {
+    id: 'rel-p-mr-002',
+    type: 'dependency',
+    fromLineId: 'line-p-001-mr2',  // 目标检测
+    toLineId: 'line-p-001-mr3',    // 多帧跟踪
+    properties: {
+      dependencyType: 'finish-to-start',
+      lag: 1,
+    },
+    attributes: {
+      critical: true,
+    },
+  },
+  {
+    id: 'rel-p-mr-003',
+    type: 'dependency',
+    fromLineId: 'line-p-001-mr3',  // 多帧跟踪
+    toLineId: 'line-p-001-mr4',    // 语义理解
+    properties: {
+      dependencyType: 'finish-to-start',
+      lag: 1,
+    },
+    attributes: {
+      critical: false, // 可以并行
+    },
+  },
+  {
+    id: 'rel-p-mr-to-gate',
+    type: 'dependency',
+    fromLineId: 'line-p-001-mr4',  // 最后一个MR
+    toLineId: 'line-p-001-gate',   // 视觉算法评审
+    properties: {
+      dependencyType: 'finish-to-start',
+      lag: 2,
     },
     attributes: {
       critical: true,
