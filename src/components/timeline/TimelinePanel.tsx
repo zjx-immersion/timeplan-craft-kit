@@ -254,6 +254,31 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     reset: resetChanges,
   } = useUndoRedo<TimePlan>(initialData);
 
+  // ✅ V11.3修复：确保data的必需字段存在（用于后续安全访问）
+  // 注意：不能在这里早期返回，因为后面还有很多hooks
+  const safeData = useMemo(() => {
+    if (!data || typeof data !== 'object') {
+      return {
+        id: 'error',
+        title: '数据错误',
+        schemaId: 'default',
+        lines: [],
+        timelines: [],
+        relations: [],
+        baselines: [],
+        baselineRanges: [],
+      } as TimePlan;
+    }
+    return {
+      ...data,
+      lines: data.lines || [],
+      timelines: data.timelines || [],
+      relations: data.relations || [],
+      baselines: data.baselines || [],
+      baselineRanges: data.baselineRanges || [],
+    };
+  }, [data]);
+
   // 同步外部数据变化
   const prevInitialDataRef = useRef(initialData);
 
@@ -518,7 +543,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
         }
       }
     }
-  }, [data.lines, data.viewConfig?.endDate, viewEndDate]);
+  }, [safeData.lines, safeData.viewConfig?.endDate, viewEndDate]);
 
   /**
    * 缩放 - 放大（增加精度）
@@ -582,8 +607,8 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
    * 根据 Timeline ID 获取其 Lines
    */
   const getLinesByTimelineId = useCallback((timelineId: string): Line[] => {
-    return data.lines.filter((line) => line.timelineId === timelineId);
-  }, [data.lines]);
+    return safeData.lines.filter((line) => line.timelineId === timelineId);
+  }, [safeData.lines]);
 
   /**
    * 切换 Timeline 折叠状态
@@ -616,7 +641,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
       setEditingTimeline(timeline);
       setIsTimelineEditDialogOpen(true);
     }
-  }, [data.timelines]);
+  }, [safeData.timelines]);
 
   /**
    * 保存 Timeline 编辑
@@ -750,7 +775,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     
     // 4. 复制该Timeline内部的Relations（只复制起点和终点都在同一Timeline内的关系）
     const timelineLineIds = new Set(timelineLines.map(l => l.id));
-    const copiedRelations: Relation[] = (data.relations || [])
+    const copiedRelations: Relation[] = (safeData.relations || [])
       .filter(rel => 
         timelineLineIds.has(rel.fromLineId) && 
         timelineLineIds.has(rel.toLineId)
@@ -792,7 +817,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     setConnectionMode({ lineId, direction });
     console.log('[TimelinePanel] 🔗 开始连线', { lineId, direction, lineTitle: line.title });
     message.info(`连线模式：${direction === 'from' ? '从' : '到'} "${line.title}"`);
-  }, [data.lines]);
+  }, [safeData.lines]);
 
   /**
    * 完成连线
@@ -950,7 +975,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     }
     
     handleAddNodeToTimeline(targetTimeline.id, type);
-  }, [data.timelines, handleAddNodeToTimeline]);
+  }, [safeData.timelines, handleAddNodeToTimeline]);
 
   /**
    * 切换关键路径显示
@@ -967,7 +992,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     const pathLines = calculateCriticalPath(data.lines, data.relations || []);
     console.log('[TimelinePanel] 🎯 关键路径:', pathLines.length, '个元素');
     return new Set(pathLines);
-  }, [data.lines, data.relations, showCriticalPath]);
+  }, [safeData.lines, safeData.relations, showCriticalPath]);
 
   // ==================== 基线系统事件处理 ====================
 
@@ -1164,9 +1189,9 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
    * 删除节点（✅ V11修复：真正删除，支持撤销）
    */
   const handleDeleteNode = useCallback((nodeId: string) => {
-    console.log('[TimelinePanel] 🗑️ handleDeleteNode called:', { nodeId, isEditMode, hasNode: !!data.lines.find(l => l.id === nodeId) });
+    console.log('[TimelinePanel] 🗑️ handleDeleteNode called:', { nodeId, isEditMode, hasNode: !!safeData.lines.find(l => l.id === nodeId) });
     
-    const node = data.lines.find(l => l.id === nodeId);
+    const node = safeData.lines.find(l => l.id === nodeId);
     if (!node) {
       console.warn('[TimelinePanel] ⚠️ Node not found:', nodeId);
       return;
