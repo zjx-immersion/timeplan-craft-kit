@@ -199,7 +199,22 @@ export const ModuleIterationView: React.FC<ModuleIterationViewProps> = ({
       });
     });
 
-    return result.sort((a, b) => a.productLine.localeCompare(b.productLine));
+    const sortedResult = result.sort((a, b) => a.productLine.localeCompare(b.productLine));
+
+    console.log('[ModuleIterationView] 最终分组结果:', {
+      productLineCount: sortedResult.length,
+      totalModules: sortedResult.reduce((sum, pl) => sum + pl.modules.length, 0),
+      totalMRs: sortedResult.reduce((sum, pl) => 
+        sum + pl.modules.reduce((msum, m) => msum + m.mrs.length, 0), 0
+      ),
+      summary: sortedResult.map(pl => ({
+        productLine: pl.productLine,
+        moduleCount: pl.modules.length,
+        mrCount: pl.modules.reduce((sum, m) => sum + m.mrs.length, 0),
+      })),
+    });
+
+    return sortedResult;
   }, [data]);
 
   // 渲染MR卡片
