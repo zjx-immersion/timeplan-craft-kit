@@ -2020,7 +2020,9 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
             flex: 1,
             position: 'relative',
             backgroundColor: '#fff',  // ✅ 修复：与左侧背景色一致，统一为白色
-            minWidth: totalWidth,
+            width: totalWidth,  // ✅ 固定宽度，防止右侧过多空白
+            maxWidth: totalWidth,  // ✅ 限制最大宽度
+            minWidth: totalWidth,  // ✅ 保持最小宽度
           }}
         >
           {/* ✅ 时间轴表头（使用独立的TimelineHeader组件） */}
@@ -2262,6 +2264,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                     style={{
                       position: 'relative',
                       height: ROW_HEIGHT,  // ✅ 固定高度120px，与左侧一致
+                      width: totalWidth,  // ✅ 固定宽度，确保背景色覆盖整个时间轴
                       borderBottom: `1px solid ${token.colorBorderSecondary}`,
                       backgroundColor: `${timelineColor}08`,  // ✅ 右侧甘特图区域背景色（8%透明度）
                       boxSizing: 'border-box',  // ✅ 确保border包含在高度内，与左侧一致

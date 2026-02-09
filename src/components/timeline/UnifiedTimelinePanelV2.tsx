@@ -365,6 +365,7 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
         display: 'flex',
         flexDirection: 'column',
         backgroundColor: token.colorBgContainer,
+        overflow: 'hidden',  // ✅ 去掉最外层滚动条，只在甘特图内滚动
       }}
       data-testid="unified-timeline-panel-v2"
       data-current-view={view}
