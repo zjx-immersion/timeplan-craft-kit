@@ -385,7 +385,8 @@ const TimelineHeader: React.FC<TimelineHeaderProps> = React.memo(({
       <div style={{ display: 'flex', height: 36 }}>
         {childHeaders.map((cell, index) => {
           // 确定背景色和文字颜色
-          let backgroundColor = 'transparent';
+          // ✅ 默认使用交替背景色（斑马纹效果）
+          let backgroundColor = index % 2 === 0 ? token.colorBgContainer : token.colorBgLayout;
           let textColor = token.colorText;
           
           if (cell.isHoliday) {
