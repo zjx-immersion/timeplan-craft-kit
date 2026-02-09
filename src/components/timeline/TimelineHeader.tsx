@@ -315,16 +315,36 @@ const TimelineHeader: React.FC<TimelineHeaderProps> = React.memo(({
 }) => {
   const { token } = useToken();
   
-  // ⚡ 性能优化：缓存昂贵的表头计算
-  const parentHeaders = useMemo(
-    () => getParentHeaders(startDate, endDate, scale),
-    [startDate, endDate, scale]
-  );
+  console.log('[TimelineHeader] 🎨 渲染开始:', {
+    startDate: startDate.toISOString().split('T')[0],
+    endDate: endDate.toISOString().split('T')[0],
+    startYear: startDate.getFullYear(),
+    endYear: endDate.getFullYear(),
+    scale,
+    width,
+  });
   
-  const childHeaders = useMemo(
-    () => getChildHeaders(startDate, endDate, scale),
-    [startDate, endDate, scale]
-  );
+  // ⚡ 性能优化：缓存昂贵的表头计算
+  const parentHeaders = useMemo(() => {
+    const headers = getParentHeaders(startDate, endDate, scale);
+    console.log('[TimelineHeader] 📊 父级表头计算完成:', {
+      count: headers.length,
+      labels: headers.map(h => h.label).join(', '),
+      widths: headers.map(h => Math.round(h.width)).join(', '),
+      totalWidth: headers.reduce((sum, h) => sum + h.width, 0),
+    });
+    return headers;
+  }, [startDate, endDate, scale]);
+  
+  const childHeaders = useMemo(() => {
+    const headers = getChildHeaders(startDate, endDate, scale);
+    console.log('[TimelineHeader] 📅 子级表头计算完成:', {
+      count: headers.length,
+      firstLabel: headers[0]?.label,
+      lastLabel: headers[headers.length - 1]?.label,
+    });
+    return headers;
+  }, [startDate, endDate, scale]);
 
   return (
     <div
