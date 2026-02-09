@@ -162,13 +162,13 @@ const BarRenderer: React.FC<LineRendererProps> = ({
         />
       )}
       
-      {/* ✅ 标题标签 - 显示在Bar上方，对准左边缘 */}
+      {/* ✅ 标题标签 - 显示在Bar上方，完整显示文字 */}
       <div
         style={{
           position: 'absolute',
           left: 0,                       // 与bar左边缘对齐
           top: -20,                      // 上方20px
-          whiteSpace: 'nowrap',
+          whiteSpace: 'nowrap',          // ✅ 不换行，完整显示
           fontSize: 12,
           fontWeight: 600,
           color: '#1E293B',              // Slate-900
@@ -177,12 +177,12 @@ const BarRenderer: React.FC<LineRendererProps> = ({
           padding: '2px 4px',
           backgroundColor: 'transparent', // ✅ 背景透明
           borderRadius: 3,
-          maxWidth: width > 0 ? `${width}px` : 'auto', // 限制最大宽度为bar宽度
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
+          // ✅ 移除maxWidth限制，让文字完整显示
+          minWidth: width > 0 ? `${width}px` : 'auto', // 最小宽度为bar宽度
+          // ✅ 移除overflow和textOverflow，不裁剪文字
         }}
       >
-        {line.label || line.title}
+        {line.label || line.title || line.name}
       </div>
       
       {/* ✅ 右侧调整手柄 - 放在连线点左侧 */}
@@ -318,14 +318,14 @@ const MilestoneRenderer: React.FC<LineRendererProps> = ({
         />
       </svg>
       
-      {/* ✅ 标签 - 显示在Milestone上方，居中对齐 */}
+      {/* ✅ 标签 - 显示在Milestone上方，居中对齐，完整显示 */}
       <div
         style={{
           position: 'absolute',
           left: '50%',                   // 居中
           transform: 'translateX(-50%)', // 水平居中
           top: -24,                      // 上方24px
-          whiteSpace: 'nowrap',
+          whiteSpace: 'nowrap',          // ✅ 不换行，完整显示
           fontSize: 12,
           fontWeight: 600,
           color: '#1E293B',
@@ -336,7 +336,7 @@ const MilestoneRenderer: React.FC<LineRendererProps> = ({
           borderRadius: 3,
         }}
       >
-        {line.label || line.title}
+        {line.label || line.title || line.name}
       </div>
 
       {/* 连接点 - 在连线模式下显示所有连接点，或在选中/hover时显示 */}
@@ -438,14 +438,14 @@ const GatewayRenderer: React.FC<LineRendererProps> = ({
         />
       </svg>
       
-      {/* ✅ 标签 - 显示在Gateway上方，居中对齐 */}
+      {/* ✅ 标签 - 显示在Gateway上方，居中对齐，完整显示 */}
       <div
         style={{
           position: 'absolute',
           left: '50%',                   // 居中对齐
           transform: 'translateX(-50%)', // 水平居中
           top: -28,                      // 上方28px（gateway比milestone大）
-          whiteSpace: 'nowrap',
+          whiteSpace: 'nowrap',          // ✅ 不换行，完整显示
           fontSize: 12,
           fontWeight: 600,
           color: '#1E293B',              // Slate-900
@@ -456,7 +456,7 @@ const GatewayRenderer: React.FC<LineRendererProps> = ({
           borderRadius: 3,
         }}
       >
-        {line.label || line.title}
+        {line.label || line.title || line.name}
       </div>
 
       {/* 连接点 - 在连线模式下显示所有连接点，或在选中/hover时显示 */}

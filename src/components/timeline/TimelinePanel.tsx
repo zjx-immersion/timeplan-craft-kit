@@ -1109,9 +1109,28 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
    * 添加节点到Timeline
    */
   const handleAddNodeToTimeline = useCallback((timelineId: string, type: 'lineplan' | 'milestone' | 'gateway') => {
-    // 获取当前滚动位置，在该位置创建节点
+    // ✅ 获取当前滚动位置，计算对应的日期
     const scrollLeft = scrollContainerRef.current?.scrollLeft || 0;
-    const position = scrollLeft + 200; // 在可视区域左侧200px处创建
+    const containerWidth = scrollContainerRef.current?.clientWidth || 800;
+    
+    // ✅ 计算可视区域中心位置对应的日期
+    const centerPosition = scrollLeft + (containerWidth / 2);
+    const startDate = getDateFromPosition(centerPosition, normalizedViewStartDate, scale);
+    
+    // ✅ 根据类型设置默认周期
+    // lineplan: 2周（14天）
+    // milestone: 单点，无endDate
+    // gateway: 单点，无endDate
+    const endDate = type === 'lineplan' ? addDays(startDate, 14) : undefined;
+    
+    console.log('[handleAddNodeToTimeline] 📍 创建新节点:', {
+      type,
+      scrollLeft,
+      centerPosition,
+      startDate: format(startDate, 'yyyy-MM-dd'),
+      endDate: endDate ? format(endDate, 'yyyy-MM-dd') : 'N/A',
+      duration: type === 'lineplan' ? '14天（2周）' : '单点',
+    });
     
     // 根据类型创建对应的schemaId
     const schemaId = type === 'lineplan' ? 'lineplan-schema' :
@@ -1119,15 +1138,16 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                     type === 'gateway' ? 'gateway-schema' : 'lineplan-schema';
     
     // 创建新Line
-    const today = new Date();
     const lineName = type === 'lineplan' ? '新计划单元' : type === 'milestone' ? '新里程碑' : '新网关';
     const newLine: Line = {
       id: `line-${Date.now()}`,
       timelineId,
       schemaId,
       label: lineName,
-      startDate: today,
-      endDate: type === 'lineplan' ? addDays(today, 7) : undefined,
+      title: lineName,  // ✅ 同时设置title和label
+      name: lineName,   // ✅ 同时设置name
+      startDate,        // ✅ 使用计算的日期，而非today
+      endDate,          // ✅ lineplan默认14天
       attributes: {
         name: lineName,
       },
@@ -1138,8 +1158,8 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
       lines: [...data.lines, newLine],
     });
     
-    message.success('节点已添加');
-  }, [data, setData]);
+    message.success(`节点已添加: ${lineName}${type === 'lineplan' ? ' (2周)' : ''}`);
+  }, [data, setData, normalizedViewStartDate, scale]);
 
   /**
    * 添加Timeline
