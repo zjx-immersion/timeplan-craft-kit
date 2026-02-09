@@ -299,29 +299,32 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     onViewChange?.(newView);
   }, [onViewChange]);
   const [viewStartDate, setViewStartDate] = useState(() => {
-    // 优先使用数据自带的 viewConfig
-    if (initialData.viewConfig?.startDate) {
-      const date = initialData.viewConfig.startDate instanceof Date
-        ? initialData.viewConfig.startDate
-        : new Date(initialData.viewConfig.startDate);
-      console.log('[TimelinePanel] 使用 viewConfig startDate:', date);
-      return date;
-    }
+    // ⚠️ 临时禁用 viewConfig，避免使用错误的缓存范围
+    // TODO: 后续需要验证 viewConfig 的有效性
+    // if (initialData.viewConfig?.startDate) {
+    //   const date = initialData.viewConfig.startDate instanceof Date
+    //     ? initialData.viewConfig.startDate
+    //     : new Date(initialData.viewConfig.startDate);
+    //   console.log('[TimelinePanel] 使用 viewConfig startDate:', date);
+    //   return date;
+    // }
+    
     // ✅ 固定范围：2024年1月1日
-    console.log('[TimelinePanel] 使用默认 startDate: 2024-01-01');
+    console.log('[TimelinePanel] 使用默认 startDate: 2024-01-01（已忽略viewConfig）');
     return new Date(2024, 0, 1);
   });
   const [viewEndDate, setViewEndDate] = useState(() => {
-    // 优先使用数据自带的 viewConfig
-    if (initialData.viewConfig?.endDate) {
-      const date = initialData.viewConfig.endDate instanceof Date
-        ? initialData.viewConfig.endDate
-        : new Date(initialData.viewConfig.endDate);
-      console.log('[TimelinePanel] 使用 viewConfig endDate:', date);
-      return date;
-    }
+    // ⚠️ 临时禁用 viewConfig，避免使用错误的缓存范围
+    // if (initialData.viewConfig?.endDate) {
+    //   const date = initialData.viewConfig.endDate instanceof Date
+    //     ? initialData.viewConfig.endDate
+    //     : new Date(initialData.viewConfig.endDate);
+    //   console.log('[TimelinePanel] 使用 viewConfig endDate:', date);
+    //   return date;
+    // }
+    
     // ✅ 固定范围：2028年12月31日
-    console.log('[TimelinePanel] 使用默认 endDate: 2028-12-31');
+    console.log('[TimelinePanel] 使用默认 endDate: 2028-12-31（已忽略viewConfig）');
     return new Date(2028, 11, 31);
   });
   
