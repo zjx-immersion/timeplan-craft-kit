@@ -32,6 +32,11 @@ interface RelationRendererProps {
   onRelationDelete?: (relationId: string) => void;
   // 关键路径
   criticalPathNodeIds?: Set<string>;
+  // ✅ 拖拽/调整大小状态（用于实时更新连线位置）
+  draggingNodeId?: string | null;
+  dragSnappedDates?: { start?: Date; end?: Date };
+  resizingNodeId?: string | null;
+  resizeSnappedDates?: { start?: Date; end?: Date };
 }
 
 interface LinePosition {
@@ -59,6 +64,10 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
   onRelationClick,
   onRelationDelete,
   criticalPathNodeIds = new Set(),
+  draggingNodeId = null,
+  dragSnappedDates = {},
+  resizingNodeId = null,
+  resizeSnappedDates = {},
 }) => {
   const [hoveredId, setHoveredId] = React.useState<string | null>(null);
   
@@ -74,17 +83,25 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
         return;
       }
       
-      // ✅ 使用 parseDateAsLocal 避免时区导致的日期偏移
-      const startPos = getPositionFromDate(
-        parseDateAsLocal(line.startDate),
-        viewStartDate,
-        scale
-      );
+      // ✅ 实时跟随：如果line正在被拖拽或调整大小，使用临时日期
+      const isDraggingThis = draggingNodeId === line.id;
+      const isResizingThis = resizingNodeId === line.id;
       
-      const endDate = line.endDate ? parseDateAsLocal(line.endDate) : parseDateAsLocal(line.startDate);
-      const width = line.endDate
-        ? getBarWidthPrecise(parseDateAsLocal(line.startDate), endDate, scale)
-        : 0;
+      const displayStartDate = isDraggingThis && dragSnappedDates.start
+        ? dragSnappedDates.start
+        : isResizingThis && resizeSnappedDates.start
+          ? resizeSnappedDates.start
+          : parseDateAsLocal(line.startDate);
+      
+      const displayEndDate = isDraggingThis && dragSnappedDates.end
+        ? dragSnappedDates.end
+        : isResizingThis && resizeSnappedDates.end
+          ? resizeSnappedDates.end
+          : line.endDate ? parseDateAsLocal(line.endDate) : parseDateAsLocal(line.startDate);
+      
+      // ✅ 使用显示日期计算位置（拖拽中的临时位置）
+      const startPos = getPositionFromDate(displayStartDate, viewStartDate, scale);
+      const width = getBarWidthPrecise(displayStartDate, displayEndDate, scale);
       
       positions.set(line.id, {
         x: startPos,
@@ -100,7 +117,17 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
       console.warn('[RelationRenderer] ⚠️ 没有lines数据');
     }
     return positions;
-  }, [lines, timelines, viewStartDate, scale, rowHeight]);
+  }, [
+    lines, 
+    timelines, 
+    viewStartDate, 
+    scale, 
+    rowHeight,
+    draggingNodeId,
+    dragSnappedDates,
+    resizingNodeId,
+    resizeSnappedDates,
+  ]); // ✅ 添加拖拽状态到依赖项，确保实时更新
   
   // ✅ 简化：只在出现错误时输出日志
   const validationResult = useMemo(() => {
@@ -411,7 +438,7 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
   );
 }, (prevProps, nextProps) => {
   // ✅ 自定义比较函数：只在关键属性变化时才重渲染
-  return (
+  const propsEqual = (
     prevProps.relations.length === nextProps.relations.length &&
     prevProps.lines.length === nextProps.lines.length &&
     prevProps.timelines.length === nextProps.timelines.length &&
@@ -420,8 +447,17 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
     prevProps.scale === nextProps.scale &&
     prevProps.rowHeight === nextProps.rowHeight &&
     prevProps.viewStartDate.getTime() === nextProps.viewStartDate.getTime() &&
-    prevProps.criticalPathNodeIds.size === nextProps.criticalPathNodeIds.size
+    prevProps.criticalPathNodeIds.size === nextProps.criticalPathNodeIds.size &&
+    // ✅ 拖拽状态变化时需要重渲染（连线实时跟随）
+    prevProps.draggingNodeId === nextProps.draggingNodeId &&
+    prevProps.resizingNodeId === nextProps.resizingNodeId &&
+    prevProps.dragSnappedDates?.start?.getTime() === nextProps.dragSnappedDates?.start?.getTime() &&
+    prevProps.dragSnappedDates?.end?.getTime() === nextProps.dragSnappedDates?.end?.getTime() &&
+    prevProps.resizeSnappedDates?.start?.getTime() === nextProps.resizeSnappedDates?.start?.getTime() &&
+    prevProps.resizeSnappedDates?.end?.getTime() === nextProps.resizeSnappedDates?.end?.getTime()
   );
+  
+  return propsEqual;
 }); // ✅ 闭合memo
 
 /**

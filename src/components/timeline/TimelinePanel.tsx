@@ -2429,6 +2429,11 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                 criticalPathNodeIds={criticalPathNodeIds}
                 onRelationClick={handleRelationClick}
                 onRelationDelete={handleRelationDelete}
+                // ✅ 传递拖拽状态，使连线实时跟随
+                draggingNodeId={draggingNodeId}
+                dragSnappedDates={dragSnappedDates}
+                resizingNodeId={resizingNodeId}
+                resizeSnappedDates={resizeSnappedDates}
               />
             )}
 
