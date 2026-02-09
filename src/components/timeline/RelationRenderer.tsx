@@ -13,7 +13,7 @@
  * - start-to-finish (SF): 前任务开始 → 后任务完成
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, memo } from 'react';
 import { Relation, Line } from '@/types/timeplanSchema';
 import { TimeScale } from '@/utils/dateUtils';
 import { getPositionFromDate, getBarWidthPrecise, parseDateAsLocal } from '@/utils/dateUtils';
@@ -45,8 +45,9 @@ interface LinePosition {
 /**
  * RelationRenderer 组件
  * ✅ 增强版：明显的视觉效果 + 交互反馈
+ * ✅ 性能优化：使用React.memo避免不必要的重渲染
  */
-export const RelationRenderer: React.FC<RelationRendererProps> = ({
+export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
   relations,
   lines,
   timelines,
@@ -492,4 +493,17 @@ function calculatePath(
       L ${endX} ${endY}
     `.replace(/\s+/g, ' ').trim();
   }
-}
+}, (prevProps, nextProps) => {
+  // ✅ 自定义比较函数：只在关键属性变化时才重渲染
+  return (
+    prevProps.relations.length === nextProps.relations.length &&
+    prevProps.lines.length === nextProps.lines.length &&
+    prevProps.timelines.length === nextProps.timelines.length &&
+    prevProps.selectedRelationId === nextProps.selectedRelationId &&
+    prevProps.isEditMode === nextProps.isEditMode &&
+    prevProps.scale === nextProps.scale &&
+    prevProps.rowHeight === nextProps.rowHeight &&
+    prevProps.viewStartDate.getTime() === nextProps.viewStartDate.getTime() &&
+    prevProps.criticalPathNodeIds.size === nextProps.criticalPathNodeIds.size
+  );
+});

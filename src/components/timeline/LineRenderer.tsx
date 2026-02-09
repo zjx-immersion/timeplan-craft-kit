@@ -12,7 +12,7 @@
  * - gateway: 网关（六边形）
  */
 
-import React from 'react';
+import React, { memo } from 'react';
 import { Line } from '@/types/timeplanSchema';
 import { timelineColors, timelineShadows, timelineTransitions } from '@/theme/timelineColors';
 import ConnectionPoints from './ConnectionPoints';
@@ -20,6 +20,9 @@ import { Tooltip } from 'antd';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { parseDateAsLocal } from '@/utils/dateUtils';
+
+// ✅ 性能优化：将默认connectionMode移到组件外部，避免每次渲染创建新对象
+const DEFAULT_CONNECTION_MODE = { lineId: null, direction: 'from' as const };
 
 interface LineRendererProps {
   line: Line;
@@ -42,8 +45,9 @@ interface LineRendererProps {
 
 /**
  * 渲染 Bar 类型（横条）
+ * ✅ 性能优化：使用React.memo避免不必要的重渲染
  */
-const BarRenderer: React.FC<LineRendererProps> = ({
+const BarRenderer: React.FC<LineRendererProps> = memo(({
   line,
   startPos,
   width,
@@ -54,7 +58,7 @@ const BarRenderer: React.FC<LineRendererProps> = ({
   onClick,
   onResizeStart,
   isHovered = false,
-  connectionMode = { lineId: null, direction: 'from' },
+  connectionMode = DEFAULT_CONNECTION_MODE,
   onStartConnection,
   onCompleteConnection,
   isCriticalPath = false,
@@ -231,12 +235,13 @@ const BarRenderer: React.FC<LineRendererProps> = ({
     </div>
     </Tooltip>
   );
-};
+}); // ✅ 闭合memo
 
 /**
  * 渲染 Milestone 类型（菱形）
+ * ✅ 性能优化：使用React.memo避免不必要的重渲染
  */
-const MilestoneRenderer: React.FC<LineRendererProps> = ({
+const MilestoneRenderer: React.FC<LineRendererProps> = memo(({
   line,
   startPos,
   isSelected,
@@ -352,12 +357,13 @@ const MilestoneRenderer: React.FC<LineRendererProps> = ({
     </div>
     </Tooltip>
   );
-};
+}); // ✅ 闭合memo
 
 /**
  * 渲染 Gateway 类型（六边形）
+ * ✅ 性能优化：使用React.memo避免不必要的重渲染
  */
-const GatewayRenderer: React.FC<LineRendererProps> = ({
+const GatewayRenderer: React.FC<LineRendererProps> = memo(({
   line,
   startPos,
   isSelected,
@@ -367,7 +373,7 @@ const GatewayRenderer: React.FC<LineRendererProps> = ({
   onMouseDown,
   onClick,
   isHovered = false,
-  connectionMode = { lineId: null, direction: 'from' },
+  connectionMode = DEFAULT_CONNECTION_MODE,
   onStartConnection,
   onCompleteConnection,
 }) => {
@@ -472,12 +478,13 @@ const GatewayRenderer: React.FC<LineRendererProps> = ({
     </div>
     </Tooltip>
   );
-};
+}); // ✅ 闭合memo
 
 /**
  * LineRenderer 主组件 - 根据类型渲染不同的 Line
+ * ✅ 性能优化：使用React.memo，自定义比较函数只在关键属性变化时重渲染
  */
-export const LineRenderer: React.FC<LineRendererProps> = (props) => {
+export const LineRenderer: React.FC<LineRendererProps> = memo((props) => {
   const { line } = props;
   
   // 根据 schemaId 判断类型
@@ -494,4 +501,17 @@ export const LineRenderer: React.FC<LineRendererProps> = (props) => {
   
   // 默认渲染为 Bar
   return <BarRenderer {...props} />;
-};
+}, (prevProps, nextProps) => {
+  // ✅ 自定义比较函数：只在关键属性变化时才重渲染
+  return (
+    prevProps.line.id === nextProps.line.id &&
+    prevProps.startPos === nextProps.startPos &&
+    prevProps.width === nextProps.width &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.isInteracting === nextProps.isInteracting &&
+    prevProps.isHovered === nextProps.isHovered &&
+    prevProps.isCriticalPath === nextProps.isCriticalPath &&
+    prevProps.connectionMode?.lineId === nextProps.connectionMode?.lineId &&
+    prevProps.isEditMode === nextProps.isEditMode
+  );
+});

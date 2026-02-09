@@ -203,6 +203,19 @@ const HEADER_HEIGHT = 72; // TimelineHeader的高度（2行header，每行36px�
 const SIDEBAR_WIDTH = 200;
 
 /**
+ * ✅ 性能优化：默认颜色列表移到组件外部，避免每次渲染创建新数组
+ */
+const DEFAULT_TIMELINE_COLORS = [
+  '#52c41a', // 绿色
+  '#1890ff', // 蓝色
+  '#9254de', // 紫色
+  '#13c2c2', // 青色
+  '#fa8c16', // 橙色
+  '#eb2f96', // 粉色
+  '#fadb14', // 黄色
+] as const;
+
+/**
  * 视图类型
  */
 type ViewType = 'gantt' | 'table' | 'matrix' | 'iteration' | 'baseline' | 'version' | 'versionPlan';
@@ -2155,17 +2168,6 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
             const isCollapsed = collapsedTimelines.has(timeline.id);
             const lines = getLinesByTimelineId(timeline.id);
             
-            // ✅ 默认颜色列表（参考截图2）
-            const defaultColors = [
-              '#52c41a', // 绿色
-              '#1890ff', // 蓝色
-              '#9254de', // 紫色
-              '#13c2c2', // 青色
-              '#fa8c16', // 橙色
-              '#eb2f96', // 粉色
-              '#fadb14', // 黄色
-            ];
-            
             // ✅ 获取Timeline背景颜色（使用timeline.color或默认颜色）
             const timelineColor = timeline.color || defaultColors[index % defaultColors.length];
             
@@ -2535,8 +2537,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
               const lines = getLinesByTimelineId(timeline.id);
               
               // ✅ 获取timeline颜色（与左侧一致）
-              const defaultColors = ['#52c41a', '#1890ff', '#722ed1', '#13c2c2', '#fa8c16', '#eb2f96', '#faad14'];
-              const timelineColor = timeline.color || defaultColors[index % defaultColors.length];
+              const timelineColor = timeline.color || DEFAULT_TIMELINE_COLORS[index % DEFAULT_TIMELINE_COLORS.length];
 
               return (
                 <div
