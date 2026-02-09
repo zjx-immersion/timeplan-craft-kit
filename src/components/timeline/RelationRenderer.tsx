@@ -66,15 +66,10 @@ export const RelationRenderer: React.FC<RelationRendererProps> = ({
     const positions = new Map<string, LinePosition>();
     const topOffset = 50; // ✅ SVG向上偏移量，所有Y坐标需要补偿
     
-    console.log('[RelationRenderer] 📍 Building line positions:');
-    console.log('  - Lines count:', lines.length);
-    console.log('  - Timelines count:', timelines.length);
-    console.log('  - Scale:', scale);
-    
     lines.forEach((line, idx) => {
       const timelineIndex = timelines.findIndex(t => t.id === line.timelineId);
       if (timelineIndex === -1) {
-        console.warn(`[RelationRenderer] ⚠️ Timeline not found for line[${idx}]:`, line.id, 'timelineId:', line.timelineId);
+        console.warn(`[RelationRenderer] ⚠️ Timeline未找到:`, line.id);
         return;
       }
       
@@ -99,41 +94,36 @@ export const RelationRenderer: React.FC<RelationRendererProps> = ({
       });
     });
     
-    console.log('[RelationRenderer] ✅ Line positions built:', positions.size);
+    // ✅ 只在开发模式输出关键信息
+    if (lines.length === 0) {
+      console.warn('[RelationRenderer] ⚠️ 没有lines数据');
+    }
     return positions;
   }, [lines, timelines, viewStartDate, scale, rowHeight]);
   
-  // 渲染所有依赖关系线
-  console.log('[RelationRenderer] 🎨 Rendering relations:');
-  console.log('  - Relations count:', relations.length);
-  console.log('  - Line positions count:', linePositions.size);
-  console.log('  - Hovered ID:', hoveredId);
-  
-  // 逐个检查Relations
-  let validRelationsCount = 0;
-  let invalidRelationsCount = 0;
-  
-  relations.forEach((relation, idx) => {
-    const fromPos = linePositions.get(relation.fromLineId);
-    const toPos = linePositions.get(relation.toLineId);
-    const visible = relation.displayConfig?.visible !== false;
+  // ✅ 简化：只在出现错误时输出日志
+  const validationResult = useMemo(() => {
+    let invalidCount = 0;
+    const invalidRelations: string[] = [];
     
-    if (!visible) {
-      console.log(`  - Relation[${idx}] ❌ 隐藏 (visible=false)`);
-      invalidRelationsCount++;
-    } else if (!fromPos) {
-      console.error(`  - Relation[${idx}] ❌ From line not found:`, relation.fromLineId);
-      invalidRelationsCount++;
-    } else if (!toPos) {
-      console.error(`  - Relation[${idx}] ❌ To line not found:`, relation.toLineId);
-      invalidRelationsCount++;
-    } else {
-      console.log(`  - Relation[${idx}] ✅ Valid: ${relation.fromLineId} → ${relation.toLineId}`);
-      validRelationsCount++;
+    relations.forEach((relation) => {
+      const fromPos = linePositions.get(relation.fromLineId);
+      const toPos = linePositions.get(relation.toLineId);
+      const visible = relation.displayConfig?.visible !== false;
+      
+      if (!visible || !fromPos || !toPos) {
+        invalidCount++;
+        invalidRelations.push(`${relation.fromLineId} → ${relation.toLineId}`);
+      }
+    });
+    
+    // 只在有错误时输出
+    if (invalidCount > 0) {
+      console.warn(`[RelationRenderer] ⚠️ 发现 ${invalidCount} 个无效连线:`, invalidRelations);
     }
-  });
-  
-  console.log(`[RelationRenderer] 📊 Summary: ${validRelationsCount} valid, ${invalidRelationsCount} invalid`);
+    
+    return { total: relations.length, invalid: invalidCount };
+  }, [relations, linePositions]);
   
   // ✅ 计算SVG实际需要的高度（包含向上/下延伸的空间）
   const extraSpace = 100;  // 上下各预留50px

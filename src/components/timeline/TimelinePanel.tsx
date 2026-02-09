@@ -277,7 +277,6 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     getId: (line: Line) => line.id,
     items: data.lines,
     onSelectionChange: (selectedIds, selectedLines) => {
-      console.log(`[Selection] 已选中 ${selectedLines.length} 个任务`);
     },
   });
 
@@ -468,14 +467,8 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     [normalizedViewStartDate, normalizedViewEndDate, scale]
   );
 
-  // ✅ 调试日志：关键信息
-  console.log(`[TimelinePanel] ⏱️ 时间轴整体范围:
-  - scale: ${scale}
-  - dateHeaders数量: ${dateHeaders.length}
-  - 第一个日期: ${dateHeaders[0]?.toLocaleDateString('zh-CN')}
-  - 最后一个日期: ${dateHeaders[dateHeaders.length - 1]?.toLocaleDateString('zh-CN')}
-  - 总宽度: ${totalWidth}px
-  - 总任务数: ${data.lines.length}`);
+  // ✅ 简化：只在视图切换或错误时输出
+  // 详细日志可通过设置 localStorage.setItem('DEBUG_TIMELINE', 'true') 启用
 
   // ==================== 视图切换时保持滚动位置相对比例 ====================
   
@@ -817,13 +810,6 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
    * 处理 Line 点击（集成批量选择）
    */
   const handleLineClick = useCallback((line: Line, e?: React.MouseEvent) => {
-    console.log('[TimelinePanel] 📌 Line被点击:', {
-      lineId: line.id,
-      lineName: line.name,
-      isEditMode,
-      hasEvent: !!e,
-    });
-    
     // 如果有事件对象，使用selection.handleClick处理批量选择
     if (e && isEditMode) {
       selection.handleClick(line.id, e);
@@ -1153,6 +1139,15 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
         name: lineName,
       },
     };
+    
+    console.log('[handleAddNodeToTimeline] ✅ 新节点已创建:', {
+      id: newLine.id,
+      type,
+      schemaId,
+      startDate: newLine.startDate,
+      endDate: newLine.endDate,
+      hasEndDate: !!newLine.endDate,
+    });
     
     setData({
       ...data,
@@ -2539,16 +2534,6 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
             {data.timelines.map((timeline, index) => {
               const lines = getLinesByTimelineId(timeline.id);
               
-              // ✅ 调试日志：仅在第一个 timeline 时输出前3个任务的详细信息
-              if (index === 0 && lines.length > 0) {
-                console.log(`[TimelinePanel] 📋 第一个Timeline的前3个任务数据:`);
-                lines.slice(0, 3).forEach((line, idx) => {
-                  console.log(`  ${idx + 1}. [${line.type}] ${line.name || line.id}:
-     startDate原始值: ${JSON.stringify(line.startDate)}
-     endDate原始值: ${line.endDate ? JSON.stringify(line.endDate) : 'null'}`);
-                });
-              }
-              
               // ✅ 获取timeline颜色（与左侧一致）
               const defaultColors = ['#52c41a', '#1890ff', '#722ed1', '#13c2c2', '#fa8c16', '#eb2f96', '#faad14'];
               const timelineColor = timeline.color || defaultColors[index % defaultColors.length];
@@ -2595,49 +2580,12 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                         ? resizeSnappedDates.end
                         : line.endDate ? parseDateAsLocal(line.endDate) : parseDateAsLocal(line.startDate);
 
-                    // ✅ 调试日志：仅输出第一个timeline的第一个line的信息（更详细）
-                    if (index === 0 && lineIndex === 0) {
-                      const startDateStr = `${displayStartDate.getFullYear()}-${(displayStartDate.getMonth() + 1).toString().padStart(2, '0')}-${displayStartDate.getDate().toString().padStart(2, '0')}`;
-                      const endDateStr = `${displayEndDate.getFullYear()}-${(displayEndDate.getMonth() + 1).toString().padStart(2, '0')}-${displayEndDate.getDate().toString().padStart(2, '0')}`;
-                      const viewStartStr = `${normalizedViewStartDate.getFullYear()}-${(normalizedViewStartDate.getMonth() + 1).toString().padStart(2, '0')}-${normalizedViewStartDate.getDate().toString().padStart(2, '0')}`;
-                      
-                      console.log(`[TimelinePanel] 🔍 第一个Timeline的第一个Line位置计算:
-  - timelineId: ${timeline.id}
-  - timelineName: ${timeline.name}
-  - lineId: ${line.id}
-  - lineName: ${line.name || '未命名'}
-  - 原始startDate: ${JSON.stringify(line.startDate)}
-  - 原始endDate: ${line.endDate ? JSON.stringify(line.endDate) : 'null'}
-  - 解析后startDate: ${startDateStr}
-  - 解析后endDate: ${endDateStr}
-  - viewStartDate: ${viewStartStr}
-  - scale: ${scale}`);
-                    }
-
                     // ✅ 修复：统一使用Precise计算，确保对齐
                     const startPos = getPositionFromDate(
                       displayStartDate,
                       normalizedViewStartDate,
                       scale
                     );
-                    
-                    // ✅ 调试日志：仅输出第一个timeline的第一个line的位置，并验证对齐
-                    if (index === 0 && lineIndex === 0) {
-                      console.log(`[TimelinePanel] 📍 第一个Timeline的第一个Line计算位置: ${startPos}px`);
-                      
-                      // 手工验证计算
-                      const year = displayStartDate.getFullYear();
-                      const month = displayStartDate.getMonth() + 1;
-                      const day = displayStartDate.getDate();
-                      const viewStartYear = normalizedViewStartDate.getFullYear();
-                      
-                      console.log(`[TimelinePanel] 🧮 手工验证位置计算:`);
-                      console.log(`  - 任务日期: ${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`);
-                      console.log(`  - 起始日期: ${viewStartYear}-01-01`);
-                      console.log(`  - 计算位置: ${startPos}px`);
-                      console.log(`  - pixelsPerDay: ${getPixelsPerDay(scale)}`);
-                      console.log(`  ℹ️ 请对比：TimelineHeader中${year}年${month}月的位置 + ${day-1}天 × ${getPixelsPerDay(scale)}px`);
-                    }
 
                     const width = getBarWidthPrecise(
                       displayStartDate,
@@ -2672,24 +2620,14 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                           isHovered={line.id === hoveredLineId}
                           connectionMode={connectionMode}
                           isCriticalPath={criticalPathNodeIds.has(line.id)}
-                          onMouseDown={(e) => {
-                            console.log('[TimelinePanel] 🖱️ Line onMouseDown:', {
-                              lineId: line.id,
-                              isEditMode,
-                              target: e.target,
-                            });
-                            if (isEditMode) {
-                              handleDragStart(e, line);
-                            }
-                          }}
-                          onClick={(e) => {
-                            console.log('[TimelinePanel] 🖱️ Line onClick:', {
-                              lineId: line.id,
-                              isEditMode,
-                              target: e.target,
-                            });
-                            handleLineClick(line, e);
-                          }}
+            onMouseDown={(e) => {
+              if (isEditMode) {
+                handleDragStart(e, line);
+              }
+            }}
+            onClick={(e) => {
+              handleLineClick(line, e);
+            }}
                           onResizeStart={(e, edge) => handleResizeStart(e, line, edge)}
                           onStartConnection={handleStartConnection}
                           onCompleteConnection={handleCompleteConnection}

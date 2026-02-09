@@ -74,15 +74,6 @@ export const useTimelineDrag = ({
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     
-    console.log('[useTimelineDrag] 🚀 开始拖拽:', {
-      lineId: line.id,
-      lineName: line.name,
-      startDate: line.startDate,
-      endDate: line.endDate,
-      clientX,
-      clientY,
-    });
-    
     // ✅ 使用统一的日期解析逻辑
     const initialStart = parseDateAsLocal(line.startDate);
     const position = getPositionFromDate(initialStart, viewStartDate, scale);
@@ -103,8 +94,6 @@ export const useTimelineDrag = ({
       currentX: clientX,
       hasMoved: false,
     });
-    
-    console.log('[useTimelineDrag] ✅ 拖拽状态已设置');
   }, [isEditMode, viewStartDate, scale]);
 
   const handleDragMove = useCallback((e: MouseEvent | TouchEvent) => {

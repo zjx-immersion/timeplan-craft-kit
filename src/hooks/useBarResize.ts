@@ -114,28 +114,19 @@ export const useBarResize = ({
     line: Line,
     edge: 'left' | 'right'
   ) => {
-    const isBar = line.schemaId?.includes('bar');
-    if (!isEditMode || !isBar) {
-      console.log('[useBarResize] 调整大小被阻止:', {
-        isEditMode,
-        isBar,
+    // ✅ 修复：lineplan和bar都可以调整大小
+    const isResizable = line.schemaId?.includes('bar') || line.schemaId?.includes('lineplan');
+    if (!isEditMode || !isResizable) {
+      console.log('[useBarResize] ⚠️ 调整被阻止:', {
         lineId: line.id,
         schemaId: line.schemaId,
+        reason: !isEditMode ? '非编辑模式' : '不支持调整（只有lineplan/bar可调整）',
       });
       return;
     }
 
     e.preventDefault();
     e.stopPropagation();
-
-    console.log('[useBarResize] 🚀 开始调整大小:', {
-      lineId: line.id,
-      lineName: line.name,
-      edge,
-      startDate: line.startDate,
-      endDate: line.endDate,
-      clientX: e.clientX,
-    });
 
     // ✅ 使用统一的日期解析逻辑
     const startDate = parseDateAsLocal(line.startDate);
