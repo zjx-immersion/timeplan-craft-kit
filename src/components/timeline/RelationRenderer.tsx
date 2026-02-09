@@ -409,7 +409,20 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
       </g>
     </svg>
   );
-};
+}, (prevProps, nextProps) => {
+  // ✅ 自定义比较函数：只在关键属性变化时才重渲染
+  return (
+    prevProps.relations.length === nextProps.relations.length &&
+    prevProps.lines.length === nextProps.lines.length &&
+    prevProps.timelines.length === nextProps.timelines.length &&
+    prevProps.selectedRelationId === nextProps.selectedRelationId &&
+    prevProps.isEditMode === nextProps.isEditMode &&
+    prevProps.scale === nextProps.scale &&
+    prevProps.rowHeight === nextProps.rowHeight &&
+    prevProps.viewStartDate.getTime() === nextProps.viewStartDate.getTime() &&
+    prevProps.criticalPathNodeIds.size === nextProps.criticalPathNodeIds.size
+  );
+}); // ✅ 闭合memo
 
 /**
  * 计算连接路径（优化版 - 利用行间空白区域）
@@ -493,17 +506,4 @@ function calculatePath(
       L ${endX} ${endY}
     `.replace(/\s+/g, ' ').trim();
   }
-}, (prevProps, nextProps) => {
-  // ✅ 自定义比较函数：只在关键属性变化时才重渲染
-  return (
-    prevProps.relations.length === nextProps.relations.length &&
-    prevProps.lines.length === nextProps.lines.length &&
-    prevProps.timelines.length === nextProps.timelines.length &&
-    prevProps.selectedRelationId === nextProps.selectedRelationId &&
-    prevProps.isEditMode === nextProps.isEditMode &&
-    prevProps.scale === nextProps.scale &&
-    prevProps.rowHeight === nextProps.rowHeight &&
-    prevProps.viewStartDate.getTime() === nextProps.viewStartDate.getTime() &&
-    prevProps.criticalPathNodeIds.size === nextProps.criticalPathNodeIds.size
-  );
-});
+}
