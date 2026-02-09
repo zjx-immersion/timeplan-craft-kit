@@ -57,6 +57,7 @@ import {
   normalizeViewStartDate,
   normalizeViewEndDate,
   getPositionFromDate,
+  getDateFromPosition,  // ✅ 添加：从位置计算日期
   getPositionFromDatePrecise,
   getBarWidthPrecise,
   getBarWidthTruePrecise,
