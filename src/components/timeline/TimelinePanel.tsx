@@ -301,21 +301,27 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   const [viewStartDate, setViewStartDate] = useState(() => {
     // 优先使用数据自带的 viewConfig
     if (initialData.viewConfig?.startDate) {
-      return initialData.viewConfig.startDate instanceof Date
+      const date = initialData.viewConfig.startDate instanceof Date
         ? initialData.viewConfig.startDate
         : new Date(initialData.viewConfig.startDate);
+      console.log('[TimelinePanel] 使用 viewConfig startDate:', date);
+      return date;
     }
     // ✅ 固定范围：2024年1月1日
+    console.log('[TimelinePanel] 使用默认 startDate: 2024-01-01');
     return new Date(2024, 0, 1);
   });
   const [viewEndDate, setViewEndDate] = useState(() => {
     // 优先使用数据自带的 viewConfig
     if (initialData.viewConfig?.endDate) {
-      return initialData.viewConfig.endDate instanceof Date
+      const date = initialData.viewConfig.endDate instanceof Date
         ? initialData.viewConfig.endDate
         : new Date(initialData.viewConfig.endDate);
+      console.log('[TimelinePanel] 使用 viewConfig endDate:', date);
+      return date;
     }
     // ✅ 固定范围：2028年12月31日
+    console.log('[TimelinePanel] 使用默认 endDate: 2028-12-31');
     return new Date(2028, 11, 31);
   });
   
@@ -401,15 +407,25 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
 
   // ==================== 规范化的视图日期 ====================
 
-  const normalizedViewStartDate = useMemo(
-    () => normalizeViewStartDate(viewStartDate, scale),
-    [viewStartDate, scale]
-  );
+  const normalizedViewStartDate = useMemo(() => {
+    const normalized = normalizeViewStartDate(viewStartDate, scale);
+    console.log('[TimelinePanel] 规范化 viewStartDate:', {
+      原始: viewStartDate,
+      规范化后: normalized,
+      scale,
+    });
+    return normalized;
+  }, [viewStartDate, scale]);
 
-  const normalizedViewEndDate = useMemo(
-    () => normalizeViewEndDate(viewEndDate, scale),
-    [viewEndDate, scale]
-  );
+  const normalizedViewEndDate = useMemo(() => {
+    const normalized = normalizeViewEndDate(viewEndDate, scale);
+    console.log('[TimelinePanel] 规范化 viewEndDate:', {
+      原始: viewEndDate,
+      规范化后: normalized,
+      scale,
+    });
+    return normalized;
+  }, [viewEndDate, scale]);
 
   // ==================== 时间轴相关计算 ====================
 
