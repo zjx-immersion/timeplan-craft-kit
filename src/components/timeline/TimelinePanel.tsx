@@ -813,11 +813,24 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   }, []);
 
   /**
-   * 处理 Line 点击
+   * 处理 Line 点击（集成批量选择）
    */
-  const handleLineClick = useCallback((line: Line) => {
+  const handleLineClick = useCallback((line: Line, e?: React.MouseEvent) => {
+    console.log('[TimelinePanel] 📌 Line被点击:', {
+      lineId: line.id,
+      lineName: line.name,
+      isEditMode,
+      hasEvent: !!e,
+    });
+    
+    // 如果有事件对象，使用selection.handleClick处理批量选择
+    if (e && isEditMode) {
+      selection.handleClick(line.id, e);
+    }
+    
+    // 同时保持单选逻辑（兼容非编辑模式）
     setSelectedLineId(line.id === selectedLineId ? null : line.id);
-  }, [selectedLineId]);
+  }, [selectedLineId, isEditMode, selection]);
 
   /**
    * 编辑 Timeline
@@ -2638,8 +2651,24 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                           isHovered={line.id === hoveredLineId}
                           connectionMode={connectionMode}
                           isCriticalPath={criticalPathNodeIds.has(line.id)}
-                          onMouseDown={(e) => isEditMode && handleDragStart(e, line)}
-                          onClick={() => handleLineClick(line)}
+                          onMouseDown={(e) => {
+                            console.log('[TimelinePanel] 🖱️ Line onMouseDown:', {
+                              lineId: line.id,
+                              isEditMode,
+                              target: e.target,
+                            });
+                            if (isEditMode) {
+                              handleDragStart(e, line);
+                            }
+                          }}
+                          onClick={(e) => {
+                            console.log('[TimelinePanel] 🖱️ Line onClick:', {
+                              lineId: line.id,
+                              isEditMode,
+                              target: e.target,
+                            });
+                            handleLineClick(line, e);
+                          }}
                           onResizeStart={(e, edge) => handleResizeStart(e, line, edge)}
                           onStartConnection={handleStartConnection}
                           onCompleteConnection={handleCompleteConnection}

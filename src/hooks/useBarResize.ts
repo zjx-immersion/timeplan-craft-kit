@@ -116,11 +116,26 @@ export const useBarResize = ({
   ) => {
     const isBar = line.schemaId?.includes('bar');
     if (!isEditMode || !isBar) {
+      console.log('[useBarResize] 调整大小被阻止:', {
+        isEditMode,
+        isBar,
+        lineId: line.id,
+        schemaId: line.schemaId,
+      });
       return;
     }
 
     e.preventDefault();
     e.stopPropagation();
+
+    console.log('[useBarResize] 🚀 开始调整大小:', {
+      lineId: line.id,
+      lineName: line.name,
+      edge,
+      startDate: line.startDate,
+      endDate: line.endDate,
+      clientX: e.clientX,
+    });
 
     // ✅ 使用统一的日期解析逻辑
     const startDate = parseDateAsLocal(line.startDate);
