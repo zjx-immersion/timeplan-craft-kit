@@ -57,6 +57,7 @@ import {
   normalizeViewStartDate,
   normalizeViewEndDate,
   getPositionFromDate,
+  getDateFromPosition,  // ✅ 添加：从位置计算日期
   getPositionFromDatePrecise,
   getBarWidthPrecise,
   getBarWidthTruePrecise,
@@ -76,6 +77,14 @@ import { isHoliday, isNonWorkingDay, getHolidayName } from '@/utils/holidayUtils
 import { useTimelineDrag } from '@/hooks/useTimelineDrag';
 import { useBarResize } from '@/hooks/useBarResize';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
+import { useKeyboardShortcuts, CommonShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useSelection } from '@/hooks/useSelection';
+import { 
+  exportTimePlanToExcel, 
+  exportTimePlanToCSV, 
+  exportSelectedLinesToExcel, 
+  exportSelectedLinesToCSV 
+} from '@/utils/exportUtils';
 import { addMonths, subMonths } from 'date-fns';
 import { LineRenderer } from './LineRenderer';
 import { RelationRenderer } from './RelationRenderer';
@@ -194,6 +203,19 @@ const HEADER_HEIGHT = 72; // TimelineHeader的高度（2行header，每行36px�
 const SIDEBAR_WIDTH = 200;
 
 /**
+ * ✅ 性能优化：默认颜色列表移到组件外部，避免每次渲染创建新数组
+ */
+const DEFAULT_TIMELINE_COLORS = [
+  '#52c41a', // 绿色
+  '#1890ff', // 蓝色
+  '#9254de', // 紫色
+  '#13c2c2', // 青色
+  '#fa8c16', // 橙色
+  '#eb2f96', // 粉色
+  '#fadb14', // 黄色
+] as const;
+
+/**
  * 视图类型
  */
 type ViewType = 'gantt' | 'table' | 'matrix' | 'iteration' | 'baseline' | 'version' | 'versionPlan';
@@ -261,6 +283,15 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     save: saveChanges,
     reset: resetChanges,
   } = useUndoRedo<TimePlan>(initialData);
+
+  // ==================== 批量选择 ====================
+  
+  const selection = useSelection({
+    getId: (line: Line) => line.id,
+    items: data.lines,
+    onSelectionChange: (selectedIds, selectedLines) => {
+    },
+  });
 
   // 同步外部数据变化
   const prevInitialDataRef = useRef(initialData);
@@ -449,14 +480,8 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     [normalizedViewStartDate, normalizedViewEndDate, scale]
   );
 
-  // ✅ 调试日志：关键信息
-  console.log(`[TimelinePanel] ⏱️ 时间轴整体范围:
-  - scale: ${scale}
-  - dateHeaders数量: ${dateHeaders.length}
-  - 第一个日期: ${dateHeaders[0]?.toLocaleDateString('zh-CN')}
-  - 最后一个日期: ${dateHeaders[dateHeaders.length - 1]?.toLocaleDateString('zh-CN')}
-  - 总宽度: ${totalWidth}px
-  - 总任务数: ${data.lines.length}`);
+  // ✅ 简化：只在视图切换或错误时输出
+  // 详细日志可通过设置 localStorage.setItem('DEBUG_TIMELINE', 'true') 启用
 
   // ==================== 视图切换时保持滚动位置相对比例 ====================
   
@@ -605,6 +630,90 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     prevViewTypeRef.current = viewType;
   }, [viewType, scrollToToday]);
 
+  // ==================== 全局快捷键 ====================
+  
+  useKeyboardShortcuts({
+    enabled: true,
+    ignoreInputs: true,
+    shortcuts: [
+      // Ctrl+Z: 撤销
+      CommonShortcuts.undo(() => {
+        if (canUndo) {
+          undo();
+          message.info('已撤销');
+        }
+      }),
+      
+      // Ctrl+Y / Ctrl+Shift+Z: 重做
+      ...CommonShortcuts.redo(() => {
+        if (canRedo) {
+          redo();
+          message.info('已重做');
+        }
+      }),
+      
+      // Ctrl+S: 保存
+      CommonShortcuts.save(() => {
+        handleSave();
+      }),
+      
+      // Space: 定位今日
+      CommonShortcuts.space(() => {
+        scrollToToday();
+        message.info('已定位到今日');
+      }),
+      
+      // Ctrl+1~5: 切换视图刻度
+      CommonShortcuts.number(1, () => handleScaleChange('day')),
+      CommonShortcuts.number(2, () => handleScaleChange('week')),
+      CommonShortcuts.number(3, () => handleScaleChange('month')),
+      CommonShortcuts.number(4, () => handleScaleChange('quarter')),
+      CommonShortcuts.number(5, () => handleScaleChange('biweekly')),
+      
+      // Ctrl+A: 全选
+      CommonShortcuts.selectAll(() => {
+        selection.selectAll();
+        message.info(`已选中 ${data.lines.length} 个任务`);
+      }),
+      
+      // Delete: 删除选中
+      CommonShortcuts.delete(() => {
+        if (selection.hasSelection && isEditMode) {
+          const selectedLines = data.lines.filter(line => selection.isSelected(line.id));
+          const lineNames = selectedLines.map(l => l.name).join('、');
+          
+          modal.confirm({
+            title: '确认删除',
+            content: `确定要删除 ${selectedLines.length} 个任务吗？（${lineNames}）`,
+            onOk: () => {
+              const newLines = data.lines.filter(line => !selection.isSelected(line.id));
+              const newRelations = data.relations?.filter(
+                rel => !selection.isSelected(rel.fromLineId) && !selection.isSelected(rel.toLineId)
+              );
+              
+              updateData({
+                ...data,
+                lines: newLines,
+                relations: newRelations,
+              });
+              
+              selection.clearSelection();
+              message.success(`已删除 ${selectedLines.length} 个任务`);
+            },
+          });
+        }
+      }),
+      
+      // Escape: 取消选择
+      CommonShortcuts.escape(() => {
+        if (selection.hasSelection) {
+          selection.clearSelection();
+          message.info('已取消选择');
+        }
+      }),
+    ],
+  });
+
   // ✅ 修复：动态更新viewEndDate，确保时间轴覆盖所有节点
   useEffect(() => {
     // 如果viewConfig中有endDate，不自动更新
@@ -711,11 +820,17 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   }, []);
 
   /**
-   * 处理 Line 点击
+   * 处理 Line 点击（集成批量选择）
    */
-  const handleLineClick = useCallback((line: Line) => {
+  const handleLineClick = useCallback((line: Line, e?: React.MouseEvent) => {
+    // 如果有事件对象，使用selection.handleClick处理批量选择
+    if (e && isEditMode) {
+      selection.handleClick(line.id, e);
+    }
+    
+    // 同时保持单选逻辑（兼容非编辑模式）
     setSelectedLineId(line.id === selectedLineId ? null : line.id);
-  }, [selectedLineId]);
+  }, [selectedLineId, isEditMode, selection]);
 
   /**
    * 编辑 Timeline
@@ -994,9 +1109,28 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
    * 添加节点到Timeline
    */
   const handleAddNodeToTimeline = useCallback((timelineId: string, type: 'lineplan' | 'milestone' | 'gateway') => {
-    // 获取当前滚动位置，在该位置创建节点
+    // ✅ 获取当前滚动位置，计算对应的日期
     const scrollLeft = scrollContainerRef.current?.scrollLeft || 0;
-    const position = scrollLeft + 200; // 在可视区域左侧200px处创建
+    const containerWidth = scrollContainerRef.current?.clientWidth || 800;
+    
+    // ✅ 计算可视区域中心位置对应的日期
+    const centerPosition = scrollLeft + (containerWidth / 2);
+    const startDate = getDateFromPosition(centerPosition, normalizedViewStartDate, scale);
+    
+    // ✅ 根据类型设置默认周期
+    // lineplan: 2周（14天）
+    // milestone: 单点，无endDate
+    // gateway: 单点，无endDate
+    const endDate = type === 'lineplan' ? addDays(startDate, 14) : undefined;
+    
+    console.log('[handleAddNodeToTimeline] 📍 创建新节点:', {
+      type,
+      scrollLeft,
+      centerPosition,
+      startDate: format(startDate, 'yyyy-MM-dd'),
+      endDate: endDate ? format(endDate, 'yyyy-MM-dd') : 'N/A',
+      duration: type === 'lineplan' ? '14天（2周）' : '单点',
+    });
     
     // 根据类型创建对应的schemaId
     const schemaId = type === 'lineplan' ? 'lineplan-schema' :
@@ -1004,27 +1138,37 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                     type === 'gateway' ? 'gateway-schema' : 'lineplan-schema';
     
     // 创建新Line
-    const today = new Date();
     const lineName = type === 'lineplan' ? '新计划单元' : type === 'milestone' ? '新里程碑' : '新网关';
     const newLine: Line = {
       id: `line-${Date.now()}`,
       timelineId,
       schemaId,
       label: lineName,
-      startDate: today,
-      endDate: type === 'lineplan' ? addDays(today, 7) : undefined,
+      title: lineName,  // ✅ 同时设置title和label
+      name: lineName,   // ✅ 同时设置name
+      startDate,        // ✅ 使用计算的日期，而非today
+      endDate,          // ✅ lineplan默认14天
       attributes: {
         name: lineName,
       },
     };
+    
+    console.log('[handleAddNodeToTimeline] ✅ 新节点已创建:', {
+      id: newLine.id,
+      type,
+      schemaId,
+      startDate: newLine.startDate,
+      endDate: newLine.endDate,
+      hasEndDate: !!newLine.endDate,
+    });
     
     setData({
       ...data,
       lines: [...data.lines, newLine],
     });
     
-    message.success('节点已添加');
-  }, [data, setData]);
+    message.success(`节点已添加: ${lineName}${type === 'lineplan' ? ' (2周)' : ''}`);
+  }, [data, setData, normalizedViewStartDate, scale]);
 
   /**
    * 添加Timeline
@@ -1385,21 +1529,47 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
    * 导出数据
    */
   const handleExportData = useCallback((format: 'json' | 'csv' | 'excel') => {
+    const filename = data.title || '时间规划';
+    
     switch (format) {
       case 'json':
         downloadJSON(data);
         message.success('JSON 数据已导出');
         break;
       case 'csv':
-        downloadCSV(data);
+        exportTimePlanToCSV(data, filename);
         message.success('CSV 数据已导出');
         break;
       case 'excel':
-        downloadExcel(data);
+        exportTimePlanToExcel(data, filename);
         message.success('Excel 数据已导出');
         break;
     }
   }, [data]);
+
+  /**
+   * 导出选中的任务
+   */
+  const handleExportSelected = useCallback((format: 'excel' | 'csv') => {
+    if (!selection.hasSelection) {
+      message.warning('请先选择要导出的任务');
+      return;
+    }
+
+    const selectedLines = data.lines.filter(line => selection.isSelected(line.id));
+    const filename = `选中任务_${selectedLines.length}个`;
+
+    switch (format) {
+      case 'excel':
+        exportSelectedLinesToExcel(selectedLines, filename);
+        message.success(`已导出 ${selectedLines.length} 个任务（Excel）`);
+        break;
+      case 'csv':
+        exportSelectedLinesToCSV(selectedLines, filename);
+        message.success(`已导出 ${selectedLines.length} 个任务（CSV）`);
+        break;
+    }
+  }, [data.lines, selection]);
 
   /**
    * 导入数据
@@ -1864,22 +2034,53 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                 menu={{
                   items: [
                     {
-                      key: 'export-json',
-                      label: '导出为 JSON',
-                      icon: <DownloadOutlined />,
-                      onClick: () => handleExportData('json'),
+                      key: 'export-all',
+                      label: '导出全部',
+                      type: 'group',
+                      children: [
+                        {
+                          key: 'export-json',
+                          label: '导出为 JSON',
+                          icon: <DownloadOutlined />,
+                          onClick: () => handleExportData('json'),
+                        },
+                        {
+                          key: 'export-csv',
+                          label: '导出为 CSV',
+                          icon: <DownloadOutlined />,
+                          onClick: () => handleExportData('csv'),
+                        },
+                        {
+                          key: 'export-excel',
+                          label: '导出为 Excel',
+                          icon: <DownloadOutlined />,
+                          onClick: () => handleExportData('excel'),
+                        },
+                      ],
                     },
                     {
-                      key: 'export-csv',
-                      label: '导出为 CSV',
-                      icon: <DownloadOutlined />,
-                      onClick: () => handleExportData('csv'),
+                      type: 'divider',
                     },
                     {
-                      key: 'export-excel',
-                      label: '导出为 Excel',
-                      icon: <DownloadOutlined />,
-                      onClick: () => handleExportData('excel'),
+                      key: 'export-selected',
+                      label: `导出选中 (${selection.selectedCount})`,
+                      type: 'group',
+                      children: [
+                        {
+                          key: 'export-selected-excel',
+                          label: '导出为 Excel',
+                          icon: <DownloadOutlined />,
+                          disabled: !selection.hasSelection,
+                          onClick: () => handleExportSelected('excel'),
+                        },
+                        {
+                          key: 'export-selected-csv',
+                          label: '导出为 CSV',
+                          icon: <DownloadOutlined />,
+                          disabled: !selection.hasSelection,
+                          onClick: () => handleExportSelected('csv'),
+                        },
+                      ],
                     },
                   ],
                 }}
@@ -1889,7 +2090,9 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                   size="small"
                   icon={<DownloadOutlined />}
                   title="导出"
-                />
+                >
+                  {selection.hasSelection && `(${selection.selectedCount})`}
+                </Button>
               </Dropdown>
 
               {/* 导入按钮 */}
@@ -1965,19 +2168,8 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
             const isCollapsed = collapsedTimelines.has(timeline.id);
             const lines = getLinesByTimelineId(timeline.id);
             
-            // ✅ 默认颜色列表（参考截图2）
-            const defaultColors = [
-              '#52c41a', // 绿色
-              '#1890ff', // 蓝色
-              '#9254de', // 紫色
-              '#13c2c2', // 青色
-              '#fa8c16', // 橙色
-              '#eb2f96', // 粉色
-              '#fadb14', // 黄色
-            ];
-            
             // ✅ 获取Timeline背景颜色（使用timeline.color或默认颜色）
-            const timelineColor = timeline.color || defaultColors[index % defaultColors.length];
+            const timelineColor = timeline.color || DEFAULT_TIMELINE_COLORS[index % DEFAULT_TIMELINE_COLORS.length];
             
             // ✅ 获取负责人和分类信息
             const owner = timeline.owner || timeline.description || '';
@@ -2237,6 +2429,11 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                 criticalPathNodeIds={criticalPathNodeIds}
                 onRelationClick={handleRelationClick}
                 onRelationDelete={handleRelationDelete}
+                // ✅ 传递拖拽状态，使连线实时跟随
+                draggingNodeId={draggingNodeId}
+                dragSnappedDates={dragSnappedDates}
+                resizingNodeId={resizingNodeId}
+                resizeSnappedDates={resizeSnappedDates}
               />
             )}
 
@@ -2344,19 +2541,8 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
             {data.timelines.map((timeline, index) => {
               const lines = getLinesByTimelineId(timeline.id);
               
-              // ✅ 调试日志：仅在第一个 timeline 时输出前3个任务的详细信息
-              if (index === 0 && lines.length > 0) {
-                console.log(`[TimelinePanel] 📋 第一个Timeline的前3个任务数据:`);
-                lines.slice(0, 3).forEach((line, idx) => {
-                  console.log(`  ${idx + 1}. [${line.type}] ${line.name || line.id}:
-     startDate原始值: ${JSON.stringify(line.startDate)}
-     endDate原始值: ${line.endDate ? JSON.stringify(line.endDate) : 'null'}`);
-                });
-              }
-              
               // ✅ 获取timeline颜色（与左侧一致）
-              const defaultColors = ['#52c41a', '#1890ff', '#722ed1', '#13c2c2', '#fa8c16', '#eb2f96', '#faad14'];
-              const timelineColor = timeline.color || defaultColors[index % defaultColors.length];
+              const timelineColor = timeline.color || DEFAULT_TIMELINE_COLORS[index % DEFAULT_TIMELINE_COLORS.length];
 
               return (
                 <div
@@ -2400,49 +2586,12 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                         ? resizeSnappedDates.end
                         : line.endDate ? parseDateAsLocal(line.endDate) : parseDateAsLocal(line.startDate);
 
-                    // ✅ 调试日志：仅输出第一个timeline的第一个line的信息（更详细）
-                    if (index === 0 && lineIndex === 0) {
-                      const startDateStr = `${displayStartDate.getFullYear()}-${(displayStartDate.getMonth() + 1).toString().padStart(2, '0')}-${displayStartDate.getDate().toString().padStart(2, '0')}`;
-                      const endDateStr = `${displayEndDate.getFullYear()}-${(displayEndDate.getMonth() + 1).toString().padStart(2, '0')}-${displayEndDate.getDate().toString().padStart(2, '0')}`;
-                      const viewStartStr = `${normalizedViewStartDate.getFullYear()}-${(normalizedViewStartDate.getMonth() + 1).toString().padStart(2, '0')}-${normalizedViewStartDate.getDate().toString().padStart(2, '0')}`;
-                      
-                      console.log(`[TimelinePanel] 🔍 第一个Timeline的第一个Line位置计算:
-  - timelineId: ${timeline.id}
-  - timelineName: ${timeline.name}
-  - lineId: ${line.id}
-  - lineName: ${line.name || '未命名'}
-  - 原始startDate: ${JSON.stringify(line.startDate)}
-  - 原始endDate: ${line.endDate ? JSON.stringify(line.endDate) : 'null'}
-  - 解析后startDate: ${startDateStr}
-  - 解析后endDate: ${endDateStr}
-  - viewStartDate: ${viewStartStr}
-  - scale: ${scale}`);
-                    }
-
                     // ✅ 修复：统一使用Precise计算，确保对齐
                     const startPos = getPositionFromDate(
                       displayStartDate,
                       normalizedViewStartDate,
                       scale
                     );
-                    
-                    // ✅ 调试日志：仅输出第一个timeline的第一个line的位置，并验证对齐
-                    if (index === 0 && lineIndex === 0) {
-                      console.log(`[TimelinePanel] 📍 第一个Timeline的第一个Line计算位置: ${startPos}px`);
-                      
-                      // 手工验证计算
-                      const year = displayStartDate.getFullYear();
-                      const month = displayStartDate.getMonth() + 1;
-                      const day = displayStartDate.getDate();
-                      const viewStartYear = normalizedViewStartDate.getFullYear();
-                      
-                      console.log(`[TimelinePanel] 🧮 手工验证位置计算:`);
-                      console.log(`  - 任务日期: ${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`);
-                      console.log(`  - 起始日期: ${viewStartYear}-01-01`);
-                      console.log(`  - 计算位置: ${startPos}px`);
-                      console.log(`  - pixelsPerDay: ${getPixelsPerDay(scale)}`);
-                      console.log(`  ℹ️ 请对比：TimelineHeader中${year}年${month}月的位置 + ${day-1}天 × ${getPixelsPerDay(scale)}px`);
-                    }
 
                     const width = getBarWidthPrecise(
                       displayStartDate,
@@ -2477,8 +2626,14 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                           isHovered={line.id === hoveredLineId}
                           connectionMode={connectionMode}
                           isCriticalPath={criticalPathNodeIds.has(line.id)}
-                          onMouseDown={(e) => isEditMode && handleDragStart(e, line)}
-                          onClick={() => handleLineClick(line)}
+            onMouseDown={(e) => {
+              if (isEditMode) {
+                handleDragStart(e, line);
+              }
+            }}
+            onClick={(e) => {
+              handleLineClick(line, e);
+            }}
                           onResizeStart={(e, edge) => handleResizeStart(e, line, edge)}
                           onStartConnection={handleStartConnection}
                           onCompleteConnection={handleCompleteConnection}
@@ -2554,10 +2709,26 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
               {isDragActive ? '移动中' : '调整中'}
             </div>
             <div style={{ fontSize: 11, opacity: 0.9 }}>
-              {isDragActive
-                ? `${format(dragSnappedDates.start!, 'yyyy-MM-dd')} ~ ${format(dragSnappedDates.end!, 'yyyy-MM-dd')}`
-                : `${format(resizeSnappedDates.start!, 'yyyy-MM-dd')} ~ ${format(resizeSnappedDates.end!, 'yyyy-MM-dd')}`
-              }
+              {(() => {
+                // 安全地格式化日期，避免无效日期导致崩溃
+                const formatSafe = (date: Date | undefined | null): string => {
+                  if (!date) return '---';
+                  try {
+                    // 检查日期是否有效
+                    if (isNaN(date.getTime())) return '---';
+                    return format(date, 'yyyy-MM-dd');
+                  } catch (e) {
+                    console.error('[TimelinePanel] 日期格式化失败:', date, e);
+                    return '---';
+                  }
+                };
+
+                const dates = isDragActive ? dragSnappedDates : resizeSnappedDates;
+                const startStr = formatSafe(dates.start);
+                const endStr = formatSafe(dates.end);
+                
+                return `${startStr} ~ ${endStr}`;
+              })()}
             </div>
           </div>
         )}

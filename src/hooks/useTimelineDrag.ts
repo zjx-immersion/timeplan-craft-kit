@@ -63,7 +63,10 @@ export const useTimelineDrag = ({
     e: React.MouseEvent | React.TouchEvent,
     line: Line
   ) => {
-    if (!isEditMode) return;
+    if (!isEditMode) {
+      console.log('[useTimelineDrag] 拖拽被阻止：非编辑模式');
+      return;
+    }
 
     e.preventDefault();
     e.stopPropagation();
@@ -113,15 +116,52 @@ export const useTimelineDrag = ({
       
       // ✅ 使用统一的日期解析逻辑
       const originalStart = parseDateAsLocal(line.startDate);
+      
+      // 🛡️ 安全检查：确保originalStart有效（仅在真正无效时才阻止）
+      if (!originalStart || isNaN(originalStart.getTime())) {
+        console.error('[useTimelineDrag] ⚠️ 无效的原始开始日期:', line.startDate);
+        // 不要return，尝试继续，只是不更新日期
+        return;
+      }
+      
       const newVisualStart = addDays(originalStart, daysOffset);
+      
+      // 🛡️ 检查计算结果（addDays通常不会失败，除非输入异常）
+      if (!newVisualStart || isNaN(newVisualStart.getTime())) {
+        console.error('[useTimelineDrag] ⚠️ 计算视觉开始日期失败, daysOffset:', daysOffset);
+        return;
+      }
 
       // 🎯 计算吸附日期（用于存储）
       // ✅ 修复：始终按天粒度对齐，兼容所有时间轴显示
       const rawDate = getDateFromPosition(currentPos, viewStartDate, scale);
+      
+      // 🛡️ 安全检查：确保rawDate有效
+      if (!rawDate || isNaN(rawDate.getTime())) {
+        console.error('[useTimelineDrag] ⚠️ 无效的计算日期, position:', currentPos);
+        return;
+      }
+      
       const newSnappedStart = snapToGrid(rawDate, 'day'); // 强制按天对齐
+      
+      // 🛡️ 检查snapToGrid结果
+      if (!newSnappedStart || isNaN(newSnappedStart.getTime())) {
+        console.error('[useTimelineDrag] ⚠️ snapToGrid失败:', rawDate);
+        return;
+      }
 
       if (line.endDate) {
         const originalEnd = parseDateAsLocal(line.endDate);
+        
+        // 🛡️ 安全检查：确保originalEnd有效
+        if (!originalEnd || isNaN(originalEnd.getTime())) {
+          console.error('[useTimelineDrag] ⚠️ 无效的原始结束日期:', line.endDate);
+          // 没有endDate的情况下，只更新start
+          setVisualDates({ start: newVisualStart });
+          setSnappedDates({ start: newSnappedStart });
+          return;
+        }
+        
         const duration = originalEnd.getTime() - originalStart.getTime();
 
         setVisualDates({

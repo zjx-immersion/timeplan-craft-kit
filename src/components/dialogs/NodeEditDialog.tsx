@@ -77,7 +77,8 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       const updates: Partial<Line> = {
         label: values.label,
         startDate: values.startDate ? values.startDate.toDate() : node.startDate,
-        endDate: values.endDate ? values.endDate.toDate() : undefined,
+        // ✅ 修复：保留原有endDate，避免误删除
+        endDate: values.endDate ? values.endDate.toDate() : (node.endDate || undefined),
         attributes: {
           ...node.attributes,
           status: values.status,
@@ -105,11 +106,12 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   };
 
   const nodeType = node?.schemaId?.replace('-schema', '') || 'bar';
-  const isBar = nodeType === 'bar';
+  // ✅ 修复：lineplan和bar都需要显示结束日期字段
+  const isBar = nodeType === 'bar' || nodeType === 'lineplan';
 
   return (
     <Modal
-      title={`编辑${nodeType === 'bar' ? '任务' : nodeType === 'milestone' ? '里程碑' : '网关'}`}
+      title={`编辑${nodeType === 'lineplan' ? '计划单元' : nodeType === 'bar' ? '任务' : nodeType === 'milestone' ? '里程碑' : '网关'}`}
       open={open}
       onCancel={handleClose}
       onOk={handleSubmit}

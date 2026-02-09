@@ -13,7 +13,7 @@
  * - start-to-finish (SF): 前任务开始 → 后任务完成
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, memo } from 'react';
 import { Relation, Line } from '@/types/timeplanSchema';
 import { TimeScale } from '@/utils/dateUtils';
 import { getPositionFromDate, getBarWidthPrecise, parseDateAsLocal } from '@/utils/dateUtils';
@@ -32,6 +32,11 @@ interface RelationRendererProps {
   onRelationDelete?: (relationId: string) => void;
   // 关键路径
   criticalPathNodeIds?: Set<string>;
+  // ✅ 拖拽/调整大小状态（用于实时更新连线位置）
+  draggingNodeId?: string | null;
+  dragSnappedDates?: { start?: Date; end?: Date };
+  resizingNodeId?: string | null;
+  resizeSnappedDates?: { start?: Date; end?: Date };
 }
 
 interface LinePosition {
@@ -45,8 +50,9 @@ interface LinePosition {
 /**
  * RelationRenderer 组件
  * ✅ 增强版：明显的视觉效果 + 交互反馈
+ * ✅ 性能优化：使用React.memo避免不必要的重渲染
  */
-export const RelationRenderer: React.FC<RelationRendererProps> = ({
+export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
   relations,
   lines,
   timelines,
@@ -58,6 +64,10 @@ export const RelationRenderer: React.FC<RelationRendererProps> = ({
   onRelationClick,
   onRelationDelete,
   criticalPathNodeIds = new Set(),
+  draggingNodeId = null,
+  dragSnappedDates = {},
+  resizingNodeId = null,
+  resizeSnappedDates = {},
 }) => {
   const [hoveredId, setHoveredId] = React.useState<string | null>(null);
   
@@ -66,29 +76,32 @@ export const RelationRenderer: React.FC<RelationRendererProps> = ({
     const positions = new Map<string, LinePosition>();
     const topOffset = 50; // ✅ SVG向上偏移量，所有Y坐标需要补偿
     
-    console.log('[RelationRenderer] 📍 Building line positions:');
-    console.log('  - Lines count:', lines.length);
-    console.log('  - Timelines count:', timelines.length);
-    console.log('  - Scale:', scale);
-    
     lines.forEach((line, idx) => {
       const timelineIndex = timelines.findIndex(t => t.id === line.timelineId);
       if (timelineIndex === -1) {
-        console.warn(`[RelationRenderer] ⚠️ Timeline not found for line[${idx}]:`, line.id, 'timelineId:', line.timelineId);
+        console.warn(`[RelationRenderer] ⚠️ Timeline未找到:`, line.id);
         return;
       }
       
-      // ✅ 使用 parseDateAsLocal 避免时区导致的日期偏移
-      const startPos = getPositionFromDate(
-        parseDateAsLocal(line.startDate),
-        viewStartDate,
-        scale
-      );
+      // ✅ 实时跟随：如果line正在被拖拽或调整大小，使用临时日期
+      const isDraggingThis = draggingNodeId === line.id;
+      const isResizingThis = resizingNodeId === line.id;
       
-      const endDate = line.endDate ? parseDateAsLocal(line.endDate) : parseDateAsLocal(line.startDate);
-      const width = line.endDate
-        ? getBarWidthPrecise(parseDateAsLocal(line.startDate), endDate, scale)
-        : 0;
+      const displayStartDate = isDraggingThis && dragSnappedDates.start
+        ? dragSnappedDates.start
+        : isResizingThis && resizeSnappedDates.start
+          ? resizeSnappedDates.start
+          : parseDateAsLocal(line.startDate);
+      
+      const displayEndDate = isDraggingThis && dragSnappedDates.end
+        ? dragSnappedDates.end
+        : isResizingThis && resizeSnappedDates.end
+          ? resizeSnappedDates.end
+          : line.endDate ? parseDateAsLocal(line.endDate) : parseDateAsLocal(line.startDate);
+      
+      // ✅ 使用显示日期计算位置（拖拽中的临时位置）
+      const startPos = getPositionFromDate(displayStartDate, viewStartDate, scale);
+      const width = getBarWidthPrecise(displayStartDate, displayEndDate, scale);
       
       positions.set(line.id, {
         x: startPos,
@@ -99,41 +112,46 @@ export const RelationRenderer: React.FC<RelationRendererProps> = ({
       });
     });
     
-    console.log('[RelationRenderer] ✅ Line positions built:', positions.size);
-    return positions;
-  }, [lines, timelines, viewStartDate, scale, rowHeight]);
-  
-  // 渲染所有依赖关系线
-  console.log('[RelationRenderer] 🎨 Rendering relations:');
-  console.log('  - Relations count:', relations.length);
-  console.log('  - Line positions count:', linePositions.size);
-  console.log('  - Hovered ID:', hoveredId);
-  
-  // 逐个检查Relations
-  let validRelationsCount = 0;
-  let invalidRelationsCount = 0;
-  
-  relations.forEach((relation, idx) => {
-    const fromPos = linePositions.get(relation.fromLineId);
-    const toPos = linePositions.get(relation.toLineId);
-    const visible = relation.displayConfig?.visible !== false;
-    
-    if (!visible) {
-      console.log(`  - Relation[${idx}] ❌ 隐藏 (visible=false)`);
-      invalidRelationsCount++;
-    } else if (!fromPos) {
-      console.error(`  - Relation[${idx}] ❌ From line not found:`, relation.fromLineId);
-      invalidRelationsCount++;
-    } else if (!toPos) {
-      console.error(`  - Relation[${idx}] ❌ To line not found:`, relation.toLineId);
-      invalidRelationsCount++;
-    } else {
-      console.log(`  - Relation[${idx}] ✅ Valid: ${relation.fromLineId} → ${relation.toLineId}`);
-      validRelationsCount++;
+    // ✅ 只在开发模式输出关键信息
+    if (lines.length === 0) {
+      console.warn('[RelationRenderer] ⚠️ 没有lines数据');
     }
-  });
+    return positions;
+  }, [
+    lines, 
+    timelines, 
+    viewStartDate, 
+    scale, 
+    rowHeight,
+    draggingNodeId,
+    dragSnappedDates,
+    resizingNodeId,
+    resizeSnappedDates,
+  ]); // ✅ 添加拖拽状态到依赖项，确保实时更新
   
-  console.log(`[RelationRenderer] 📊 Summary: ${validRelationsCount} valid, ${invalidRelationsCount} invalid`);
+  // ✅ 简化：只在出现错误时输出日志
+  const validationResult = useMemo(() => {
+    let invalidCount = 0;
+    const invalidRelations: string[] = [];
+    
+    relations.forEach((relation) => {
+      const fromPos = linePositions.get(relation.fromLineId);
+      const toPos = linePositions.get(relation.toLineId);
+      const visible = relation.displayConfig?.visible !== false;
+      
+      if (!visible || !fromPos || !toPos) {
+        invalidCount++;
+        invalidRelations.push(`${relation.fromLineId} → ${relation.toLineId}`);
+      }
+    });
+    
+    // 只在有错误时输出
+    if (invalidCount > 0) {
+      console.warn(`[RelationRenderer] ⚠️ 发现 ${invalidCount} 个无效连线:`, invalidRelations);
+    }
+    
+    return { total: relations.length, invalid: invalidCount };
+  }, [relations, linePositions]);
   
   // ✅ 计算SVG实际需要的高度（包含向上/下延伸的空间）
   const extraSpace = 100;  // 上下各预留50px
@@ -418,7 +436,29 @@ export const RelationRenderer: React.FC<RelationRendererProps> = ({
       </g>
     </svg>
   );
-};
+}, (prevProps, nextProps) => {
+  // ✅ 自定义比较函数：只在关键属性变化时才重渲染
+  const propsEqual = (
+    prevProps.relations.length === nextProps.relations.length &&
+    prevProps.lines.length === nextProps.lines.length &&
+    prevProps.timelines.length === nextProps.timelines.length &&
+    prevProps.selectedRelationId === nextProps.selectedRelationId &&
+    prevProps.isEditMode === nextProps.isEditMode &&
+    prevProps.scale === nextProps.scale &&
+    prevProps.rowHeight === nextProps.rowHeight &&
+    prevProps.viewStartDate.getTime() === nextProps.viewStartDate.getTime() &&
+    prevProps.criticalPathNodeIds.size === nextProps.criticalPathNodeIds.size &&
+    // ✅ 拖拽状态变化时需要重渲染（连线实时跟随）
+    prevProps.draggingNodeId === nextProps.draggingNodeId &&
+    prevProps.resizingNodeId === nextProps.resizingNodeId &&
+    prevProps.dragSnappedDates?.start?.getTime() === nextProps.dragSnappedDates?.start?.getTime() &&
+    prevProps.dragSnappedDates?.end?.getTime() === nextProps.dragSnappedDates?.end?.getTime() &&
+    prevProps.resizeSnappedDates?.start?.getTime() === nextProps.resizeSnappedDates?.start?.getTime() &&
+    prevProps.resizeSnappedDates?.end?.getTime() === nextProps.resizeSnappedDates?.end?.getTime()
+  );
+  
+  return propsEqual;
+}); // ✅ 闭合memo
 
 /**
  * 计算连接路径（优化版 - 利用行间空白区域）
