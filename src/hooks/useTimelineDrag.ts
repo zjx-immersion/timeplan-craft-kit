@@ -113,15 +113,36 @@ export const useTimelineDrag = ({
       
       // ✅ 使用统一的日期解析逻辑
       const originalStart = parseDateAsLocal(line.startDate);
+      
+      // 🛡️ 安全检查：确保originalStart有效
+      if (!originalStart || isNaN(originalStart.getTime())) {
+        console.error('[useTimelineDrag] 无效的原始开始日期:', line.startDate);
+        return;
+      }
+      
       const newVisualStart = addDays(originalStart, daysOffset);
 
       // 🎯 计算吸附日期（用于存储）
       // ✅ 修复：始终按天粒度对齐，兼容所有时间轴显示
       const rawDate = getDateFromPosition(currentPos, viewStartDate, scale);
+      
+      // 🛡️ 安全检查：确保rawDate有效
+      if (!rawDate || isNaN(rawDate.getTime())) {
+        console.error('[useTimelineDrag] 无效的计算日期, position:', currentPos);
+        return;
+      }
+      
       const newSnappedStart = snapToGrid(rawDate, 'day'); // 强制按天对齐
 
       if (line.endDate) {
         const originalEnd = parseDateAsLocal(line.endDate);
+        
+        // 🛡️ 安全检查：确保originalEnd有效
+        if (!originalEnd || isNaN(originalEnd.getTime())) {
+          console.error('[useTimelineDrag] 无效的原始结束日期:', line.endDate);
+          return;
+        }
+        
         const duration = originalEnd.getTime() - originalStart.getTime();
 
         setVisualDates({

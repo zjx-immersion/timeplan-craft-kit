@@ -157,9 +157,26 @@ export const useBarResize = ({
     const pixelsPerDay = getPixelsPerDay(scale);
     const daysOffset = Math.round(deltaX / pixelsPerDay);  // ✅ 四舍五入到整数天
 
+    // 🛡️ 安全检查：确保原始日期有效
+    if (!resizeState.originalStartDate || isNaN(resizeState.originalStartDate.getTime()) ||
+        !resizeState.originalEndDate || isNaN(resizeState.originalEndDate.getTime())) {
+      console.error('[useBarResize] 无效的原始日期:', {
+        start: resizeState.originalStartDate,
+        end: resizeState.originalEndDate
+      });
+      return;
+    }
+
     if (resizeState.edge === 'left') {
       // ✅ V5 修复：直接按整数天计算，使用startOfDay对齐（不用snapToGrid）
       let snappedStart = addDays(resizeState.originalStartDate, daysOffset);
+      
+      // 🛡️ 安全检查：确保计算结果有效
+      if (!snappedStart || isNaN(snappedStart.getTime())) {
+        console.error('[useBarResize] 无效的计算开始日期, daysOffset:', daysOffset);
+        return;
+      }
+      
       snappedStart = startOfDay(snappedStart);  // ✅ 只对齐到天的开始，不跨月/年
       
       // 确保不超过结束日期（至少保持1天）
@@ -185,6 +202,13 @@ export const useBarResize = ({
     } else if (resizeState.edge === 'right') {
       // ✅ V5 修复：直接按整数天计算，使用startOfDay对齐（不用snapToGrid）
       let snappedEnd = addDays(resizeState.originalEndDate, daysOffset);
+      
+      // 🛡️ 安全检查：确保计算结果有效
+      if (!snappedEnd || isNaN(snappedEnd.getTime())) {
+        console.error('[useBarResize] 无效的计算结束日期, daysOffset:', daysOffset);
+        return;
+      }
+      
       snappedEnd = startOfDay(snappedEnd);  // ✅ 只对齐到天的开始，不跨月/年
       
       // 确保不小于开始日期（至少保持1天）

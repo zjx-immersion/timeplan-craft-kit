@@ -2715,10 +2715,26 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
               {isDragActive ? '移动中' : '调整中'}
             </div>
             <div style={{ fontSize: 11, opacity: 0.9 }}>
-              {isDragActive
-                ? `${format(dragSnappedDates.start!, 'yyyy-MM-dd')} ~ ${format(dragSnappedDates.end!, 'yyyy-MM-dd')}`
-                : `${format(resizeSnappedDates.start!, 'yyyy-MM-dd')} ~ ${format(resizeSnappedDates.end!, 'yyyy-MM-dd')}`
-              }
+              {(() => {
+                // 安全地格式化日期，避免无效日期导致崩溃
+                const formatSafe = (date: Date | undefined | null): string => {
+                  if (!date) return '---';
+                  try {
+                    // 检查日期是否有效
+                    if (isNaN(date.getTime())) return '---';
+                    return format(date, 'yyyy-MM-dd');
+                  } catch (e) {
+                    console.error('[TimelinePanel] 日期格式化失败:', date, e);
+                    return '---';
+                  }
+                };
+
+                const dates = isDragActive ? dragSnappedDates : resizeSnappedDates;
+                const startStr = formatSafe(dates.start);
+                const endStr = formatSafe(dates.end);
+                
+                return `${startStr} ~ ${endStr}`;
+              })()}
             </div>
           </div>
         )}
