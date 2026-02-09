@@ -16,6 +16,10 @@ import React from 'react';
 import { Line } from '@/types/timeplanSchema';
 import { timelineColors, timelineShadows, timelineTransitions } from '@/theme/timelineColors';
 import ConnectionPoints from './ConnectionPoints';
+import { Tooltip } from 'antd';
+import { format } from 'date-fns';
+import { zhCN } from 'date-fns/locale';
+import { parseDateAsLocal } from '@/utils/dateUtils';
 
 interface LineRendererProps {
   line: Line;
@@ -63,7 +67,23 @@ const BarRenderer: React.FC<LineRendererProps> = ({
   // 悬停状态
   const [isHovering, setIsHovering] = React.useState(false);
   
+  // ✅ 格式化日期范围用于Tooltip（使用统一的日期解析）
+  const dateRangeText = React.useMemo(() => {
+    try {
+      const startDate = parseDateAsLocal(line.startDate);
+      const endDate = parseDateAsLocal(line.endDate);
+      return `${format(startDate, 'yyyy-MM-dd', { locale: zhCN })} ~ ${format(endDate, 'yyyy-MM-dd', { locale: zhCN })}`;
+    } catch (error) {
+      return '';
+    }
+  }, [line.startDate, line.endDate]);
+  
   return (
+    <Tooltip 
+      title={dateRangeText} 
+      placement="top"
+      mouseEnterDelay={0.5}
+    >
     <div
       onClick={onClick}
       onMouseDown={onMouseDown}
@@ -209,6 +229,7 @@ const BarRenderer: React.FC<LineRendererProps> = ({
         />
       )}
     </div>
+    </Tooltip>
   );
 };
 
@@ -236,7 +257,22 @@ const MilestoneRenderer: React.FC<LineRendererProps> = ({
   
   const [isHovering, setIsHovering] = React.useState(false);
   
+  // ✅ 格式化日期用于Tooltip（使用统一的日期解析）
+  const dateText = React.useMemo(() => {
+    try {
+      const startDate = parseDateAsLocal(line.startDate);
+      return format(startDate, 'yyyy-MM-dd', { locale: zhCN });
+    } catch (error) {
+      return '';
+    }
+  }, [line.startDate]);
+  
   return (
+    <Tooltip 
+      title={dateText} 
+      placement="top"
+      mouseEnterDelay={0.5}
+    >
     <div
       onClick={onClick}
       onMouseDown={onMouseDown}
@@ -314,6 +350,7 @@ const MilestoneRenderer: React.FC<LineRendererProps> = ({
         />
       )}
     </div>
+    </Tooltip>
   );
 };
 
@@ -341,7 +378,22 @@ const GatewayRenderer: React.FC<LineRendererProps> = ({
   
   const [isHovering, setIsHovering] = React.useState(false);
   
+  // ✅ 格式化日期用于Tooltip（使用统一的日期解析）
+  const dateText = React.useMemo(() => {
+    try {
+      const startDate = parseDateAsLocal(line.startDate);
+      return format(startDate, 'yyyy-MM-dd', { locale: zhCN });
+    } catch (error) {
+      return '';
+    }
+  }, [line.startDate]);
+  
   return (
+    <Tooltip 
+      title={dateText} 
+      placement="top"
+      mouseEnterDelay={0.5}
+    >
     <div
       onClick={onClick}
       onMouseDown={onMouseDown}
@@ -418,6 +470,7 @@ const GatewayRenderer: React.FC<LineRendererProps> = ({
         />
       )}
     </div>
+    </Tooltip>
   );
 };
 

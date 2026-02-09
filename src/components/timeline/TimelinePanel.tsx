@@ -61,12 +61,15 @@ import {
   getBarWidthPrecise,
   getBarWidthTruePrecise,
   getScaleUnit,
+  getPixelsPerDay,
+  parseDateAsLocal,
 } from '@/utils/dateUtils';
 import {
   format,
   addDays,
   startOfWeek,
   startOfDay,
+  getDaysInMonth,
 } from 'date-fns';
 // addDays已在上面导入
 import { isHoliday, isNonWorkingDay, getHolidayName } from '@/utils/holidayUtils';
@@ -402,6 +405,8 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   // Refs
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const prevScaleRef = useRef<TimeScale>(scale);
+  const prevTotalWidthRef = useRef<number>(0);
   
   /**
    * ✅ 滚动对齐：整体滚动，左侧固定
@@ -443,6 +448,55 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     () => getTotalTimelineWidth(normalizedViewStartDate, normalizedViewEndDate, scale),
     [normalizedViewStartDate, normalizedViewEndDate, scale]
   );
+
+  // ✅ 调试日志：关键信息
+  console.log(`[TimelinePanel] ⏱️ 时间轴整体范围:
+  - scale: ${scale}
+  - dateHeaders数量: ${dateHeaders.length}
+  - 第一个日期: ${dateHeaders[0]?.toLocaleDateString('zh-CN')}
+  - 最后一个日期: ${dateHeaders[dateHeaders.length - 1]?.toLocaleDateString('zh-CN')}
+  - 总宽度: ${totalWidth}px
+  - 总任务数: ${data.lines.length}`);
+
+  // ==================== 视图切换时保持滚动位置相对比例 ====================
+  
+  useEffect(() => {
+    // 检测 scale 是否发生变化
+    if (prevScaleRef.current !== scale) {
+      const scrollContainer = scrollContainerRef.current;
+      const prevScale = prevScaleRef.current;
+      const prevTotalWidth = prevTotalWidthRef.current;
+
+      if (scrollContainer && prevTotalWidth > 0) {
+        // 计算切换前的滚动位置相对比例
+        const currentScrollLeft = scrollContainer.scrollLeft;
+        const scrollRatio = currentScrollLeft / prevTotalWidth;
+
+        console.log(`[TimelinePanel] 📊 视图切换 - 保持滚动位置相对比例:
+  - 旧视图: ${prevScale}, 旧总宽度: ${prevTotalWidth}px, 旧滚动位置: ${currentScrollLeft}px
+  - 相对比例: ${(scrollRatio * 100).toFixed(2)}%
+  - 新视图: ${scale}, 新总宽度: ${totalWidth}px`);
+
+        // 使用 requestAnimationFrame 确保在 DOM 更新后应用新的滚动位置
+        requestAnimationFrame(() => {
+          const newScrollLeft = Math.round(scrollRatio * totalWidth);
+          
+          console.log(`  - 新滚动位置: ${newScrollLeft}px`);
+          
+          scrollContainer.scrollTo({
+            left: newScrollLeft,
+            behavior: 'auto', // 使用 'auto' 实现即时切换
+          });
+        });
+      }
+
+      // 更新 refs
+      prevScaleRef.current = scale;
+    }
+
+    // 始终更新 totalWidth ref
+    prevTotalWidthRef.current = totalWidth;
+  }, [scale, totalWidth]);
 
   // ==================== 辅助函数 ====================
 
@@ -518,6 +572,38 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
       scrollToTodayRef.current = scrollToToday;
     }
   }, [scrollToToday, scrollToTodayRef]);
+
+  // ==================== 初次加载和视图切换时自动定位到今日 ====================
+  
+  const hasInitialScrolledRef = useRef(false);
+  const prevViewTypeRef = useRef<ViewType>(viewType);
+
+  useEffect(() => {
+    // 场景1: 初次加载时自动滚动到今日
+    if (!hasInitialScrolledRef.current && scrollContainerRef.current && totalWidth > 0) {
+      console.log('[TimelinePanel] 📍 初次加载 - 自动定位到今日');
+      
+      // 延迟执行，确保 DOM 已完全渲染
+      setTimeout(() => {
+        scrollToToday();
+        hasInitialScrolledRef.current = true;
+      }, 100);
+    }
+  }, [totalWidth, scrollToToday]);
+
+  useEffect(() => {
+    // 场景2: 从其他视图切换回甘特图时自动滚动到今日
+    if (prevViewTypeRef.current !== 'gantt' && viewType === 'gantt' && hasInitialScrolledRef.current) {
+      console.log('[TimelinePanel] 📍 切换回甘特图 - 自动定位到今日');
+      
+      // 延迟执行，确保视图已切换完成
+      setTimeout(() => {
+        scrollToToday();
+      }, 100);
+    }
+    
+    prevViewTypeRef.current = viewType;
+  }, [viewType, scrollToToday]);
 
   // ✅ 修复：动态更新viewEndDate，确保时间轴覆盖所有节点
   useEffect(() => {
@@ -1463,6 +1549,8 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
+        maxHeight: '100%',  // ✅ 限制最大高度
+        overflow: 'hidden',  // ✅ 防止外层滚动条
         backgroundColor: token.colorBgContainer,
       }}
     >
@@ -1834,6 +1922,8 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
           flex: 1,
           overflow: 'auto',
           position: 'relative',
+          width: '100%',  // ✅ 限制宽度
+          maxWidth: '100%',  // ✅ 防止水平扩展
         }}
       >
         {/* 左侧边栏 - Timeline 列表 */}
@@ -2017,7 +2107,8 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
         {/* 右侧内容区域 - 时间轴和内容 */}
         <div
           style={{
-            flex: 1,
+            // flex: 1,  // ❌ 移除：flex会导致自动扩展，与固定宽度冲突
+            flex: '0 0 auto',  // ✅ 修复：使用flex-shrink为0，固定宽度
             position: 'relative',
             backgroundColor: '#fff',  // ✅ 修复：与左侧背景色一致，统一为白色
             width: totalWidth,  // ✅ 固定宽度，防止右侧过多空白
@@ -2072,15 +2163,22 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
 
             {/* ✅ 垂直网格线 - 月视图和季度视图特殊处理 */}
             {scale === 'month' || scale === 'quarter' ? (
-              // 月视图和季度视图：根据月份/季度绘制网格线
+              // 月视图和季度视图：根据月份/季度的实际累积宽度绘制网格线
               dateHeaders.map((date, index) => {
-                const columnWidth = getScaleUnit(scale);
+                // ✅ 计算累积宽度：累加前面所有月份的实际宽度
+                let accumulatedWidth = 0;
+                for (let i = 0; i < index; i++) {
+                  const monthDate = dateHeaders[i];
+                  const daysInMonth = getDaysInMonth(monthDate);
+                  accumulatedWidth += daysInMonth * getPixelsPerDay(scale);
+                }
+                
                 return (
                   <div
                     key={`line-${index}`}
                     style={{
                       position: 'absolute',
-                      left: index * columnWidth,
+                      left: accumulatedWidth,  // ✅ 使用累积宽度而不是固定宽度
                       top: 0,
                       bottom: 0,
                       width: 1,
@@ -2246,6 +2344,16 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
             {data.timelines.map((timeline, index) => {
               const lines = getLinesByTimelineId(timeline.id);
               
+              // ✅ 调试日志：仅在第一个 timeline 时输出前3个任务的详细信息
+              if (index === 0 && lines.length > 0) {
+                console.log(`[TimelinePanel] 📋 第一个Timeline的前3个任务数据:`);
+                lines.slice(0, 3).forEach((line, idx) => {
+                  console.log(`  ${idx + 1}. [${line.type}] ${line.name || line.id}:
+     startDate原始值: ${JSON.stringify(line.startDate)}
+     endDate原始值: ${line.endDate ? JSON.stringify(line.endDate) : 'null'}`);
+                });
+              }
+              
               // ✅ 获取timeline颜色（与左侧一致）
               const defaultColors = ['#52c41a', '#1890ff', '#722ed1', '#13c2c2', '#fa8c16', '#eb2f96', '#faad14'];
               const timelineColor = timeline.color || defaultColors[index % defaultColors.length];
@@ -2274,22 +2382,42 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                     }}
                   >
                   {/* 渲染该 Timeline 的所有 Lines */}
-                  {lines.map((line) => {
+                  {lines.map((line, lineIndex) => {
                     const isDraggingThis = draggingNodeId === line.id;
                     const isResizingThis = resizingNodeId === line.id;
 
                     // ✅ 修复：使用snappedDates而不是visualDates，确保按天对齐
+                    // ✅ 关键修复：使用 parseDateAsLocal 避免时区导致的日期偏移
                     const displayStartDate = isDraggingThis && dragSnappedDates.start
                       ? dragSnappedDates.start
                       : isResizingThis && resizeSnappedDates.start
                         ? resizeSnappedDates.start
-                        : new Date(line.startDate);
+                        : parseDateAsLocal(line.startDate);
 
                     const displayEndDate = isDraggingThis && dragSnappedDates.end
                       ? dragSnappedDates.end
                       : isResizingThis && resizeSnappedDates.end
                         ? resizeSnappedDates.end
-                        : line.endDate ? new Date(line.endDate) : new Date(line.startDate);
+                        : line.endDate ? parseDateAsLocal(line.endDate) : parseDateAsLocal(line.startDate);
+
+                    // ✅ 调试日志：仅输出第一个timeline的第一个line的信息（更详细）
+                    if (index === 0 && lineIndex === 0) {
+                      const startDateStr = `${displayStartDate.getFullYear()}-${(displayStartDate.getMonth() + 1).toString().padStart(2, '0')}-${displayStartDate.getDate().toString().padStart(2, '0')}`;
+                      const endDateStr = `${displayEndDate.getFullYear()}-${(displayEndDate.getMonth() + 1).toString().padStart(2, '0')}-${displayEndDate.getDate().toString().padStart(2, '0')}`;
+                      const viewStartStr = `${normalizedViewStartDate.getFullYear()}-${(normalizedViewStartDate.getMonth() + 1).toString().padStart(2, '0')}-${normalizedViewStartDate.getDate().toString().padStart(2, '0')}`;
+                      
+                      console.log(`[TimelinePanel] 🔍 第一个Timeline的第一个Line位置计算:
+  - timelineId: ${timeline.id}
+  - timelineName: ${timeline.name}
+  - lineId: ${line.id}
+  - lineName: ${line.name || '未命名'}
+  - 原始startDate: ${JSON.stringify(line.startDate)}
+  - 原始endDate: ${line.endDate ? JSON.stringify(line.endDate) : 'null'}
+  - 解析后startDate: ${startDateStr}
+  - 解析后endDate: ${endDateStr}
+  - viewStartDate: ${viewStartStr}
+  - scale: ${scale}`);
+                    }
 
                     // ✅ 修复：统一使用Precise计算，确保对齐
                     const startPos = getPositionFromDate(
@@ -2297,6 +2425,24 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                       normalizedViewStartDate,
                       scale
                     );
+                    
+                    // ✅ 调试日志：仅输出第一个timeline的第一个line的位置，并验证对齐
+                    if (index === 0 && lineIndex === 0) {
+                      console.log(`[TimelinePanel] 📍 第一个Timeline的第一个Line计算位置: ${startPos}px`);
+                      
+                      // 手工验证计算
+                      const year = displayStartDate.getFullYear();
+                      const month = displayStartDate.getMonth() + 1;
+                      const day = displayStartDate.getDate();
+                      const viewStartYear = normalizedViewStartDate.getFullYear();
+                      
+                      console.log(`[TimelinePanel] 🧮 手工验证位置计算:`);
+                      console.log(`  - 任务日期: ${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`);
+                      console.log(`  - 起始日期: ${viewStartYear}-01-01`);
+                      console.log(`  - 计算位置: ${startPos}px`);
+                      console.log(`  - pixelsPerDay: ${getPixelsPerDay(scale)}`);
+                      console.log(`  ℹ️ 请对比：TimelineHeader中${year}年${month}月的位置 + ${day-1}天 × ${getPixelsPerDay(scale)}px`);
+                    }
 
                     const width = getBarWidthPrecise(
                       displayStartDate,

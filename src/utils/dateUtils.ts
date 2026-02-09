@@ -67,7 +67,7 @@ export const getScaleUnit = (scale: TimeScale): number => {
     case 'week':
       return PIXELS_PER_DAY * 7; // 1 周 = 280px
     case 'biweekly':
-      return PIXELS_PER_DAY * 14; // 2 周 = 560px
+      return 20 * 14; // 2 周 = 280px（调整后，20px/天 × 14天）
     case 'month':
       return PIXELS_PER_DAY * 30; // 名义月份 = 1200px（实际会变化）
     case 'quarter':
@@ -88,7 +88,7 @@ export const getPixelsPerDay = (scale: TimeScale): number => {
     case 'week':
       return 40; // 与日视图相同 - 周视图只是分组列
     case 'biweekly':
-      return 40; // 与日视图相同
+      return 20; // 调整为 20px/天，使一个屏幕能显示 6 个双周（12周）
     case 'month':
       return 5; // 压缩：每天 5px
     case 'quarter':
@@ -182,30 +182,52 @@ export const getDateHeaders = (
   endDate: Date,
   scale: TimeScale
 ): Date[] => {
+  // ✅ 修复：所有视图都使用本地时间，避免时区导致的偏移
   switch (scale) {
-    case 'day':
-      return eachDayOfInterval({ start: startDate, end: endDate });
-    case 'week':
+    case 'day': {
+      // 使用本地时间的日期，避免时区导致的日期偏移
+      const localStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+      const localEnd = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+      return eachDayOfInterval({ start: localStart, end: localEnd });
+    }
+    case 'week': {
+      // 使用本地时间
+      const localStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+      const localEnd = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
       return eachWeekOfInterval(
-        { start: startDate, end: endDate },
+        { start: localStart, end: localEnd },
         { weekStartsOn: 1 }
       );
+    }
     case 'biweekly': {
-      // 生成双周日期
+      // 生成双周日期，使用本地时间
       const result: Date[] = [];
-      let current = startOfWeek(startDate, { weekStartsOn: 1 });
-      while (current <= endDate) {
+      const localStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+      const localEnd = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+      let current = startOfWeek(localStart, { weekStartsOn: 1 });
+      while (current <= localEnd) {
         result.push(current);
         current = addDays(current, 14);
       }
       return result;
     }
-    case 'month':
-      return eachMonthOfInterval({ start: startDate, end: endDate });
-    case 'quarter':
-      return eachQuarterOfInterval({ start: startDate, end: endDate });
-    default:
-      return eachMonthOfInterval({ start: startDate, end: endDate });
+    case 'month': {
+      // ✅ 确保使用本地时间的月初，避免时区导致的月份偏移
+      const localStart = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      const localEnd = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+      return eachMonthOfInterval({ start: localStart, end: localEnd });
+    }
+    case 'quarter': {
+      // 使用本地时间
+      const localStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+      const localEnd = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+      return eachQuarterOfInterval({ start: localStart, end: localEnd });
+    }
+    default: {
+      const localStart = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      const localEnd = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+      return eachMonthOfInterval({ start: localStart, end: localEnd });
+    }
   }
 };
 
@@ -251,6 +273,35 @@ export const formatDateHeader = (date: Date, scale: TimeScale): string => {
 };
 
 /**
+ * 解析日期为本地日期（仅年月日，忽略时区）
+ * ✅ 统一日期解析逻辑，避免时区导致的日期偏移
+ * 
+ * 关键问题：'2025-08-28T16:00:00.000Z' 在UTC+8时区会被解析为 2025-08-29
+ * 解决方案：直接从字符串提取日期部分 (YYYY-MM-DD)
+ */
+export const parseDateAsLocal = (dateInput: Date | string): Date => {
+  if (dateInput instanceof Date) {
+    // 如果已经是Date对象，提取本地的年月日
+    return new Date(dateInput.getFullYear(), dateInput.getMonth(), dateInput.getDate());
+  }
+  
+  // 如果是字符串，直接解析日期部分（YYYY-MM-DD）
+  const dateStr = typeof dateInput === 'string' ? dateInput : dateInput.toString();
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  
+  if (match) {
+    const year = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1; // 月份从0开始
+    const day = parseInt(match[3], 10);
+    return new Date(year, month, day);
+  }
+  
+  // 兜底：使用Date构造函数，然后提取本地日期
+  const date = new Date(dateInput);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+};
+
+/**
  * 统一的位置计算
  * 
  * 所有位置都基于精确的日历天数差异计算
@@ -263,11 +314,10 @@ export const getPositionFromDate = (
 ): number => {
   const pixelsPerDay = getPixelsPerDay(scale);
 
-  // 使用日历天数差异进行精确对齐
-  // startOfDay 确保我们在日边界进行比较
-  const normalizedDate = startOfDay(date);
-  const normalizedStart = startOfDay(viewStartDate);
-  const diffDays = differenceInCalendarDays(normalizedDate, normalizedStart);
+  // ✅ 使用明确的本地时间（年月日）进行计算，避免时区转换
+  const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const localStart = new Date(viewStartDate.getFullYear(), viewStartDate.getMonth(), viewStartDate.getDate());
+  const diffDays = differenceInCalendarDays(localDate, localStart);
 
   return diffDays * pixelsPerDay;
 };
@@ -369,8 +419,11 @@ export const getBarWidthPrecise = (
   scale: TimeScale
 ): number => {
   const pixelsPerDay = getPixelsPerDay(scale);
-  const daysDiff =
-    differenceInCalendarDays(startOfDay(endDate), startOfDay(startDate)) + 1;
+  
+  // ✅ 使用明确的本地时间（年月日）进行计算，避免时区转换
+  const localStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+  const localEnd = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+  const daysDiff = differenceInCalendarDays(localEnd, localStart) + 1;
   const width = daysDiff * pixelsPerDay;
 
   // 最小宽度以确保可见性

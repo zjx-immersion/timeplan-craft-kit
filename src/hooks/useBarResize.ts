@@ -16,7 +16,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Line } from '@/types/timeplanSchema';
 import { TimeScale } from '@/utils/dateUtils';
-import { getDateFromPosition, getPositionFromDate, getPixelsPerDay, addDays } from '@/utils/dateUtils';
+import { getDateFromPosition, getPositionFromDate, getPixelsPerDay, addDays, parseDateAsLocal } from '@/utils/dateUtils';
 import { differenceInDays, startOfDay } from 'date-fns';
 
 interface ResizeState {
@@ -58,8 +58,9 @@ const findMagneticSnapDate = (
   allLines.forEach(line => {
     if (line.id === currentLineId) return; // 跳过自己
 
-    const lineStartDate = new Date(line.startDate);
-    const lineEndDate = line.endDate ? new Date(line.endDate) : lineStartDate;
+    // ✅ 使用统一的日期解析逻辑
+    const lineStartDate = parseDateAsLocal(line.startDate);
+    const lineEndDate = line.endDate ? parseDateAsLocal(line.endDate) : lineStartDate;
 
     // 检查与其他元素的开始和结束日期的距离
     const startDistance = Math.abs(differenceInDays(targetDate, lineStartDate));
@@ -121,8 +122,9 @@ export const useBarResize = ({
     e.preventDefault();
     e.stopPropagation();
 
-    const endDate = line.endDate ? new Date(line.endDate) : new Date(new Date(line.startDate).getTime() + 7 * 24 * 60 * 60 * 1000);
-    const startDate = new Date(line.startDate);
+    // ✅ 使用统一的日期解析逻辑
+    const startDate = parseDateAsLocal(line.startDate);
+    const endDate = line.endDate ? parseDateAsLocal(line.endDate) : addDays(startDate, 7);
 
     nodeRef.current = line;
     setResizeState({

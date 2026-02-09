@@ -16,7 +16,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { TimeScale } from '@/utils/dateUtils';
 import { Line } from '@/types/timeplanSchema';
-import { getDateFromPosition, getPositionFromDate, snapToGrid, getPixelsPerDay, addDays } from '@/utils/dateUtils';
+import { getDateFromPosition, getPositionFromDate, snapToGrid, getPixelsPerDay, addDays, parseDateAsLocal } from '@/utils/dateUtils';
 
 interface DragState {
   isDragging: boolean;
@@ -70,13 +70,15 @@ export const useTimelineDrag = ({
 
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    const position = getPositionFromDate(new Date(line.startDate), viewStartDate, scale);
+    
+    // ✅ 使用统一的日期解析逻辑
+    const initialStart = parseDateAsLocal(line.startDate);
+    const position = getPositionFromDate(initialStart, viewStartDate, scale);
 
     nodeRef.current = line;
     setMousePosition({ x: clientX, y: clientY });
 
-    const initialStart = new Date(line.startDate);
-    const initialEnd = line.endDate ? new Date(line.endDate) : undefined;
+    const initialEnd = line.endDate ? parseDateAsLocal(line.endDate) : undefined;
 
     setVisualDates({ start: initialStart, end: initialEnd });
     setSnappedDates({ start: initialStart, end: initialEnd });
@@ -108,7 +110,9 @@ export const useTimelineDrag = ({
       // 计算视觉日期（平滑渲染）
       const pixelsPerDay = getPixelsPerDay(scale);
       const daysOffset = deltaX / pixelsPerDay;
-      const originalStart = new Date(line.startDate);
+      
+      // ✅ 使用统一的日期解析逻辑
+      const originalStart = parseDateAsLocal(line.startDate);
       const newVisualStart = addDays(originalStart, daysOffset);
 
       // 🎯 计算吸附日期（用于存储）
@@ -117,7 +121,8 @@ export const useTimelineDrag = ({
       const newSnappedStart = snapToGrid(rawDate, 'day'); // 强制按天对齐
 
       if (line.endDate) {
-        const duration = new Date(line.endDate).getTime() - new Date(line.startDate).getTime();
+        const originalEnd = parseDateAsLocal(line.endDate);
+        const duration = originalEnd.getTime() - originalStart.getTime();
 
         setVisualDates({
           start: newVisualStart,

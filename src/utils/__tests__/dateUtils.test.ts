@@ -13,6 +13,7 @@ import {
   getBarWidthPrecise,
   snapToGrid,
   formatDateHeader,
+  parseDateAsLocal,
 } from '../dateUtils';
 
 describe('dateUtils', () => {
@@ -348,6 +349,83 @@ describe('dateUtils', () => {
       expect(pos2025).toBeGreaterThan(1800); // 约365天 * 5px
       expect(pos2026).toBeGreaterThan(3600); // 约730天 * 5px
       expect(pos2028).toBeGreaterThan(9000); // 约1826天 * 5px
+    });
+  });
+
+  describe('parseDateAsLocal', () => {
+    it('应该正确解析ISO字符串，忽略时区', () => {
+      // 测试UTC时间字符串（这些在UTC+8时区会产生偏移）
+      const date1 = parseDateAsLocal('2025-08-28T16:00:00.000Z');
+      expect(date1.getFullYear()).toBe(2025);
+      expect(date1.getMonth()).toBe(7); // 8月（0-based）
+      expect(date1.getDate()).toBe(28);
+      expect(date1.getHours()).toBe(0);
+      expect(date1.getMinutes()).toBe(0);
+
+      const date2 = parseDateAsLocal('2025-11-07T16:00:00.000Z');
+      expect(date2.getFullYear()).toBe(2025);
+      expect(date2.getMonth()).toBe(10); // 11月
+      expect(date2.getDate()).toBe(7);
+    });
+
+    it('应该正确解析简单的日期字符串', () => {
+      const date = parseDateAsLocal('2026-02-09');
+      expect(date.getFullYear()).toBe(2026);
+      expect(date.getMonth()).toBe(1); // 2月（0-based）
+      expect(date.getDate()).toBe(9);
+      expect(date.getHours()).toBe(0);
+    });
+
+    it('应该正确处理Date对象', () => {
+      // Date对象可能包含时间部分，应该被归零
+      const inputDate = new Date('2026-02-09T15:30:45.123Z');
+      const parsed = parseDateAsLocal(inputDate);
+      
+      // 应该提取本地的年月日
+      expect(parsed.getFullYear()).toBe(inputDate.getFullYear());
+      expect(parsed.getMonth()).toBe(inputDate.getMonth());
+      expect(parsed.getDate()).toBe(inputDate.getDate());
+      expect(parsed.getHours()).toBe(0);
+      expect(parsed.getMinutes()).toBe(0);
+      expect(parsed.getSeconds()).toBe(0);
+    });
+
+    it('应该处理已经是本地日期的Date对象', () => {
+      const localDate = new Date(2026, 1, 9); // 2026-02-09
+      const parsed = parseDateAsLocal(localDate);
+      
+      expect(parsed.getFullYear()).toBe(2026);
+      expect(parsed.getMonth()).toBe(1);
+      expect(parsed.getDate()).toBe(9);
+      expect(parsed.getHours()).toBe(0);
+    });
+
+    it('应该避免时区导致的日期偏移', () => {
+      // 这个UTC时间在UTC+8时区会变成第二天
+      const utcString = '2025-12-31T16:00:00.000Z';
+      const parsed = parseDateAsLocal(utcString);
+      
+      // 应该解析为 2025-12-31，而不是 2026-01-01
+      expect(parsed.getFullYear()).toBe(2025);
+      expect(parsed.getMonth()).toBe(11); // 12月
+      expect(parsed.getDate()).toBe(31);
+    });
+
+    it('应该处理各种日期格式', () => {
+      const formats = [
+        '2026-01-15',
+        '2026-01-15T00:00:00',
+        '2026-01-15T00:00:00.000Z',
+        '2026-01-15T12:30:45.123Z',
+      ];
+
+      formats.forEach(dateStr => {
+        const parsed = parseDateAsLocal(dateStr);
+        expect(parsed.getFullYear()).toBe(2026);
+        expect(parsed.getMonth()).toBe(0); // 1月
+        expect(parsed.getDate()).toBe(15);
+        expect(parsed.getHours()).toBe(0);
+      });
     });
   });
 });

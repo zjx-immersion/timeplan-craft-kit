@@ -15,7 +15,7 @@ import React, { useMemo } from 'react';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { TimeScale } from '@/utils/dateUtils';
-import { getPositionFromDate } from '@/utils/dateUtils';
+import { getPositionFromDate, parseDateAsLocal } from '@/utils/dateUtils';
 import { timelineColors } from '@/theme/timelineColors';
 
 interface TodayLineProps {
@@ -34,16 +34,36 @@ export const TodayLine: React.FC<TodayLineProps> = ({
   scale,
   height,
 }) => {
-  const today = new Date();
+  // ✅ 使用本地日期（仅年月日），避免时间部分干扰
+  const today = useMemo(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }, []);
   
   // 计算今日线的位置
   const todayPosition = useMemo(() => {
     // 检查今天是否在视图范围内
     if (today < viewStartDate || today > viewEndDate) {
+      console.log('[TodayLine] 今天不在视图范围内，不渲染');
       return null;
     }
     
-    return getPositionFromDate(today, viewStartDate, scale);
+    const position = getPositionFromDate(today, viewStartDate, scale);
+    
+    // ✅ 调试日志：今日标记位置计算（更详细）
+    const todayStr = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
+    const viewStartStr = `${viewStartDate.getFullYear()}-${(viewStartDate.getMonth() + 1).toString().padStart(2, '0')}-${viewStartDate.getDate().toString().padStart(2, '0')}`;
+    const viewEndStr = `${viewEndDate.getFullYear()}-${(viewEndDate.getMonth() + 1).toString().padStart(2, '0')}-${viewEndDate.getDate().toString().padStart(2, '0')}`;
+    
+    console.log(`[TodayLine] 🕐 今日标记位置计算:
+  - 今天: ${todayStr}
+  - 视图范围: ${viewStartStr} ~ ${viewEndStr}
+  - scale: ${scale}
+  - 计算位置: ${position}px`);
+    
+    console.log(`[TodayLine] 🧮 验证：今日红线应该在 TimelineHeader 中 ${today.getFullYear()}年${today.getMonth() + 1}月的位置 + ${today.getDate() - 1}天 × 5px 处`);
+    
+    return position;
   }, [today, viewStartDate, viewEndDate, scale]);
   
   // 如果今天不在视图范围内，不渲染

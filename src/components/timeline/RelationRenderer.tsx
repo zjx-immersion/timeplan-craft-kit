@@ -16,7 +16,7 @@
 import React, { useMemo } from 'react';
 import { Relation, Line } from '@/types/timeplanSchema';
 import { TimeScale } from '@/utils/dateUtils';
-import { getPositionFromDate, getBarWidthPrecise } from '@/utils/dateUtils';
+import { getPositionFromDate, getBarWidthPrecise, parseDateAsLocal } from '@/utils/dateUtils';
 
 interface RelationRendererProps {
   relations: Relation[];
@@ -78,15 +78,16 @@ export const RelationRenderer: React.FC<RelationRendererProps> = ({
         return;
       }
       
+      // ✅ 使用 parseDateAsLocal 避免时区导致的日期偏移
       const startPos = getPositionFromDate(
-        new Date(line.startDate),
+        parseDateAsLocal(line.startDate),
         viewStartDate,
         scale
       );
       
-      const endDate = line.endDate ? new Date(line.endDate) : new Date(line.startDate);
+      const endDate = line.endDate ? parseDateAsLocal(line.endDate) : parseDateAsLocal(line.startDate);
       const width = line.endDate
-        ? getBarWidthPrecise(new Date(line.startDate), endDate, scale)
+        ? getBarWidthPrecise(parseDateAsLocal(line.startDate), endDate, scale)
         : 0;
       
       positions.set(line.id, {
