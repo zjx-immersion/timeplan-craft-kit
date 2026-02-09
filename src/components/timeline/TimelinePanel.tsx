@@ -2169,7 +2169,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
             const lines = getLinesByTimelineId(timeline.id);
             
             // ✅ 获取Timeline背景颜色（使用timeline.color或默认颜色）
-            const timelineColor = timeline.color || defaultColors[index % defaultColors.length];
+            const timelineColor = timeline.color || DEFAULT_TIMELINE_COLORS[index % DEFAULT_TIMELINE_COLORS.length];
             
             // ✅ 获取负责人和分类信息
             const owner = timeline.owner || timeline.description || '';
