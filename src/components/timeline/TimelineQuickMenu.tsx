@@ -43,7 +43,7 @@ export interface TimelineQuickMenuProps {
   /**
    * 添加节点回调
    */
-  onAddNode?: (timelineId: string, type: 'bar' | 'milestone' | 'gateway') => void;
+  onAddNode?: (timelineId: string, type: 'lineplan' | 'milestone' | 'gateway') => void;
   
   /**
    * 编辑Timeline回调
@@ -110,10 +110,10 @@ export const TimelineQuickMenu: React.FC<TimelineQuickMenuProps> = ({
         icon: <PlusOutlined />,
         children: [
           {
-            key: 'add-bar',
-            label: '计划单元 (Bar)',
+            key: 'add-lineplan',
+            label: '计划单元 (LinePlan)',
             icon: <MinusOutlined />,
-            onClick: () => onAddNode(timelineId, 'bar'),
+            onClick: () => onAddNode(timelineId, 'lineplan'),
           },
           {
             key: 'add-milestone',
