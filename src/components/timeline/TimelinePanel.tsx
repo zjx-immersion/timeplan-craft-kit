@@ -76,6 +76,14 @@ import { isHoliday, isNonWorkingDay, getHolidayName } from '@/utils/holidayUtils
 import { useTimelineDrag } from '@/hooks/useTimelineDrag';
 import { useBarResize } from '@/hooks/useBarResize';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
+import { useKeyboardShortcuts, CommonShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useSelection } from '@/hooks/useSelection';
+import { 
+  exportTimePlanToExcel, 
+  exportTimePlanToCSV, 
+  exportSelectedLinesToExcel, 
+  exportSelectedLinesToCSV 
+} from '@/utils/exportUtils';
 import { addMonths, subMonths } from 'date-fns';
 import { LineRenderer } from './LineRenderer';
 import { RelationRenderer } from './RelationRenderer';
@@ -261,6 +269,16 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     save: saveChanges,
     reset: resetChanges,
   } = useUndoRedo<TimePlan>(initialData);
+
+  // ==================== 批量选择 ====================
+  
+  const selection = useSelection({
+    getId: (line: Line) => line.id,
+    items: data.lines,
+    onSelectionChange: (selectedIds, selectedLines) => {
+      console.log(`[Selection] 已选中 ${selectedLines.length} 个任务`);
+    },
+  });
 
   // 同步外部数据变化
   const prevInitialDataRef = useRef(initialData);
@@ -604,6 +622,90 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     
     prevViewTypeRef.current = viewType;
   }, [viewType, scrollToToday]);
+
+  // ==================== 全局快捷键 ====================
+  
+  useKeyboardShortcuts({
+    enabled: true,
+    ignoreInputs: true,
+    shortcuts: [
+      // Ctrl+Z: 撤销
+      CommonShortcuts.undo(() => {
+        if (canUndo) {
+          undo();
+          message.info('已撤销');
+        }
+      }),
+      
+      // Ctrl+Y / Ctrl+Shift+Z: 重做
+      ...CommonShortcuts.redo(() => {
+        if (canRedo) {
+          redo();
+          message.info('已重做');
+        }
+      }),
+      
+      // Ctrl+S: 保存
+      CommonShortcuts.save(() => {
+        handleSave();
+      }),
+      
+      // Space: 定位今日
+      CommonShortcuts.space(() => {
+        scrollToToday();
+        message.info('已定位到今日');
+      }),
+      
+      // Ctrl+1~5: 切换视图刻度
+      CommonShortcuts.number(1, () => handleScaleChange('day')),
+      CommonShortcuts.number(2, () => handleScaleChange('week')),
+      CommonShortcuts.number(3, () => handleScaleChange('month')),
+      CommonShortcuts.number(4, () => handleScaleChange('quarter')),
+      CommonShortcuts.number(5, () => handleScaleChange('biweekly')),
+      
+      // Ctrl+A: 全选
+      CommonShortcuts.selectAll(() => {
+        selection.selectAll();
+        message.info(`已选中 ${data.lines.length} 个任务`);
+      }),
+      
+      // Delete: 删除选中
+      CommonShortcuts.delete(() => {
+        if (selection.hasSelection && isEditMode) {
+          const selectedLines = data.lines.filter(line => selection.isSelected(line.id));
+          const lineNames = selectedLines.map(l => l.name).join('、');
+          
+          modal.confirm({
+            title: '确认删除',
+            content: `确定要删除 ${selectedLines.length} 个任务吗？（${lineNames}）`,
+            onOk: () => {
+              const newLines = data.lines.filter(line => !selection.isSelected(line.id));
+              const newRelations = data.relations?.filter(
+                rel => !selection.isSelected(rel.fromLineId) && !selection.isSelected(rel.toLineId)
+              );
+              
+              updateData({
+                ...data,
+                lines: newLines,
+                relations: newRelations,
+              });
+              
+              selection.clearSelection();
+              message.success(`已删除 ${selectedLines.length} 个任务`);
+            },
+          });
+        }
+      }),
+      
+      // Escape: 取消选择
+      CommonShortcuts.escape(() => {
+        if (selection.hasSelection) {
+          selection.clearSelection();
+          message.info('已取消选择');
+        }
+      }),
+    ],
+  });
 
   // ✅ 修复：动态更新viewEndDate，确保时间轴覆盖所有节点
   useEffect(() => {
@@ -1385,21 +1487,47 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
    * 导出数据
    */
   const handleExportData = useCallback((format: 'json' | 'csv' | 'excel') => {
+    const filename = data.title || '时间规划';
+    
     switch (format) {
       case 'json':
         downloadJSON(data);
         message.success('JSON 数据已导出');
         break;
       case 'csv':
-        downloadCSV(data);
+        exportTimePlanToCSV(data, filename);
         message.success('CSV 数据已导出');
         break;
       case 'excel':
-        downloadExcel(data);
+        exportTimePlanToExcel(data, filename);
         message.success('Excel 数据已导出');
         break;
     }
   }, [data]);
+
+  /**
+   * 导出选中的任务
+   */
+  const handleExportSelected = useCallback((format: 'excel' | 'csv') => {
+    if (!selection.hasSelection) {
+      message.warning('请先选择要导出的任务');
+      return;
+    }
+
+    const selectedLines = data.lines.filter(line => selection.isSelected(line.id));
+    const filename = `选中任务_${selectedLines.length}个`;
+
+    switch (format) {
+      case 'excel':
+        exportSelectedLinesToExcel(selectedLines, filename);
+        message.success(`已导出 ${selectedLines.length} 个任务（Excel）`);
+        break;
+      case 'csv':
+        exportSelectedLinesToCSV(selectedLines, filename);
+        message.success(`已导出 ${selectedLines.length} 个任务（CSV）`);
+        break;
+    }
+  }, [data.lines, selection]);
 
   /**
    * 导入数据
@@ -1864,22 +1992,53 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                 menu={{
                   items: [
                     {
-                      key: 'export-json',
-                      label: '导出为 JSON',
-                      icon: <DownloadOutlined />,
-                      onClick: () => handleExportData('json'),
+                      key: 'export-all',
+                      label: '导出全部',
+                      type: 'group',
+                      children: [
+                        {
+                          key: 'export-json',
+                          label: '导出为 JSON',
+                          icon: <DownloadOutlined />,
+                          onClick: () => handleExportData('json'),
+                        },
+                        {
+                          key: 'export-csv',
+                          label: '导出为 CSV',
+                          icon: <DownloadOutlined />,
+                          onClick: () => handleExportData('csv'),
+                        },
+                        {
+                          key: 'export-excel',
+                          label: '导出为 Excel',
+                          icon: <DownloadOutlined />,
+                          onClick: () => handleExportData('excel'),
+                        },
+                      ],
                     },
                     {
-                      key: 'export-csv',
-                      label: '导出为 CSV',
-                      icon: <DownloadOutlined />,
-                      onClick: () => handleExportData('csv'),
+                      type: 'divider',
                     },
                     {
-                      key: 'export-excel',
-                      label: '导出为 Excel',
-                      icon: <DownloadOutlined />,
-                      onClick: () => handleExportData('excel'),
+                      key: 'export-selected',
+                      label: `导出选中 (${selection.selectedCount})`,
+                      type: 'group',
+                      children: [
+                        {
+                          key: 'export-selected-excel',
+                          label: '导出为 Excel',
+                          icon: <DownloadOutlined />,
+                          disabled: !selection.hasSelection,
+                          onClick: () => handleExportSelected('excel'),
+                        },
+                        {
+                          key: 'export-selected-csv',
+                          label: '导出为 CSV',
+                          icon: <DownloadOutlined />,
+                          disabled: !selection.hasSelection,
+                          onClick: () => handleExportSelected('csv'),
+                        },
+                      ],
                     },
                   ],
                 }}
@@ -1889,7 +2048,9 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                   size="small"
                   icon={<DownloadOutlined />}
                   title="导出"
-                />
+                >
+                  {selection.hasSelection && `(${selection.selectedCount})`}
+                </Button>
               </Dropdown>
 
               {/* 导入按钮 */}
