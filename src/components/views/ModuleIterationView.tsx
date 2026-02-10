@@ -366,7 +366,7 @@ export const ModuleIterationView: React.FC<ModuleIterationViewProps> = ({
       {/* 产品线折叠面板 */}
       <Collapse
         defaultActiveKey={groupedData.map(pl => pl.productLine)}
-        expandIconPosition="end"
+        expandIconPlacement="end"
         style={{ background: 'transparent' }}
       >
         {groupedData.map(productLine => (

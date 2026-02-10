@@ -513,22 +513,27 @@ function calculatePath(
     }
   } else {
     // ========== 跨Timeline的连接 ==========
-    // 策略：利用行间空白区域（行边界），使用简单的正交路径
+    // 策略：水平折线落在目标连线所属的 timeline 内
+    // ✅ 修复：水平折线应该落在目标 timeline 区域内，而不是中间位置
     
     const goingDown = endRowIndex > startRowIndex;
-    const rowGap = 8; // 行间空白区域的中间位置（距离行边界的偏移）
+    const routingOffset = 15; // 距离目标行边界的偏移量
     
-    // ✅ 使用行间空白区域的Y坐标
-    // 向下：从起点行的底部边界通过
-    // 向上：从终点行的顶部边界通过
-    const routingY = goingDown
-      ? startRowY + rowHeight + rowGap  // 起点行底部 + 偏移
-      : endRowY - rowGap;                // 终点行顶部 - 偏移
+    // ✅ 修复：水平折线落在目标连线所属的 timeline 内
+    let routingY: number;
+    
+    if (goingDown) {
+      // 向下连接：水平线在目标行（终点行）的上部
+      routingY = endRowY + routingOffset;  // 终点行顶部向下偏移
+    } else {
+      // 向上连接：水平线在目标行（终点行）的下部
+      routingY = endRowY + rowHeight - routingOffset;  // 终点行底部向上偏移
+    }
     
     const x1 = startX + horizontalExtension;
     const x2 = endX - 20; // 终点前20px转折
     
-    // ✅ 简化的正交路径（水平-垂直-水平），利用行间空白
+    // ✅ 简化的正交路径（水平-垂直-水平），水平线落在目标 timeline 内
     return `
       M ${startX} ${startY}
       L ${x1} ${startY}
