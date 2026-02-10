@@ -105,7 +105,7 @@ export const ImageExportDialog: React.FC<ImageExportDialogProps> = ({
       cancelText="取消"
       confirmLoading={exporting}
       width={520}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}

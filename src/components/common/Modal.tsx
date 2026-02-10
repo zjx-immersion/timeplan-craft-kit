@@ -118,7 +118,7 @@ export const Modal: React.FC<ModalProps> = ({
   return (
     <AntModal
       onCancel={handleCancel}
-      destroyOnClose
+      destroyOnHidden
       {...props}
     />
   );
