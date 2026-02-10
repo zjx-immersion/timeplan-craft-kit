@@ -11,18 +11,19 @@
  * @date 2026-02-10
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Table, Input, Button, Space, Tag, Tooltip, Progress, message } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import {
   SearchOutlined,
-  ExportOutlined,
 } from '@ant-design/icons';
 import type { TimePlan, Line } from '@/types/timeplanSchema';
 import { format, differenceInDays } from 'date-fns';
 import EditableCell from './EditableCell';
 import type { SelectOption } from './EditableCell';
 import BatchOperationBar from './BatchOperationBar';
+import type { ColumnConfig } from './column';
+import { getCurrentColumns } from './column';
 
 export interface EnhancedTableViewProps {
   data: TimePlan;
@@ -31,6 +32,8 @@ export interface EnhancedTableViewProps {
   showSearch?: boolean;
   className?: string;
   style?: React.CSSProperties;
+  columnConfig?: ColumnConfig[];
+  onSelectedRowsChange?: (selectedKeys: string[]) => void;
 }
 
 interface TableRow {
@@ -58,6 +61,8 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
   showSearch = true,
   className,
   style,
+  columnConfig: externalColumnConfig,
+  onSelectedRowsChange,
 }) => {
   const [searchText, setSearchText] = useState('');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -67,6 +72,16 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
     showSizeChanger: true,
     showTotal: (total) => `共 ${total} 条`,
   });
+  
+  // 使用外部列配置或默认配置
+  const columnConfig = externalColumnConfig || getCurrentColumns();
+  
+  // 当选中行变化时通知父组件
+  useEffect(() => {
+    if (onSelectedRowsChange) {
+      onSelectedRowsChange(selectedRowKeys as string[]);
+    }
+  }, [selectedRowKeys, onSelectedRowsChange]);
 
   // 辅助函数
   const getTypeLabel = (schemaId: string): string => {
@@ -356,7 +371,8 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
       { label: 'P3', value: 'P3' },
     ];
 
-    return [
+    // 所有列的定义
+    const allColumns = [
       {
         title: 'Timeline',
         dataIndex: 'timelineName',
@@ -551,7 +567,38 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
         ),
       },
     ];
-  }, [handleCellSave, readonly]);
+    
+    // 根据columnConfig过滤和排序列
+    if (columnConfig && columnConfig.length > 0) {
+      // 创建列key到列定义的映射
+      const columnMap = new Map<string, any>();
+      allColumns.forEach(col => {
+        if (col.key) {
+          columnMap.set(col.key as string, col);
+        }
+      });
+      
+      // 根据columnConfig过滤visible的列，并按order排序
+      const visibleConfigs = columnConfig
+        .filter(config => config.visible)
+        .sort((a, b) => a.order - b.order);
+      
+      const filteredColumns = visibleConfigs
+        .map(config => columnMap.get(config.key))
+        .filter(Boolean);
+      
+      console.log('[EnhancedTableView] 应用列配置:', {
+        totalColumns: allColumns.length,
+        visibleColumns: filteredColumns.length,
+        columnKeys: filteredColumns.map(c => c.key),
+      });
+      
+      return filteredColumns;
+    }
+    
+    // 没有配置时返回所有列
+    return allColumns;
+  }, [handleCellSave, readonly, columnConfig]);
 
   // 行选择配置
   const rowSelection = useMemo(() => ({
@@ -596,11 +643,8 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
           )}
         </Space>
 
-        <Space>
-          <Button icon={<ExportOutlined />}>
-            导出
-          </Button>
-        </Space>
+        {/* 工具栏按钮已移至UnifiedTimelinePanelV2 */}
+        <Space></Space>
       </Space>
 
       {/* 批量操作栏 */}
