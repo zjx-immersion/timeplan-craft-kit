@@ -533,8 +533,9 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
               style={{
                 color: editMode ? '#FFFFFF' : undefined,
               }}
+              title={editMode ? '点击切换到查看模式' : '点击切换到编辑模式'}
             >
-              {editMode ? '编辑' : '查看'}
+              {editMode ? '查看模式' : '编辑模式'}
             </Button>
 
             {/* 以下按钮只在甘特图视图显示 */}

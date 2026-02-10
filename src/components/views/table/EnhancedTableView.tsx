@@ -615,8 +615,9 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
         dataSource={filteredData}
         pagination={pagination}
         onChange={(newPagination) => setPagination(newPagination)}
-        scroll={{ x: 1500 }}
+        scroll={{ x: 1500, y: 'calc(100vh - 280px)' }}
         size="small"
+        sticky
       />
     </div>
   );
