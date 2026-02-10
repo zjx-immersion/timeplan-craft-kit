@@ -58,7 +58,7 @@ const ProductSelector: React.FC<ProductSelectorProps> = ({
               borderColor: productColors[product.type] || '#d9d9d9'
             }}
             onClick={() => onSelect(product)}
-            bodyStyle={{ padding: 24 }}
+            styles={{ body: { padding: 24 } }}
           >
             <div style={{ 
               color: productColors[product.type] || '#8c8c8c',
