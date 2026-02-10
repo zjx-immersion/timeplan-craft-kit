@@ -115,7 +115,7 @@ export const TimelineEditDialog: React.FC<TimelineEditDialogProps> = ({
       onCancel={handleCancel}
       okText="保存"
       cancelText="取消"
-      destroyOnClose
+      destroyOnHidden
       data-testid="timeline-edit-dialog"
     >
       <Form

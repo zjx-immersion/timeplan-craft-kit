@@ -105,7 +105,7 @@ export const ImageExportDialog: React.FC<ImageExportDialogProps> = ({
       cancelText="取消"
       confirmLoading={exporting}
       width={520}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}
@@ -183,7 +183,7 @@ export const ImageExportDialog: React.FC<ImageExportDialogProps> = ({
           </Form.Item>
         )}
 
-        <Space direction="vertical" size="small" style={{ width: '100%', marginTop: 16 }}>
+        <Space orientation="vertical" size="small" style={{ width: '100%', marginTop: 16 }}>
           <div style={{ fontSize: 12, color: '#8c8c8c' }}>
             💡 提示：
           </div>

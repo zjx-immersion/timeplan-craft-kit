@@ -144,7 +144,7 @@ const IterationMarkers: React.FC<IterationMarkersProps> = ({
         title="迭代标记"
         width={600}
       >
-        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+        <Space orientation="vertical" style={{ width: '100%' }} size="middle">
           {/* 搜索框 */}
           <Input
             placeholder="搜索标记名称..."

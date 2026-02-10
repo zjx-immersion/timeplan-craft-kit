@@ -234,9 +234,9 @@ export const ModuleIterationView: React.FC<ModuleIterationViewProps> = ({
           borderLeft: `4px solid ${token.colorPrimary}`,
           cursor: onLineClick ? 'pointer' : 'default',
         }}
-        bodyStyle={{ padding: 12 }}
+        styles={{ body: { padding: 12 } }}
       >
-        <Space direction="vertical" style={{ width: '100%' }} size={8}>
+        <Space orientation="vertical" style={{ width: '100%' }} size={8}>
           {/* 标题行 */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <Space>

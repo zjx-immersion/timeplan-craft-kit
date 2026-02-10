@@ -2662,7 +2662,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                 color: token.colorTextSecondary,
               }}
             >
-              <Space direction="vertical" align="center" size="large">
+              <Space orientation="vertical" align="center" size="large">
                 <CalendarOutlined style={{ fontSize: 64, color: token.colorTextTertiary }} />
                 <div>
                   <div style={{ fontSize: 16, fontWeight: 500, color: token.colorText, marginBottom: 8 }}>

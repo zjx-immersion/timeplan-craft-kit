@@ -91,7 +91,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
       ]}
       width={520}
     >
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         {/* 项目信息 */}
         {plan && (
           <div>
@@ -118,7 +118,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
             value={format}
             onChange={(e) => setFormat(e.target.value)}
           >
-            <Space direction="vertical">
+            <Space orientation="vertical">
               <Radio value="json">
                 <Space>
                   <FileTextOutlined />

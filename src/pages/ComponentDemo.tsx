@@ -107,7 +107,7 @@ export const ComponentDemo: React.FC = () => {
           cancelText="取消"
           width={600}
         >
-          <Space direction="vertical" style={{ width: '100%' }} size="large">
+          <Space orientation="vertical" style={{ width: '100%' }} size="large">
             <div>
               <Text strong>这是一个对话框示例</Text>
               <br />
@@ -245,7 +245,7 @@ export const ComponentDemo: React.FC = () => {
 
       {/* 综合示例 */}
       <Card title="综合示例 - 表单" style={{ marginBottom: 24 }}>
-        <Space direction="vertical" style={{ width: '100%' }} size="large">
+        <Space orientation="vertical" style={{ width: '100%' }} size="large">
           <div>
             <Text strong>项目名称:</Text>
             <Input placeholder="请输入项目名称" style={{ marginTop: 8 }} />

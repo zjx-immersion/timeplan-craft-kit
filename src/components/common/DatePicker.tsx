@@ -27,7 +27,7 @@ import type { Dayjs } from 'dayjs';
 /**
  * 扩展的日期选择器属性
  */
-export interface DatePickerProps extends AntDatePickerProps {
+export interface DatePickerProps extends Omit<AntDatePickerProps, 'onChange' | 'value'> {
   /**
    * 占位符
    */
@@ -56,12 +56,13 @@ export interface DatePickerProps extends AntDatePickerProps {
   /**
    * 选中的日期
    */
-  value?: Dayjs | null;
+  value?: Dayjs | Dayjs[] | null;
   
   /**
    * 日期变化时的回调
+   * Ant Design 6 支持 multiple 模式，所以 date 可能是数组
    */
-  onChange?: (date: Dayjs | null, dateString: string | string[]) => void;
+  onChange?: (date: Dayjs | Dayjs[] | null, dateString: string | string[]) => void;
   
   /**
    * 不可选择的日期
@@ -72,7 +73,7 @@ export interface DatePickerProps extends AntDatePickerProps {
 /**
  * 日期范围选择器属性
  */
-export interface RangePickerProps extends AntRangePickerProps {
+export interface RangePickerProps extends Omit<AntRangePickerProps, 'onChange' | 'value'> {
   /**
    * 占位符
    */
