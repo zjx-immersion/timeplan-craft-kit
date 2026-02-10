@@ -58,7 +58,16 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
-        <ConfigProvider locale={zhCN} theme={theme}>
+        <ConfigProvider 
+          locale={zhCN} 
+          theme={theme}
+          modal={{
+            // Ant Design 6: 启用遮罩模糊效果（默认）
+            mask: {
+              blur: true,
+            },
+          }}
+        >
           <AntdApp>
             <App />
           </AntdApp>
