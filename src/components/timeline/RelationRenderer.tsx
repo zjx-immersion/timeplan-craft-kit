@@ -296,7 +296,7 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
                   stroke="transparent"
                   strokeWidth="16"
                   style={{ 
-                    cursor: isEditMode ? 'pointer' : 'default',
+                    cursor: 'pointer',  // ✅ 始终显示可点击光标
                     pointerEvents: 'auto',
                   }}
                   onMouseEnter={() => setHoveredId(relation.id)}
@@ -308,8 +308,10 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
                     e.stopPropagation();
                     // 更新鼠标位置，用于显示 Tooltip
                     setMousePosition({ x: e.clientX, y: e.clientY });
-                    if (isEditMode && onRelationClick) {
+                    // ✅ 在查看模式和编辑模式下都允许点击选中
+                    if (onRelationClick) {
                       onRelationClick(relation.id);
+                      console.log('[RelationRenderer] 点击连线:', relation.id, '编辑模式:', isEditMode);
                     }
                   }}
                 />
