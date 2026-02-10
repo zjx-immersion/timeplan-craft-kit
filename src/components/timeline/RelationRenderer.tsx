@@ -309,8 +309,10 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
                     setMousePosition({ x: e.clientX, y: e.clientY });
                   }}
                   onClick={(e) => {
+                    e.stopPropagation();
+                    // 更新鼠标位置，用于显示 Tooltip
+                    setMousePosition({ x: e.clientX, y: e.clientY });
                     if (isEditMode && onRelationClick) {
-                      e.stopPropagation();
                       onRelationClick(relation.id);
                     }
                   }}
@@ -453,19 +455,19 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
       </g>
     </svg>
     
-    {/* ✅ Hover 时显示详细 Tooltip */}
-    {hoveredId && (() => {
-      const hoveredRelation = relations.find(r => r.id === hoveredId);
-      if (!hoveredRelation) return null;
+    {/* ✅ 选中时显示详细 Tooltip */}
+    {selectedRelationId && (() => {
+      const selectedRelation = relations.find(r => r.id === selectedRelationId);
+      if (!selectedRelation) return null;
       
-      const fromLine = lines.find(l => l.id === hoveredRelation.fromLineId);
-      const toLine = lines.find(l => l.id === hoveredRelation.toLineId);
-      const isCriticalPath = criticalPathNodeIds.has(hoveredRelation.fromLineId) && 
-                             criticalPathNodeIds.has(hoveredRelation.toLineId);
+      const fromLine = lines.find(l => l.id === selectedRelation.fromLineId);
+      const toLine = lines.find(l => l.id === selectedRelation.toLineId);
+      const isCriticalPath = criticalPathNodeIds.has(selectedRelation.fromLineId) && 
+                             criticalPathNodeIds.has(selectedRelation.toLineId);
       
       return (
         <RelationTooltip
-          relation={hoveredRelation}
+          relation={selectedRelation}
           fromLine={fromLine}
           toLine={toLine}
           position={mousePosition}

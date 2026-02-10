@@ -12,10 +12,11 @@
  * @date 2026-02-10
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, Descriptions, Tag, Space } from 'antd';
 import { ThunderboltOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import type { Relation, Line } from '@/types/timeplanSchema';
+import { parseDateAsLocal } from '@/utils/dateUtils';
 
 export interface RelationTooltipProps {
   relation: Relation;
@@ -57,6 +58,50 @@ export const RelationTooltip: React.FC<RelationTooltipProps> = ({
     : dependencyType === 'start-to-start' ? 'SS'
     : dependencyType === 'finish-to-finish' ? 'FF'
     : 'SF';
+
+  // 计算两个任务之间的时间差（天数）
+  const timeDifference = useMemo(() => {
+    if (!fromLine || !toLine) return null;
+
+    try {
+      let fromDate: Date;
+      let toDate: Date;
+
+      // 根据依赖类型确定比较的时间点
+      switch (dependencyType) {
+        case 'finish-to-start':
+          // 前置任务结束时间 → 后置任务开始时间
+          fromDate = fromLine.endDate ? parseDateAsLocal(fromLine.endDate) : parseDateAsLocal(fromLine.startDate);
+          toDate = parseDateAsLocal(toLine.startDate);
+          break;
+        case 'start-to-start':
+          // 前置任务开始时间 → 后置任务开始时间
+          fromDate = parseDateAsLocal(fromLine.startDate);
+          toDate = parseDateAsLocal(toLine.startDate);
+          break;
+        case 'finish-to-finish':
+          // 前置任务结束时间 → 后置任务结束时间
+          fromDate = fromLine.endDate ? parseDateAsLocal(fromLine.endDate) : parseDateAsLocal(fromLine.startDate);
+          toDate = toLine.endDate ? parseDateAsLocal(toLine.endDate) : parseDateAsLocal(toLine.startDate);
+          break;
+        case 'start-to-finish':
+          // 前置任务开始时间 → 后置任务结束时间
+          fromDate = parseDateAsLocal(fromLine.startDate);
+          toDate = toLine.endDate ? parseDateAsLocal(toLine.endDate) : parseDateAsLocal(toLine.startDate);
+          break;
+        default:
+          return null;
+      }
+
+      // 计算天数差（toDate - fromDate）
+      const diffTime = toDate.getTime() - fromDate.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    } catch (error) {
+      console.error('计算时间差失败:', error);
+      return null;
+    }
+  }, [fromLine, toLine, dependencyType]);
 
   return (
     <div
@@ -121,7 +166,7 @@ export const RelationTooltip: React.FC<RelationTooltipProps> = ({
             </div>
           </Descriptions.Item>
 
-          {relation.lag !== undefined && relation.lag !== 0 && (
+          {timeDifference !== null && (
             <Descriptions.Item 
               label={
                 <Space size={4}>
@@ -130,7 +175,18 @@ export const RelationTooltip: React.FC<RelationTooltipProps> = ({
                 </Space>
               }
             >
-              <Tag color={relation.lag > 0 ? 'orange' : 'green'}>
+              <Tag color={timeDifference < 0 ? 'red' : timeDifference === 0 ? 'blue' : 'green'}>
+                {timeDifference > 0 ? `+${timeDifference}` : timeDifference} 天
+              </Tag>
+              <div style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
+                {timeDifference < 0 ? '后置任务开始较早' : timeDifference === 0 ? '无间隔' : '后置任务延后开始'}
+              </div>
+            </Descriptions.Item>
+          )}
+
+          {relation.lag !== undefined && relation.lag !== 0 && (
+            <Descriptions.Item label="配置延迟">
+              <Tag color={relation.lag > 0 ? 'orange' : 'cyan'}>
                 {relation.lag > 0 ? `+${relation.lag}` : relation.lag} 天
               </Tag>
             </Descriptions.Item>
