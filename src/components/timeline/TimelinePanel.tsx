@@ -102,6 +102,7 @@ import BaselineRangeEditDialog from './BaselineRangeEditDialog';
 import BaselineRangeDragCreator from './BaselineRangeDragCreator';
 import NodeContextMenu from './NodeContextMenu';
 import { NodeEditDialog } from '../dialogs/NodeEditDialog';
+import { RelationEditDialog } from '../dialogs/RelationEditDialog';
 import { TimelineTimeShiftDialog } from '../dialogs/TimelineTimeShiftDialog';
 import { calculateCriticalPath } from '@/utils/criticalPath';
 
@@ -408,6 +409,10 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   // Timeline编辑状态
   const [editingTimeline, setEditingTimeline] = useState<Timeline | null>(null);
   const [isTimelineEditDialogOpen, setIsTimelineEditDialogOpen] = useState(false);
+
+  // Relation编辑状态
+  const [editingRelation, setEditingRelation] = useState<Relation | null>(null);
+  const [isRelationEditDialogOpen, setIsRelationEditDialogOpen] = useState(false);
 
   // 连线模式状态
   const [connectionMode, setConnectionMode] = useState<{
@@ -1104,6 +1109,34 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
       },
     });
   }, [data, setData, modal]);
+
+  /**
+   * 编辑连线
+   */
+  const handleRelationEdit = useCallback((relationId: string) => {
+    const relation = data.relations.find(r => r.id === relationId);
+    if (relation) {
+      setEditingRelation(relation);
+      setIsRelationEditDialogOpen(true);
+      console.log('[TimelinePanel] ✏️ 编辑连线:', relationId);
+    }
+  }, [data.relations]);
+
+  /**
+   * 保存连线编辑
+   */
+  const handleRelationSave = useCallback((id: string, updates: Partial<Relation>) => {
+    setData(prev => ({
+      ...prev,
+      relations: prev.relations.map(r =>
+        r.id === id ? { ...r, ...updates } : r
+      ),
+    }));
+    setIsRelationEditDialogOpen(false);
+    setEditingRelation(null);
+    message.success('连线已更新');
+    console.log('[TimelinePanel] 💾 保存连线:', id, updates);
+  }, [setData]);
 
   /**
    * 添加节点到Timeline
@@ -2428,6 +2461,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                 isEditMode={isEditMode}
                 criticalPathNodeIds={criticalPathNodeIds}
                 onRelationClick={handleRelationClick}
+                onRelationEdit={handleRelationEdit}
                 onRelationDelete={handleRelationDelete}
                 // ✅ 传递拖拽状态，使连线实时跟随
                 draggingNodeId={draggingNodeId}
@@ -2662,7 +2696,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                 color: token.colorTextSecondary,
               }}
             >
-              <Space direction="vertical" align="center" size="large">
+              <Space orientation="vertical" align="center" size="large">
                 <CalendarOutlined style={{ fontSize: 64, color: token.colorTextTertiary }} />
                 <div>
                   <div style={{ fontSize: 16, fontWeight: 500, color: token.colorText, marginBottom: 8 }}>
@@ -2777,6 +2811,17 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
         onClose={() => {
           setNodeEditDialogOpen(false);
           setEditingNode(null);
+        }}
+      />
+
+      {/* 连线编辑对话框 */}
+      <RelationEditDialog
+        open={isRelationEditDialogOpen}
+        relation={editingRelation}
+        onSave={handleRelationSave}
+        onClose={() => {
+          setIsRelationEditDialogOpen(false);
+          setEditingRelation(null);
         }}
       />
 

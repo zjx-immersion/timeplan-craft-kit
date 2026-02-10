@@ -194,7 +194,7 @@ export const TimelineTimeShiftDialog: React.FC<TimelineTimeShiftDialogProps> = (
       cancelText="取消"
       width={900}
       okButtonProps={{ disabled: affectedCount === 0 }}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}
@@ -205,7 +205,7 @@ export const TimelineTimeShiftDialog: React.FC<TimelineTimeShiftDialogProps> = (
           keepRelations: true,
         }}
       >
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        <Space orientation="vertical" size="large" style={{ width: '100%' }}>
           {/* 选择Timeline */}
           <Form.Item
             label="选择Timeline"

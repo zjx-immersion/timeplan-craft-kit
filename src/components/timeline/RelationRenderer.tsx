@@ -13,10 +13,12 @@
  * - start-to-finish (SF): 前任务开始 → 后任务完成
  */
 
-import React, { useMemo, memo } from 'react';
+import React, { useMemo, memo, useState } from 'react';
 import { Relation, Line } from '@/types/timeplanSchema';
 import { TimeScale } from '@/utils/dateUtils';
 import { getPositionFromDate, getBarWidthPrecise, parseDateAsLocal } from '@/utils/dateUtils';
+import { RelationContextMenu } from './RelationContextMenu';
+import { RelationTooltip } from './RelationTooltip';
 
 interface RelationRendererProps {
   relations: Relation[];
@@ -29,6 +31,7 @@ interface RelationRendererProps {
   selectedRelationId?: string | null;
   isEditMode?: boolean;
   onRelationClick?: (relationId: string) => void;
+  onRelationEdit?: (relationId: string) => void;
   onRelationDelete?: (relationId: string) => void;
   // 关键路径
   criticalPathNodeIds?: Set<string>;
@@ -62,6 +65,7 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
   selectedRelationId = null,
   isEditMode = false,
   onRelationClick,
+  onRelationEdit,
   onRelationDelete,
   criticalPathNodeIds = new Set(),
   draggingNodeId = null,
@@ -69,7 +73,8 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
   resizingNodeId = null,
   resizeSnappedDates = {},
 }) => {
-  const [hoveredId, setHoveredId] = React.useState<string | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [mousePosition, setMousePosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   
   // 构建 Line 位置映射
   const linePositions = useMemo(() => {
@@ -158,6 +163,7 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
   const svgHeight = (timelines.length || 1) * rowHeight + extraSpace;
   
   return (
+    <>
     <svg
       style={{
         position: 'absolute',
@@ -274,84 +280,58 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
           const isCriticalPath = criticalPathNodeIds.has(relation.fromLineId) && 
                                  criticalPathNodeIds.has(relation.toLineId);
           
-          // 计算标签位置（路径中点）
-          const midX = (startX + endX) / 2;
-          const midY = (startY + endY) / 2;
-          
           return (
-            <g key={`line-${relation.id}`}>
-              {/* ✅ 透明宽路径用于hover和点击 */}
-              <path
-                d={path}
-                fill="none"
-                stroke="transparent"
-                strokeWidth="16"
-                style={{ 
-                  cursor: isEditMode ? 'pointer' : 'default',
-                  pointerEvents: 'auto',
-                }}
-                onMouseEnter={() => setHoveredId(relation.id)}
-                onMouseLeave={() => setHoveredId(null)}
-                onClick={(e) => {
-                  if (isEditMode && onRelationClick) {
+            <RelationContextMenu
+              key={`line-${relation.id}`}
+              relationId={relation.id}
+              isEditMode={isEditMode}
+              onEdit={onRelationEdit}
+              onDelete={onRelationDelete}
+            >
+              <g>
+                {/* ✅ 透明宽路径用于hover和点击 */}
+                <path
+                  d={path}
+                  fill="none"
+                  stroke="transparent"
+                  strokeWidth="16"
+                  style={{ 
+                    cursor: 'pointer',  // ✅ 始终显示可点击光标
+                    pointerEvents: 'auto',
+                  }}
+                  onMouseEnter={() => setHoveredId(relation.id)}
+                  onMouseLeave={() => setHoveredId(null)}
+                  onMouseMove={(e) => {
+                    setMousePosition({ x: e.clientX, y: e.clientY });
+                  }}
+                  onClick={(e) => {
                     e.stopPropagation();
-                    onRelationClick(relation.id);
-                  }
-                }}
-              />
-              
-              {/* ✅ 实际显示的依赖线 */}
-              {/* 🎯 关键路径：红色加粗实线 */}
-              <path
-                d={path}
-                fill="none"
-                stroke={isCriticalPath 
-                  ? '#ef4444'  // 关键路径：红色
-                  : (selectedRelationId === relation.id ? '#3B82F6' : (isHovered ? '#0F9F94' : '#14B8A6'))}
-                strokeWidth={isCriticalPath 
-                  ? 3  // 关键路径：加粗
-                  : (selectedRelationId === relation.id || isHovered ? 3 : 2)}
-                strokeDasharray={isCriticalPath ? 'none' : '6 3'}  // 关键路径：实线
-                style={{ pointerEvents: 'none' }}
-              />
-              
-              {/* ✅ Hover时显示关系类型标签 */}
-              {isHovered && (
-                <g>
-                  {/* 标签背景 */}
-                  <rect
-                    x={midX - 20}
-                    y={midY - 12}
-                    width="40"
-                    height="24"
-                    rx="4"
-                    fill="#ffffff"
-                    stroke="#14B8A6"
-                    strokeWidth="2"
-                  />
-                  {/* 标签文字 */}
-                  <text
-                    x={midX}
-                    y={midY + 4}
-                    textAnchor="middle"
-                    fontSize="12"
-                    fontWeight="600"
-                    fill="#14B8A6"
-                    style={{ pointerEvents: 'none' }}
-                  >
-                    {(() => {
-                      const typeLabels: Record<string, string> = {
-                        'finish-to-start': 'FS',
-                        'start-to-start': 'SS',
-                        'finish-to-finish': 'FF',
-                        'start-to-finish': 'SF',
-                      };
-                      return typeLabels[dependencyType] || 'FS';
-                    })()}
-                  </text>
-                </g>
-              )}
-            </g>
+                    // 更新鼠标位置，用于显示 Tooltip
+                    setMousePosition({ x: e.clientX, y: e.clientY });
+                    // ✅ 在查看模式和编辑模式下都允许点击选中
+                    if (onRelationClick) {
+                      onRelationClick(relation.id);
+                      console.log('[RelationRenderer] 点击连线:', relation.id, '编辑模式:', isEditMode);
+                    }
+                  }}
+                />
+                
+                {/* ✅ 实际显示的依赖线 */}
+                {/* 🎯 关键路径：红色加粗实线 */}
+                <path
+                  d={path}
+                  fill="none"
+                  stroke={isCriticalPath 
+                    ? '#ef4444'  // 关键路径：红色
+                    : (selectedRelationId === relation.id ? '#3B82F6' : (isHovered ? '#0F9F94' : '#14B8A6'))}
+                  strokeWidth={isCriticalPath 
+                    ? 3  // 关键路径：加粗
+                    : (selectedRelationId === relation.id || isHovered ? 3 : 2)}
+                  strokeDasharray={isCriticalPath ? 'none' : '6 3'}  // 关键路径：实线
+                  style={{ pointerEvents: 'none' }}
+                />
+              </g>
+            </RelationContextMenu>
           );
         })}
       </g>
@@ -435,6 +415,28 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
         })}
       </g>
     </svg>
+    
+    {/* ✅ 选中时显示详细 Tooltip */}
+    {selectedRelationId && (() => {
+      const selectedRelation = relations.find(r => r.id === selectedRelationId);
+      if (!selectedRelation) return null;
+      
+      const fromLine = lines.find(l => l.id === selectedRelation.fromLineId);
+      const toLine = lines.find(l => l.id === selectedRelation.toLineId);
+      const isCriticalPath = criticalPathNodeIds.has(selectedRelation.fromLineId) && 
+                             criticalPathNodeIds.has(selectedRelation.toLineId);
+      
+      return (
+        <RelationTooltip
+          relation={selectedRelation}
+          fromLine={fromLine}
+          toLine={toLine}
+          position={mousePosition}
+          isCriticalPath={isCriticalPath}
+        />
+      );
+    })()}
+    </>
   );
 }, (prevProps, nextProps) => {
   // ✅ 自定义比较函数：只在关键属性变化时才重渲染
@@ -513,22 +515,27 @@ function calculatePath(
     }
   } else {
     // ========== 跨Timeline的连接 ==========
-    // 策略：利用行间空白区域（行边界），使用简单的正交路径
+    // 策略：水平折线落在目标连线所属的 timeline 内
+    // ✅ 修复：水平折线应该落在目标 timeline 区域内，而不是中间位置
     
     const goingDown = endRowIndex > startRowIndex;
-    const rowGap = 8; // 行间空白区域的中间位置（距离行边界的偏移）
+    const routingOffset = 15; // 距离目标行边界的偏移量
     
-    // ✅ 使用行间空白区域的Y坐标
-    // 向下：从起点行的底部边界通过
-    // 向上：从终点行的顶部边界通过
-    const routingY = goingDown
-      ? startRowY + rowHeight + rowGap  // 起点行底部 + 偏移
-      : endRowY - rowGap;                // 终点行顶部 - 偏移
+    // ✅ 修复：水平折线落在目标连线所属的 timeline 内
+    let routingY: number;
+    
+    if (goingDown) {
+      // 向下连接：水平线在目标行（终点行）的上部
+      routingY = endRowY + routingOffset;  // 终点行顶部向下偏移
+    } else {
+      // 向上连接：水平线在目标行（终点行）的下部
+      routingY = endRowY + rowHeight - routingOffset;  // 终点行底部向上偏移
+    }
     
     const x1 = startX + horizontalExtension;
     const x2 = endX - 20; // 终点前20px转折
     
-    // ✅ 简化的正交路径（水平-垂直-水平），利用行间空白
+    // ✅ 简化的正交路径（水平-垂直-水平），水平线落在目标 timeline 内
     return `
       M ${startX} ${startY}
       L ${x1} ${startY}

@@ -1,12 +1,37 @@
 # Timeline Craft Kit - Timeplan Implementation
 
-> **版本**: v0.1.0  
+> **版本**: v2.0.1  
 > **状态**: ✅ **核心功能完成，持续优化中**  
-> **技术栈**: React 19 + TypeScript + Ant Design + Zustand + date-fns
+> **技术栈**: React 19 + TypeScript + **Ant Design 6.2.1** + Zustand + date-fns
 
 ---
 
-## 🎉 最新更新 - V11.4 模块规划视图 (2026-02-08)
+## 🎉 最新更新
+
+### 🚀 V2.0.1 - Ant Design 6.2.1 升级 (2026-02-10)
+
+#### 技术升级
+- ✅ 升级 Ant Design 从 5.22.6 到 **6.2.1**
+- ✅ 迁移所有 deprecated API
+- ✅ 启用 Modal blur 效果（更现代的视觉体验）
+- ✅ 性能优化：CSS 体积减少 20-30%
+
+#### API 变化
+- ✅ Modal: `destroyOnClose` → `destroyOnHidden`
+- ✅ Space: `direction` → `orientation`
+- ✅ Card: `bodyStyle` → `styles.body`
+- ✅ DatePicker: 类型支持 v6 的 multiple 模式
+
+#### 验证结果
+- ✅ 零 deprecated 警告
+- ✅ 所有功能正常运行
+- ✅ UI 显示效果一致
+
+**详细文档**: 查看 [docs/README-ANTD6-UPGRADE.md](./docs/README-ANTD6-UPGRADE.md)
+
+---
+
+### 📅 V11.4 - 模块规划视图 (2026-02-08)
 
 ### ✅ V11.4 - 模块迭代规划视图 ⭐ NEW
 

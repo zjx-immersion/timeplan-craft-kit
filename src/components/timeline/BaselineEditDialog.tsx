@@ -124,7 +124,7 @@ export const BaselineEditDialog: React.FC<BaselineEditDialogProps> = ({
       okText="保存"
       cancelText="取消"
       width={480}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}
