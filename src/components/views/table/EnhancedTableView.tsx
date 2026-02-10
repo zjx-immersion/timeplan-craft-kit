@@ -86,39 +86,91 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
     const timelines = data.timelines || [];
     const lines = data.lines || [];
 
+    console.log('[EnhancedTableView] 数据转换:', {
+      timelinesCount: timelines.length,
+      linesCount: lines.length,
+      firstTimeline: timelines[0],
+      firstLine: lines[0],
+    });
+
     return lines.map((line) => {
-      const timeline = timelines.find((t) => t.id === line.timelineId);
-      return {
-        key: line.id,
-        id: line.id,
-        timelineId: line.timelineId,
-        timelineName: timeline?.label || '未知',
-        label: line.label,
-        type: getTypeLabel(line.schemaId),
-        schemaId: line.schemaId,
-        owner: line.attributes?.owner,
-        startDate: format(new Date(line.startDate), 'yyyy-MM-dd'),
-        endDate: line.endDate ? format(new Date(line.endDate), 'yyyy-MM-dd') : '',
-        duration: calculateDuration(line),
-        progress: (line.attributes?.progress as number) || 0,
-        status: line.attributes?.status as string,
-        priority: line.attributes?.priority as string,
-        line,
-      };
+      try {
+        const timeline = timelines.find((t) => t.id === line.timelineId);
+        
+        // 安全地格式化日期
+        let startDateStr = '';
+        let endDateStr = '';
+        try {
+          startDateStr = line.startDate ? format(new Date(line.startDate), 'yyyy-MM-dd') : '';
+        } catch (e) {
+          console.error('[EnhancedTableView] 格式化开始日期失败:', line.startDate, e);
+          startDateStr = String(line.startDate || '');
+        }
+        
+        try {
+          endDateStr = line.endDate ? format(new Date(line.endDate), 'yyyy-MM-dd') : '';
+        } catch (e) {
+          console.error('[EnhancedTableView] 格式化结束日期失败:', line.endDate, e);
+          endDateStr = String(line.endDate || '');
+        }
+
+        return {
+          key: line.id,
+          id: line.id,
+          timelineId: line.timelineId,
+          timelineName: timeline?.label || timeline?.name || '未分组',
+          label: line.label,
+          type: getTypeLabel(line.schemaId),
+          schemaId: line.schemaId,
+          owner: line.attributes?.owner as string,
+          startDate: startDateStr,
+          endDate: endDateStr,
+          duration: calculateDuration(line),
+          progress: (line.attributes?.progress as number) || 0,
+          status: line.attributes?.status as string,
+          priority: line.attributes?.priority as string,
+          line,
+        };
+      } catch (error) {
+        console.error('[EnhancedTableView] 转换行数据失败:', line, error);
+        // 返回一个最小可用的行数据
+        return {
+          key: line.id,
+          id: line.id,
+          timelineId: line.timelineId,
+          timelineName: '错误',
+          label: line.label || '未命名',
+          type: '未知',
+          schemaId: line.schemaId || '',
+          owner: '',
+          startDate: '',
+          endDate: '',
+          duration: 0,
+          progress: 0,
+          status: '',
+          priority: '',
+          line,
+        };
+      }
     });
   }, [data]);
 
   // 搜索过滤
   const filteredData = useMemo(() => {
-    if (!searchText.trim()) return tableData;
+    if (!searchText.trim()) {
+      console.log('[EnhancedTableView] 无搜索，显示全部数据:', tableData.length, '行');
+      return tableData;
+    }
     
     const lowerSearch = searchText.toLowerCase();
-    return tableData.filter(
+    const filtered = tableData.filter(
       (row) =>
         row.label.toLowerCase().includes(lowerSearch) ||
         row.timelineName.toLowerCase().includes(lowerSearch) ||
         row.owner?.toLowerCase().includes(lowerSearch)
     );
+    console.log('[EnhancedTableView] 搜索结果:', filtered.length, '行（关键词:', searchText, '）');
+    return filtered;
   }, [tableData, searchText]);
 
   /**
@@ -502,12 +554,22 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
   }, [handleCellSave, readonly]);
 
   // 行选择配置
-  const rowSelection = {
+  const rowSelection = useMemo(() => ({
     selectedRowKeys,
     onChange: (newSelectedRowKeys: React.Key[]) => {
+      console.log('[EnhancedTableView] 选中行变更:', newSelectedRowKeys);
       setSelectedRowKeys(newSelectedRowKeys);
     },
-  };
+  }), [selectedRowKeys]);
+
+  // 调试输出
+  console.log('[EnhancedTableView] 渲染状态:', {
+    readonly,
+    showSearch,
+    dataSourceCount: filteredData.length,
+    selectedCount: selectedRowKeys.length,
+    hasRowSelection: !readonly,
+  });
 
   return (
     <div className={className} style={style}>
@@ -534,7 +596,7 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
       </Space>
 
       {/* 批量操作栏 */}
-      {!readonly && (
+      {!readonly && selectedRowKeys.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <BatchOperationBar
             selectedCount={selectedRowKeys.length}
