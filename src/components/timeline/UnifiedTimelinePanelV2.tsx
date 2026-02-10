@@ -56,7 +56,7 @@ import { downloadJSON } from '@/utils/dataExport';
 import type { TimeScale } from '@/types/timeplanSchema';
 import type { ViewType } from './ViewSwitcher';
 import TimelinePanel from './TimelinePanel';
-import { TableView } from '../views/TableView';
+import { EnhancedTableView } from '../views/table'; // ✅ 使用增强的表格视图
 import { MatrixView } from '../views/MatrixView';
 import { VersionTableView } from '../views/VersionTableView';
 import { VersionPlanView } from '../views/VersionPlanView'; // ✅ 版本计划视图
@@ -304,7 +304,7 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
 
       case 'table':
         return (
-          <TableView
+          <EnhancedTableView
             data={plan}
             onDataChange={handleDataChange}
             readonly={!editMode}
