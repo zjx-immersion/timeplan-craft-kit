@@ -29,16 +29,17 @@
 
 ## 🔄 进行中
 
-### 阶段 3: API 迁移 (0%)
-- [ ] 全局 API 替换
-  - [ ] Select/DatePicker/Cascader dropdown → popup API
-  - [ ] Space direction → orientation
-  - [ ] Dropdown overlay API
-  - [ ] Tooltip overlay API
-- [ ] 样式属性替换
-  - [ ] Modal/Drawer 样式 API
-  - [ ] Card 样式 API
-  - [ ] Table API
+### 阶段 3: API 迁移 (60%)
+- [x] 全局 API 替换 ✅
+  - [x] Select/DatePicker/Cascader dropdown → popup API（未使用，无需迁移）
+  - [x] Space direction → orientation（10 处已迁移）
+  - [x] Dropdown overlay API（未使用，无需迁移）
+  - [x] Tooltip overlay API（未使用，无需迁移）
+- [x] 样式属性替换 ✅
+  - [x] Modal destroyOnClose → destroyOnHidden（6 个文件已迁移）
+  - [x] Modal blur 效果配置 ✅
+  - [ ] Card 样式 API（待检查）
+  - [ ] Table API（待检查）
 - [ ] 组件特定 API
   - [ ] Alert API
   - [ ] Progress API
@@ -92,13 +93,13 @@
 |------|------|------|
 | 阶段 1: 准备工作 | 100% | ✅ 完成 |
 | 阶段 2: 依赖升级 | 100% | ✅ 完成 |
-| 阶段 3: API 迁移 | 0% | 🔄 待开始 |
+| 阶段 3: API 迁移 | 60% | 🔄 进行中 |
 | 阶段 4: 样式调整 | 0% | ⏳ 待开始 |
 | 阶段 5: 功能测试 | 0% | ⏳ 待开始 |
 | 阶段 6: 优化与文档 | 0% | ⏳ 待开始 |
 | 阶段 7: 发布与监控 | 0% | ⏳ 待开始 |
 
-**总体进度**: 2/7 阶段完成 (28.6%)
+**总体进度**: 2.6/7 阶段完成 (37%)
 
 ---
 
@@ -127,16 +128,29 @@
 - ✅ 创建升级分支
 - ✅ 升级 antd 到 6.2.1
 - ✅ 修复 DatePicker 类型定义
+- ✅ 迁移 Modal API（destroyOnClose → destroyOnHidden）
+  - 6 个文件已修复
+  - 消除了所有 deprecated 警告
+- ✅ 迁移 Space API（direction → orientation）
+  - 10 处已迁移
+  - 批量自动化替换
+- ✅ 配置 Modal blur 效果
+  - 启用遮罩模糊效果
+  - 更现代的视觉体验
 
 #### 遇到的问题
 - ⚠️ DatePicker onChange 类型不匹配
   - **原因**: Ant Design 6 支持 multiple 模式，onChange 可能接收数组
   - **解决**: 更新类型定义，使用 `Dayjs | Dayjs[] | null`
   - **状态**: ✅ 已修复
+- ⚠️ Modal destroyOnClose deprecated
+  - **原因**: Ant Design 6 废弃此 API
+  - **解决**: 批量替换为 destroyOnHidden
+  - **状态**: ✅ 已修复
 
 #### 下一步
-- 开始 API 迁移工作
-- 优先处理通用组件封装
+- 检查其他组件的 API（Card, Table, Alert 等）
+- 运行完整测试验证功能
 
 ---
 
@@ -144,13 +158,13 @@
 
 ### 通用组件（高优先级）
 - [x] `src/components/common/DatePicker.tsx` - ✅ 类型已修复
-- [ ] `src/components/common/Select.tsx` - ⏳ 待迁移
-- [ ] `src/components/common/Modal.tsx` - ⏳ 待迁移
-- [ ] `src/components/common/Input.tsx` - ⏳ 待迁移
-- [ ] `src/components/common/Button.tsx` - ⏳ 待迁移
+- [x] `src/components/common/Select.tsx` - ✅ 无需迁移（未使用 deprecated API）
+- [x] `src/components/common/Modal.tsx` - ✅ 已迁移（destroyOnHidden）
+- [ ] `src/components/common/Input.tsx` - ⏳ 待检查
+- [ ] `src/components/common/Button.tsx` - ⏳ 待检查
 
 ### 配置文件
-- [ ] `src/main.tsx` - ⏳ 待配置 blur 效果
+- [x] `src/main.tsx` - ✅ 已配置 blur 效果
 - [ ] `src/theme/ThemeProvider.tsx` - ⏳ 待检查
 
 ---
