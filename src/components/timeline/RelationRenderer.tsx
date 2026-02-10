@@ -280,10 +280,6 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
           const isCriticalPath = criticalPathNodeIds.has(relation.fromLineId) && 
                                  criticalPathNodeIds.has(relation.toLineId);
           
-          // 计算标签位置（路径中点）
-          const midX = (startX + endX) / 2;
-          const midY = (startY + endY) / 2;
-          
           return (
             <RelationContextMenu
               key={`line-${relation.id}`}
@@ -332,43 +328,6 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
                   strokeDasharray={isCriticalPath ? 'none' : '6 3'}  // 关键路径：实线
                   style={{ pointerEvents: 'none' }}
                 />
-                
-                {/* ✅ Hover时显示关系类型标签 */}
-                {isHovered && (
-                  <g>
-                    {/* 标签背景 */}
-                    <rect
-                      x={midX - 20}
-                      y={midY - 12}
-                      width="40"
-                      height="24"
-                      rx="4"
-                      fill="#ffffff"
-                      stroke="#14B8A6"
-                      strokeWidth="2"
-                    />
-                    {/* 标签文字 */}
-                    <text
-                      x={midX}
-                      y={midY + 4}
-                      textAnchor="middle"
-                      fontSize="12"
-                      fontWeight="600"
-                      fill="#14B8A6"
-                      style={{ pointerEvents: 'none' }}
-                    >
-                      {(() => {
-                        const typeLabels: Record<string, string> = {
-                          'finish-to-start': 'FS',
-                          'start-to-start': 'SS',
-                          'finish-to-finish': 'FF',
-                          'start-to-finish': 'SF',
-                        };
-                        return typeLabels[dependencyType] || 'FS';
-                      })()}
-                    </text>
-                  </g>
-                )}
               </g>
             </RelationContextMenu>
           );
