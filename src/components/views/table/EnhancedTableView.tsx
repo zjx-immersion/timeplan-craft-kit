@@ -572,9 +572,17 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
   });
 
   return (
-    <div className={className} style={style}>
+    <div 
+      className={className} 
+      style={{ 
+        ...style, 
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
       {/* 工具栏 */}
-      <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
+      <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between', flexShrink: 0 }}>
         <Space>
           {showSearch && (
             <Input
@@ -597,7 +605,7 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
 
       {/* 批量操作栏 */}
       {!readonly && selectedRowKeys.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 16, flexShrink: 0 }}>
           <BatchOperationBar
             selectedCount={selectedRowKeys.length}
             onBatchDelete={handleBatchDelete}
@@ -608,17 +616,27 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
         </div>
       )}
 
-      {/* 表格 */}
-      <Table<TableRow>
-        rowSelection={readonly ? undefined : rowSelection}
-        columns={columns}
-        dataSource={filteredData}
-        pagination={pagination}
-        onChange={(newPagination) => setPagination(newPagination)}
-        scroll={{ x: 1500, y: 'calc(100vh - 280px)' }}
-        size="small"
-        sticky
-      />
+      {/* 表格容器 - 填充所有剩余空间 */}
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <Table<TableRow>
+          rowSelection={readonly ? undefined : rowSelection}
+          columns={columns}
+          dataSource={filteredData}
+          pagination={{
+            ...pagination,
+            style: { marginBottom: 8, marginTop: 8 },
+          }}
+          onChange={(newPagination) => setPagination(newPagination)}
+          scroll={{ 
+            x: 1500, 
+            y: selectedRowKeys.length > 0 
+              ? 'calc(100vh - 340px)'  // 有批量操作栏时减去更多高度
+              : 'calc(100vh - 240px)'   // 没有批量操作栏时
+          }}
+          size="small"
+          sticky
+        />
+      </div>
     </div>
   );
 };
