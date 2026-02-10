@@ -140,7 +140,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
       ]}
       width={640}
     >
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         {/* 说明 */}
         <Alert
           message="支持的格式"
@@ -155,7 +155,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
             导入模式：
           </Text>
           <Radio.Group value={mode} onChange={(e) => setMode(e.target.value)}>
-            <Space direction="vertical">
+            <Space orientation="vertical">
               <Radio value="merge">
                 <span>
                   <strong>合并模式</strong>

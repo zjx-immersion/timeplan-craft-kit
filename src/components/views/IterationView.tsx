@@ -143,7 +143,7 @@ export const IterationView: React.FC<IterationViewProps> = ({
               }
               data-testid={`iteration-${iteration.id}`}
             >
-              <Space direction="vertical" style={{ width: '100%' }}>
+              <Space orientation="vertical" style={{ width: '100%' }}>
                 <div>
                   <div style={{ marginBottom: 8 }}>
                     整体进度: {iteration.progress.toFixed(1)}%
