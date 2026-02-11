@@ -27,6 +27,7 @@ import { ProductManagementDialog } from '@/components/matrix/ProductManagementDi
 import { TeamManagementDialog } from '@/components/matrix/TeamManagementDialog';
 import { HEATMAP_LEGEND } from '@/utils/matrix/heatmap';
 import { initializeSampleData, shouldInitialize } from '@/utils/matrix/sampleData';
+import { enhanceTimePlan, printEnhancementStats } from '@/utils/matrix/dataEnhancer';
 import dayjs from 'dayjs';
 
 const { RangePicker } = DatePicker;
@@ -52,15 +53,18 @@ export const MatrixViewV2: React.FC<MatrixViewV2Props> = ({ data, className, sty
     end: new Date(new Date().getFullYear(), 2, 31),
   });
   
-  // 扩展Line数据（添加productId和teamId）
+  // 扩展Line数据（添加productId、teamId和effort）
   const extendedLines = useMemo<LineExtended[]>(() => {
-    return (data.lines || []).map(line => ({
-      ...line,
-      productId: (line as any).productId,
-      teamId: (line as any).teamId,
-      effort: (line as any).effort || 1.0,  // 默认1人/天
-    }));
-  }, [data.lines]);
+    // 使用数据增强工具，自动为Line添加Product和Team关联
+    const enhancedPlan = enhanceTimePlan(data);
+    
+    // 在开发环境打印统计信息
+    if (process.env.NODE_ENV === 'development') {
+      printEnhancementStats(data);
+    }
+    
+    return enhancedPlan.lines;
+  }, [data]);
   
   // 计算矩阵数据
   const matrixData = useMemo(() => {
@@ -216,7 +220,7 @@ export const MatrixViewV2: React.FC<MatrixViewV2Props> = ({ data, className, sty
               title="预警数量"
               value={matrixData.warnings.length}
               prefix={<WarningOutlined />}
-              valueStyle={{ color: matrixData.warnings.length > 0 ? '#ff4d4f' : undefined }}
+              styles={{ content: { color: matrixData.warnings.length > 0 ? '#ff4d4f' : undefined } }}
             />
           </Card>
         </Col>
@@ -303,13 +307,15 @@ export const MatrixViewV2: React.FC<MatrixViewV2Props> = ({ data, className, sty
                   title="负载率"
                   value={selectedCellData.loadRate.toFixed(1)}
                   suffix="%"
-                  valueStyle={{
-                    color:
-                      selectedCellData.loadStatus === 'overload'
-                        ? '#ff4d4f'
-                        : selectedCellData.loadStatus === 'warning'
-                        ? '#faad14'
-                        : '#52c41a',
+                  styles={{
+                    content: {
+                      color:
+                        selectedCellData.loadStatus === 'overload'
+                          ? '#ff4d4f'
+                          : selectedCellData.loadStatus === 'warning'
+                          ? '#faad14'
+                          : '#52c41a',
+                    }
                   }}
                 />
               </Col>

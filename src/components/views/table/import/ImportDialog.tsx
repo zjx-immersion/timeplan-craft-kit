@@ -244,7 +244,7 @@ const ImportDialog: React.FC<ImportDialogProps> = ({
       onCancel={handleClose}
       width={1000}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       <div style={{ marginBottom: 24 }}>
         <Steps

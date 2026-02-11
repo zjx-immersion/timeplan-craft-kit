@@ -131,13 +131,13 @@ export const IterationView: React.FC<IterationViewProps> = ({
                     title="任务数"
                     value={iteration.lines.length}
                     suffix="个"
-                    valueStyle={{ fontSize: 16 }}
+                    styles={{ content: { fontSize: 16 } }}
                   />
                   <Statistic
                     title="总工作量"
                     value={iteration.totalDays}
                     suffix="天"
-                    valueStyle={{ fontSize: 16 }}
+                    styles={{ content: { fontSize: 16 } }}
                   />
                 </Space>
               }
