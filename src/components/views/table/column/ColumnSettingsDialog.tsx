@@ -115,6 +115,10 @@ const ColumnSettingsDialog: React.FC<ColumnSettingsDialogProps> = ({
       content: '此操作将清除所有自定义配置，是否继续？',
       okText: '确定',
       cancelText: '取消',
+      okButtonProps: {
+        danger: true,
+        style: { color: '#fff', backgroundColor: '#ff4d4f' }
+      },
       onOk: () => {
         resetToDefault();
         const defaultPreset = presets.find(p => p.id === 'default');
@@ -223,6 +227,7 @@ const ColumnSettingsDialog: React.FC<ColumnSettingsDialogProps> = ({
               type="primary" 
               onClick={handleSaveAsPreset}
               loading={saving}
+              style={{ color: '#fff', backgroundColor: '#1890ff' }}
             >
               保存
             </Button>
@@ -236,7 +241,11 @@ const ColumnSettingsDialog: React.FC<ColumnSettingsDialogProps> = ({
         
         {/* 底部操作 */}
         <div style={{ textAlign: 'right' }}>
-          <Button onClick={handleReset} danger>
+          <Button 
+            onClick={handleReset} 
+            danger
+            style={{ color: '#fff', backgroundColor: '#ff4d4f' }}
+          >
             重置为默认
           </Button>
         </div>

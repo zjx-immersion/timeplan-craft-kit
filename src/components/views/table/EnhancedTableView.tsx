@@ -376,15 +376,15 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
       {
         title: 'Timeline',
         dataIndex: 'timelineName',
-        key: 'timelineName',
+        key: 'timeline',  // ← 修复：使用与DEFAULT_COLUMNS一致的key
         width: 120,
         fixed: 'left',
         sorter: (a, b) => a.timelineName.localeCompare(b.timelineName),
       },
       {
-        title: '名称',
+        title: '任务名称',
         dataIndex: 'label',
-        key: 'label',
+        key: 'name',  // ← 修复：使用与DEFAULT_COLUMNS一致的key
         width: 200,
         fixed: 'left',
         render: (text, record) => (
