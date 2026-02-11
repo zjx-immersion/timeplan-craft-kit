@@ -53,8 +53,10 @@ const TIMELINE_TO_TEAM_MAP: Record<string, string> = {
 
 /**
  * 根据Line类型估算工作量（人/天）
+ * 
+ * @public 导出供单元测试使用
  */
-function estimateEffort(line: Line): number {
+export function estimateEffort(line: Line): number {
   // 如果已有effort字段，直接使用
   if ((line as any).effort) {
     return (line as any).effort;
