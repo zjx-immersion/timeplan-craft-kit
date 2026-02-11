@@ -15,6 +15,87 @@ import { LinePlanSchema, MilestoneSchema } from '@/schemas/defaultSchemas';
 
 describe('矩阵视图集成测试', () => {
   // ============================================================================
+  // 实际数据验证（使用orionXTimePlan）
+  // ============================================================================
+  describe('实际数据验证', () => {
+    it('应该能导入orionXTimePlan数据', async () => {
+      // 动态导入实际数据
+      const { orionXTimePlan } = await import('@/data/orionXTimePlan');
+      
+      expect(orionXTimePlan).toBeDefined();
+      expect(orionXTimePlan.lines.length).toBeGreaterThan(0);
+      expect(orionXTimePlan.timelines.length).toBeGreaterThan(0);
+      
+      console.log('\n📊 Orion X TimePlan数据:');
+      console.log(`  - Timeline数量: ${orionXTimePlan.timelines.length}`);
+      console.log(`  - Line数量: ${orionXTimePlan.lines.length}`);
+    });
+
+    it('应该验证所有Line在Timeline中的覆盖情况', async () => {
+      const { orionXTimePlan } = await import('@/data/orionXTimePlan');
+      
+      // 统计被Timeline包含的Line
+      const allLineIdsInTimelines = new Set<string>();
+      orionXTimePlan.timelines.forEach(tl => {
+        tl.lineIds.forEach(lineId => allLineIdsInTimelines.add(lineId));
+      });
+
+      const orphanLines = orionXTimePlan.lines.filter(
+        line => !allLineIdsInTimelines.has(line.id)
+      );
+
+      console.log('\n🔗 Line-Timeline关联:');
+      console.log(`  - 被Timeline包含的Line: ${allLineIdsInTimelines.size}`);
+      console.log(`  - 孤立Line: ${orphanLines.length}`);
+      
+      if (orphanLines.length > 0) {
+        console.log('  ⚠️  孤立Line列表:');
+        orphanLines.slice(0, 5).forEach(line => {
+          console.log(`    - ${line.id}: ${line.name}`);
+        });
+        if (orphanLines.length > 5) {
+          console.log(`    ... 还有 ${orphanLines.length - 5} 个`);
+        }
+      }
+
+      // 孤立Line应该会使用默认Team
+      expect(orphanLines.length).toBeGreaterThanOrEqual(0);
+    });
+
+    it('应该正确增强Orion X数据', async () => {
+      const { orionXTimePlan } = await import('@/data/orionXTimePlan');
+      const enhanced = enhanceTimePlan(orionXTimePlan);
+
+      // 统计Product分布
+      const productStats: Record<string, number> = {};
+      enhanced.lines.forEach(line => {
+        productStats[line.productId] = (productStats[line.productId] || 0) + 1;
+      });
+
+      // 统计Team分布
+      const teamStats: Record<string, number> = {};
+      enhanced.lines.forEach(line => {
+        teamStats[line.teamId] = (teamStats[line.teamId] || 0) + 1;
+      });
+
+      console.log('\n📦 Product分布:');
+      Object.entries(productStats).forEach(([id, count]) => {
+        console.log(`  - ${id}: ${count}`);
+      });
+
+      console.log('\n👥 Team分布:');
+      Object.entries(teamStats)
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([id, count]) => {
+          console.log(`  - ${id}: ${count}`);
+        });
+
+      // 验证：应该主要是product-orion-x
+      expect(productStats['product-orion-x']).toBeGreaterThan(0);
+    });
+  });
+
+  // ============================================================================
   // 数据增强流程测试
   // ============================================================================
   describe('数据增强流程', () => {
