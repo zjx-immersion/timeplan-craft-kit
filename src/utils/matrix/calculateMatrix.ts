@@ -17,9 +17,8 @@ import type {
   LineExtended,
   ResourceWarning,
   WarningConfig,
-  DEFAULT_WARNING_CONFIG,
 } from '@/types/matrix';
-import { generateCellKey } from '@/types/matrix';
+import { generateCellKey, DEFAULT_WARNING_CONFIG } from '@/types/matrix';
 import { differenceInDays, isWithinInterval } from 'date-fns';
 
 /**
