@@ -292,7 +292,12 @@ const MRSelectorDialog: React.FC<MRSelectorDialogProps> = ({
           </span>
           <Space>
             <Button onClick={handleCancel}>取消</Button>
-            <Button type="primary" onClick={handleConfirm} disabled={selectedMRs.size === 0} style={{ color: '#fff' }}>
+            <Button 
+              type="primary" 
+              onClick={handleConfirm} 
+              disabled={selectedMRs.size === 0} 
+              style={{ backgroundColor: '#14B8A6', borderColor: '#14B8A6', color: '#fff' }}
+            >
               确定
             </Button>
           </Space>

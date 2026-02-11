@@ -117,8 +117,9 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
       cancelText="取消"
       okButtonProps={{ 
         style: { 
-          color: '#fff',
-          backgroundColor: '#1890ff'
+          backgroundColor: '#14B8A6',
+          borderColor: '#14B8A6',
+          color: '#fff'
         } 
       }}
       width={600}

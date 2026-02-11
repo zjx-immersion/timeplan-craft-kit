@@ -319,7 +319,7 @@ const ImportDialog: React.FC<ImportDialogProps> = ({
                 onClick={handleImport}
                 disabled={stats.valid === 0}
                 loading={importing}
-                style={{ color: '#fff' }}
+                style={{ backgroundColor: '#14B8A6', borderColor: '#14B8A6', color: '#fff' }}
               >
                 开始导入 ({stats.valid}条)
               </Button>

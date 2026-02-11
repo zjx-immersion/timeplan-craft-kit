@@ -195,7 +195,7 @@ export const TimelineTimeShiftDialog: React.FC<TimelineTimeShiftDialogProps> = (
       width={900}
       okButtonProps={{ 
         disabled: affectedCount === 0,
-        style: { color: '#fff', backgroundColor: '#1890ff' }
+        style: { backgroundColor: '#14B8A6', borderColor: '#14B8A6', color: '#fff' }
       }}
       destroyOnHidden
     >

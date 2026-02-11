@@ -144,8 +144,9 @@ const ColumnSettingsDialog: React.FC<ColumnSettingsDialogProps> = ({
       cancelText="取消"
       okButtonProps={{ 
         style: { 
-          color: '#fff',
-          backgroundColor: '#1890ff'
+          backgroundColor: '#14B8A6',
+          borderColor: '#14B8A6',
+          color: '#fff'
         } 
       }}
     >
@@ -227,7 +228,7 @@ const ColumnSettingsDialog: React.FC<ColumnSettingsDialogProps> = ({
               type="primary" 
               onClick={handleSaveAsPreset}
               loading={saving}
-              style={{ color: '#fff', backgroundColor: '#1890ff' }}
+              style={{ backgroundColor: '#14B8A6', borderColor: '#14B8A6', color: '#fff' }}
             >
               保存
             </Button>
