@@ -70,6 +70,9 @@ export const RelationEditDialog: React.FC<RelationEditDialogProps> = ({
       onCancel={onClose}
       okText="保存"
       cancelText="取消"
+      okButtonProps={{ 
+        style: { color: '#fff', backgroundColor: '#1890ff' }
+      }}
     >
       <Form form={form} layout="vertical">
         <Form.Item

@@ -85,6 +85,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
           icon={<DownloadOutlined />}
           loading={loading}
           onClick={handleExport}
+          style={{ color: '#fff' }}
         >
           导出
         </Button>,

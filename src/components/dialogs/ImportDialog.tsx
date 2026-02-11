@@ -134,6 +134,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
           disabled={!importedPlan}
           loading={loading}
           onClick={handleImport}
+          style={{ color: '#fff' }}
         >
           导入
         </Button>,

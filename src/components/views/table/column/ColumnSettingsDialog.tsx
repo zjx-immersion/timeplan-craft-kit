@@ -138,6 +138,12 @@ const ColumnSettingsDialog: React.FC<ColumnSettingsDialogProps> = ({
       width={700}
       okText="应用"
       cancelText="取消"
+      okButtonProps={{ 
+        style: { 
+          color: '#fff',
+          backgroundColor: '#1890ff'
+        } 
+      }}
     >
       <div>
         {/* 预设方案选择 */}

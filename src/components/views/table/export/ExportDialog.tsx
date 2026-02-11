@@ -115,6 +115,12 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
       confirmLoading={exporting}
       okText="导出"
       cancelText="取消"
+      okButtonProps={{ 
+        style: { 
+          color: '#fff',
+          backgroundColor: '#1890ff'
+        } 
+      }}
       width={600}
     >
       <Form layout="vertical">

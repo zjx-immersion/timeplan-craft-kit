@@ -193,7 +193,10 @@ export const TimelineTimeShiftDialog: React.FC<TimelineTimeShiftDialogProps> = (
       okText="确认平移"
       cancelText="取消"
       width={900}
-      okButtonProps={{ disabled: affectedCount === 0 }}
+      okButtonProps={{ 
+        disabled: affectedCount === 0,
+        style: { color: '#fff', backgroundColor: '#1890ff' }
+      }}
       destroyOnHidden
     >
       <Form

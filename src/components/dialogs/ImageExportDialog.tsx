@@ -104,6 +104,9 @@ export const ImageExportDialog: React.FC<ImageExportDialogProps> = ({
       okText="导出"
       cancelText="取消"
       confirmLoading={exporting}
+      okButtonProps={{ 
+        style: { color: '#fff', backgroundColor: '#1890ff' }
+      }}
       width={520}
       destroyOnHidden
     >

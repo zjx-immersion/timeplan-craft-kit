@@ -123,6 +123,9 @@ export const BaselineEditDialog: React.FC<BaselineEditDialogProps> = ({
       onCancel={handleCancel}
       okText="保存"
       cancelText="取消"
+      okButtonProps={{ 
+        style: { color: '#fff', backgroundColor: '#1890ff' }
+      }}
       width={480}
       destroyOnHidden
     >
