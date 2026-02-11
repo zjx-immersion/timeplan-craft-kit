@@ -59,6 +59,7 @@ import type { ViewType } from './ViewSwitcher';
 import TimelinePanel from './TimelinePanel';
 import { EnhancedTableView } from '../views/table'; // ✅ 使用增强的表格视图
 import { MatrixView } from '../views/MatrixView';
+import { MatrixViewV2 } from '../views/MatrixViewV2'; // ✅ 新版矩阵视图
 import { VersionTableView } from '../views/VersionTableView';
 import { VersionPlanView } from '../views/VersionPlanView'; // ✅ 版本计划视图
 import IterationView from '../iteration/IterationView'; // 原时间迭代视图
@@ -135,6 +136,7 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
   const [zoom, setZoom] = useState(initialZoom);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
+  const [useMatrixV2, setUseMatrixV2] = useState(true); // ✅ 使用新版矩阵视图
   const [imageExportDialogOpen, setImageExportDialogOpen] = useState(false);
   const [importDialogVisible, setImportDialogVisible] = useState(false);
   const [exportDialogVisible, setExportDialogVisible] = useState(false);
@@ -384,10 +386,10 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
         );
 
       case 'matrix':
-        return (
-          <MatrixView
-            data={plan}
-          />
+        return useMatrixV2 ? (
+          <MatrixViewV2 data={plan} />
+        ) : (
+          <MatrixView data={plan} />
         );
 
       case 'version':
@@ -529,8 +531,18 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
               color: view === 'matrix' ? '#FFFFFF' : undefined,
             }}
           >
-            矩阵
+            矩阵{view === 'matrix' && useMatrixV2 && <span style={{ fontSize: 10, marginLeft: 4 }}>V2</span>}
           </Button>
+          {view === 'matrix' && (
+            <Tooltip title={useMatrixV2 ? '切换到旧版矩阵' : '切换到新版矩阵'}>
+              <Button
+                size="small"
+                onClick={() => setUseMatrixV2(!useMatrixV2)}
+              >
+                {useMatrixV2 ? 'V2' : 'V1'}
+              </Button>
+            </Tooltip>
+          )}
           <Button
             size="small"
             icon={<HistoryOutlined />}
