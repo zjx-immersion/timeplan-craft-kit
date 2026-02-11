@@ -16,17 +16,21 @@
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
     "@tanstack/react-query": "^5.90.20",
+    "@tanstack/react-table": "^8.21.3",
     "antd": "^6.2.1",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
+    "dexie": "^4.3.0",
     "html2canvas": "^1.4.1",
+    "immer": "^10.2.0",
     "lucide-react": "^0.563.0",
     "react": "^19.0.0",
+    "react-beautiful-dnd": "^13.1.1",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.13.0",
     "uuid": "^11.0.3",
-    "xlsx": "^0.18.5",
-    "zustand": "^5.0.3"
+    "xlsx": "0.18",
+    "zustand": "^4.5.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
@@ -35,6 +39,7 @@
     "@testing-library/user-event": "^14.5.2",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
+    "@types/react-beautiful-dnd": "^13.1.8",
     "@types/react-dom": "^19.0.2",
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^4.3.4",

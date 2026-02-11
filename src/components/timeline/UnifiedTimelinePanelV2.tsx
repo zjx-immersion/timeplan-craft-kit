@@ -11,7 +11,7 @@
  * @date 2026-02-07
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { 
   Button, 
   Space, 
@@ -50,13 +50,14 @@ import {
   DownloadOutlined,
   UploadOutlined,
   FullscreenOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import type { TimePlan } from '@/types/timeplanSchema';
 import { downloadJSON } from '@/utils/dataExport';
 import type { TimeScale } from '@/types/timeplanSchema';
 import type { ViewType } from './ViewSwitcher';
 import TimelinePanel from './TimelinePanel';
-import { TableView } from '../views/TableView';
+import { EnhancedTableView } from '../views/table'; // ✅ 使用增强的表格视图
 import { MatrixView } from '../views/MatrixView';
 import { VersionTableView } from '../views/VersionTableView';
 import { VersionPlanView } from '../views/VersionPlanView'; // ✅ 版本计划视图
@@ -65,6 +66,11 @@ import { ModuleIterationView } from '../views/ModuleIterationView'; // ✅ 模�
 import { useTimePlanStoreWithHistory } from '@/stores/timePlanStoreWithHistory';
 import type { Timeline } from '@/types/timeplanSchema';
 import { ImageExportDialog } from '../dialogs/ImageExportDialog';
+import ImportDialog from '../views/table/import/ImportDialog';
+import ExportDialog from '../views/table/export/ExportDialog';
+import ColumnSettingsDialog from '../views/table/column/ColumnSettingsDialog';
+import type { ColumnConfig } from '../views/table/column';
+import { getCurrentColumns, saveColumnWidths } from '../views/table/column';
 
 /**
  * 统一时间线面板属性
@@ -130,6 +136,17 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
   const [imageExportDialogOpen, setImageExportDialogOpen] = useState(false);
+  const [importDialogVisible, setImportDialogVisible] = useState(false);
+  const [exportDialogVisible, setExportDialogVisible] = useState(false);
+  const [columnSettingsVisible, setColumnSettingsVisible] = useState(false);
+  const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  
+  // 加载列配置
+  useEffect(() => {
+    const config = getCurrentColumns();
+    setColumnConfig(config);
+  }, []);
   const timelineContainerRef = useRef<HTMLDivElement>(null);
 
   // 获取当前 plan
@@ -204,18 +221,70 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
    * 导出数据
    */
   const handleExportData = useCallback((format: 'json' | 'csv' | 'excel') => {
-    if (plan) {
+    if (format === 'excel') {
+      // 使用新的Excel导出对话框（仅表格视图）
+      if (view === 'table') {
+        setExportDialogVisible(true);
+      } else {
+        // 其他视图使用简单导出
+        message.info('Excel导出功能仅在表格视图可用');
+      }
+    } else if (plan) {
       downloadJSON(plan);
       message.success(`导出${format.toUpperCase()}成功`);
     }
-  }, [plan]);
+  }, [plan, view]);
+  
+  /**
+   * 导入数据处理
+   */
+  const handleImportLines = useCallback((newLines: any[]) => {
+    if (!plan) return;
+    
+    try {
+      const updatedData = {
+        ...plan,
+        lines: [...(plan.lines || []), ...newLines],
+      };
+      
+      updatePlan(updatedData);
+      setImportDialogVisible(false);
+      message.success(`成功导入 ${newLines.length} 条任务`);
+    } catch (error) {
+      console.error('[UnifiedTimelinePanelV2] 导入失败:', error);
+      message.error('导入失败');
+    }
+  }, [plan, updatePlan]);
+  
+  /**
+   * 列配置变更
+   */
+  const handleColumnsChange = useCallback((newColumns: ColumnConfig[]) => {
+    setColumnConfig(newColumns);
+    
+    // 保存列宽
+    const widths: Record<string, number> = {};
+    newColumns.forEach(col => {
+      if (col.width) {
+        widths[col.key] = col.width;
+      }
+    });
+    saveColumnWidths(widths);
+    
+    message.success('列配置已更新');
+  }, []);
 
   /**
    * 导入数据
    */
   const handleImportData = useCallback(() => {
-    message.info('导入功能开发中...');
-  }, []);
+    // 仅在表格视图可用
+    if (view === 'table') {
+      setImportDialogVisible(true);
+    } else {
+      message.info('导入功能仅在表格视图可用');
+    }
+  }, [view]);
 
   /**
    * 全屏切换
@@ -304,11 +373,13 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
 
       case 'table':
         return (
-          <TableView
+          <EnhancedTableView
             data={plan}
             onDataChange={handleDataChange}
             readonly={!editMode}
             showSearch={true}
+            columnConfig={columnConfig}
+            onSelectedRowsChange={setSelectedRowKeys}
           />
         );
 
@@ -533,8 +604,9 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
               style={{
                 color: editMode ? '#FFFFFF' : undefined,
               }}
+              title={editMode ? '点击切换到查看模式' : '点击切换到编辑模式'}
             >
-              {editMode ? '编辑' : '查看'}
+              {editMode ? '查看模式' : '编辑模式'}
             </Button>
 
             {/* 以下按钮只在甘特图视图显示 */}
@@ -755,6 +827,17 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
                 onClick={handleImportData}
               />
             </Tooltip>
+            
+            {/* 列设置 - 仅表格视图显示 */}
+            {view === 'table' && (
+              <Tooltip title="列设置">
+                <Button
+                  size="small"
+                  icon={<SettingOutlined />}
+                  onClick={() => setColumnSettingsVisible(true)}
+                />
+              </Tooltip>
+            )}
 
             <Tooltip title="全屏">
               <Button
@@ -778,6 +861,36 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
         onClose={() => setImageExportDialogOpen(false)}
         targetElement={timelineContainerRef.current}
         defaultFilename={plan ? `${plan.title}-export` : 'timeplan-export'}
+      />
+      
+      {/* Excel导入对话框 */}
+      {plan && (
+        <ImportDialog
+          visible={importDialogVisible}
+          onClose={() => setImportDialogVisible(false)}
+          onImport={handleImportLines}
+          data={plan}
+        />
+      )}
+      
+      {/* Excel导出对话框 */}
+      {plan && (
+        <ExportDialog
+          visible={exportDialogVisible}
+          onClose={() => setExportDialogVisible(false)}
+          lines={plan.lines || []}
+          timelines={plan.timelines || []}
+          selectedRowKeys={selectedRowKeys}
+          filteredData={undefined}
+        />
+      )}
+      
+      {/* 列设置对话框 */}
+      <ColumnSettingsDialog
+        visible={columnSettingsVisible}
+        onClose={() => setColumnSettingsVisible(false)}
+        columns={columnConfig}
+        onColumnsChange={handleColumnsChange}
       />
     </div>
   );

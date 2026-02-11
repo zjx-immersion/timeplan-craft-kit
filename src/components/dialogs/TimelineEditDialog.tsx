@@ -115,6 +115,9 @@ export const TimelineEditDialog: React.FC<TimelineEditDialogProps> = ({
       onCancel={handleCancel}
       okText="保存"
       cancelText="取消"
+      okButtonProps={{ 
+        style: { backgroundColor: '#14B8A6', borderColor: '#14B8A6', color: '#fff' }
+      }}
       destroyOnHidden
       data-testid="timeline-edit-dialog"
     >

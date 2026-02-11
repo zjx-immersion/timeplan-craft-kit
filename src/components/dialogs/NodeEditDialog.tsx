@@ -118,6 +118,9 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       width={600}
       okText="保存"
       cancelText="取消"
+      okButtonProps={{ 
+        style: { backgroundColor: '#14B8A6', borderColor: '#14B8A6', color: '#fff' }
+      }}
     >
       <Form
         form={form}
