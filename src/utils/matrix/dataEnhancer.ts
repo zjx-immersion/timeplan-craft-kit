@@ -10,42 +10,42 @@ import type { TimePlan, Line, Timeline } from '@/types/timeplan';
 import type { LineExtended } from '@/types/matrix';
 
 /**
- * Timeline到Product的映射规则
+ * TimePlan到Product的映射规则
+ * 
+ * 1个TimePlan = 1个Product
  */
-const TIMELINE_TO_PRODUCT_MAP: Record<string, string> = {
-  // Orion X相关的timeline
-  'tl-project-mgmt': 'product-orion-x',
-  'tl-ee-arch': 'product-orion-x',
-  'tl-sensing': 'product-orion-x',
-  'tl-decision': 'product-orion-x',
-  'tl-control': 'product-orion-x',
-  'tl-hmi': 'product-orion-x',
-  'tl-platform': 'product-orion-x',
-  'tl-testing': 'product-orion-x',
-  'tl-integration': 'product-orion-x',
-  'tl-quality': 'product-orion-x',
+function getProductIdFromPlan(plan: TimePlan): string {
+  // 根据plan的ID或名称判断Product
+  const planName = plan.name?.toLowerCase() || '';
   
-  // 默认产品
-  'default': 'product-demo',
-};
+  if (planName.includes('orion') || plan.id?.includes('orion')) {
+    return 'product-orion-x';
+  }
+  
+  // 其他产品可以在这里扩展
+  
+  return 'product-demo';
+}
 
 /**
  * Timeline到Team的映射规则
  * 
- * 根据timeline的owner或category判断
+ * 每个Timeline = 1个Team（模块团队）
  */
 const TIMELINE_TO_TEAM_MAP: Record<string, string> = {
-  // 按timeline ID映射
-  'tl-project-mgmt': 'team-demo',
-  'tl-ee-arch': 'team-chenghzhi',
-  'tl-sensing': 'team-chenghzhi',
-  'tl-decision': 'team-chenghzhi',
-  'tl-control': 'team-chenghzhi',
-  'tl-hmi': 'team-chenghzhi',
-  'tl-platform': 'team-chenghzhi',
-  'tl-testing': 'team-demo',
-  'tl-integration': 'team-demo',
-  'tl-quality': 'team-demo',
+  // Orion X项目的模块团队
+  'tl-project-mgmt': 'team-project-office',      // 项目办
+  'tl-ee-arch': 'team-ee-arch',                  // 电子电器架构团队
+  'tl-perception': 'team-perception',            // 感知团队
+  'tl-sensing': 'team-perception',               // 感知团队（别名）
+  'tl-planning': 'team-planning',                // 规划团队
+  'tl-decision': 'team-planning',                // 规划团队（别名）
+  'tl-control': 'team-control',                  // 控制团队
+  'tl-hmi': 'team-hmi',                          // 座舱HMI团队
+  'tl-platform': 'team-platform',                // 平台团队
+  'tl-testing': 'team-testing',                  // 测试团队
+  'tl-integration': 'team-integration',          // 集成团队
+  'tl-quality': 'team-quality',                  // 质量团队
   
   // 默认团队
   'default': 'team-demo',
@@ -90,12 +90,11 @@ function estimateEffort(line: Line): number {
  */
 export function enhanceLine(
   line: Line,
-  timeline: Timeline
+  timeline: Timeline,
+  productId: string
 ): LineExtended {
-  // 获取productId
-  const productId = TIMELINE_TO_PRODUCT_MAP[timeline.id] || TIMELINE_TO_PRODUCT_MAP['default'];
-  
-  // 获取teamId
+  // Product来自TimePlan层级（整个计划）
+  // Team来自Timeline（模块团队）
   const teamId = TIMELINE_TO_TEAM_MAP[timeline.id] || TIMELINE_TO_TEAM_MAP['default'];
   
   // 估算工作量
@@ -113,11 +112,10 @@ export function enhanceLine(
  * 增强整个TimePlan数据
  */
 export function enhanceTimePlan(plan: TimePlan): TimePlan & { lines: LineExtended[] } {
-  // 创建timeline映射，方便查找
-  const timelineMap = new Map<string, Timeline>();
-  plan.timelines.forEach(tl => timelineMap.set(tl.id, tl));
+  // 步骤1：确定Product（整个TimePlan = 1个Product）
+  const productId = getProductIdFromPlan(plan);
   
-  // 增强所有line
+  // 步骤2：为每个Line分配Team（根据所属的Timeline）
   const enhancedLines = plan.lines.map(line => {
     // 找到line所属的timeline
     const timeline = plan.timelines.find(tl => tl.lineIds.includes(line.id));
@@ -126,13 +124,13 @@ export function enhanceTimePlan(plan: TimePlan): TimePlan & { lines: LineExtende
       console.warn(`[dataEnhancer] Line ${line.id} 未找到所属timeline，使用默认映射`);
       return {
         ...line,
-        productId: TIMELINE_TO_PRODUCT_MAP['default'],
+        productId,
         teamId: TIMELINE_TO_TEAM_MAP['default'],
         effort: estimateEffort(line),
       } as LineExtended;
     }
     
-    return enhanceLine(line, timeline);
+    return enhanceLine(line, timeline, productId);
   });
   
   return {

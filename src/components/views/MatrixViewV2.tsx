@@ -247,7 +247,7 @@ export const MatrixViewV2: React.FC<MatrixViewV2Props> = ({ data, className, sty
       {/* 预警提示 */}
       {matrixData.warnings.length > 0 && (
         <Alert
-          message={`发现 ${matrixData.warnings.length} 个资源预警`}
+          title={`发现 ${matrixData.warnings.length} 个资源预警`}
           description={
             <ul style={{ margin: 0, paddingLeft: 20 }}>
               {matrixData.warnings.slice(0, 5).map(w => (
