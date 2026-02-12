@@ -17,9 +17,17 @@ import { Line } from '@/types/timeplanSchema';
 import { timelineColors, timelineShadows, timelineTransitions } from '@/theme/timelineColors';
 import ConnectionPoints from './ConnectionPoints';
 import { Tooltip } from 'antd';
+import {
+  CalendarOutlined,
+  TeamOutlined,
+  FieldTimeOutlined,
+  FlagOutlined,
+} from '@ant-design/icons';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { parseDateAsLocal } from '@/utils/dateUtils';
+import { EnhancedTooltip } from '@/components/common/EnhancedTooltip';
+import type { TooltipContent } from '@/components/common/EnhancedTooltip';
 
 // ✅ 性能优化：将默认connectionMode移到组件外部，避免每次渲染创建新对象
 const DEFAULT_CONNECTION_MODE = { lineId: null, direction: 'from' as const };
@@ -71,22 +79,62 @@ const BarRenderer: React.FC<LineRendererProps> = memo(({
   // 悬停状态
   const [isHovering, setIsHovering] = React.useState(false);
   
-  // ✅ 格式化日期范围用于Tooltip（使用统一的日期解析）
-  const dateRangeText = React.useMemo(() => {
-    try {
-      const startDate = parseDateAsLocal(line.startDate);
-      const endDate = parseDateAsLocal(line.endDate);
-      return `${format(startDate, 'yyyy-MM-dd', { locale: zhCN })} ~ ${format(endDate, 'yyyy-MM-dd', { locale: zhCN })}`;
-    } catch (error) {
-      return '';
-    }
-  }, [line.startDate, line.endDate]);
+  // ✅ 生成增强的Tooltip内容
+  const tooltipContent = React.useMemo((): TooltipContent => {
+    const startDate = parseDateAsLocal(line.startDate);
+    const endDate = parseDateAsLocal(line.endDate);
+    const startDateStr = format(startDate, 'yyyy-MM-dd', { locale: zhCN });
+    const endDateStr = format(endDate, 'yyyy-MM-dd', { locale: zhCN });
+    
+    const effort = line.attributes?.effort || 0;
+    const owner = line.attributes?.owner || '未指定';
+    const priority = line.attributes?.priority || 'P3';
+    const status = line.attributes?.status || line.label?.includes('完成') ? '已完成' : '进行中';
+    
+    return {
+      summary: line.description || line.label,
+      stats: [
+        {
+          label: '开始日期',
+          value: startDateStr,
+          icon: <CalendarOutlined />,
+        },
+        {
+          label: '结束日期',
+          value: endDateStr,
+          icon: <CalendarOutlined />,
+        },
+        effort > 0 ? {
+          label: '工作量',
+          value: `${effort}人/天`,
+          icon: <FieldTimeOutlined />,
+        } : null,
+        {
+          label: '负责人',
+          value: owner,
+          icon: <TeamOutlined />,
+        },
+      ].filter(Boolean) as any,
+      items: [
+        {
+          label: '优先级',
+          value: priority,
+          status: priority === 'P0' ? 'error' : priority === 'P1' ? 'warning' : 'default',
+        },
+        {
+          label: '状态',
+          value: status,
+          status: status === '已完成' ? 'success' : 'default',
+        },
+      ],
+    };
+  }, [line]);
   
   return (
-    <Tooltip 
-      title={dateRangeText} 
+    <EnhancedTooltip
+      title={line.name || line.label}
+      content={tooltipContent}
       placement="top"
-      mouseEnterDelay={0.5}
     >
     <div
       onClick={onClick}
@@ -233,7 +281,7 @@ const BarRenderer: React.FC<LineRendererProps> = memo(({
         />
       )}
     </div>
-    </Tooltip>
+    </EnhancedTooltip>
   );
 }); // ✅ 闭合memo
 
