@@ -10,6 +10,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { TimePlan, Timeline, Line, Relation } from '@/types/timeplanSchema';
+import { autoFixRelations } from '@/utils/validation';
 
 /**
  * 历史记录项
@@ -172,7 +173,32 @@ export const useTimePlanStoreWithHistory = create<TimePlanStateWithHistory>()(
       // 项目管理
       setPlans: (plans) => {
         get().saveSnapshot();
-        set({ plans });
+        
+        // 验证并修复每个计划的关系数据
+        const validatedPlans = plans.map(plan => {
+          if (!plan.relations || plan.relations.length === 0) {
+            return plan;
+          }
+          
+          // 自动修复无效关系
+          const { fixed, removed, warnings } = autoFixRelations(
+            plan.relations,
+            plan.lines
+          );
+          
+          if (removed > 0) {
+            console.warn(
+              `[TimePlanStore] 计划 "${plan.name}" 已移除 ${removed} 个无效关系`
+            );
+          }
+          
+          return {
+            ...plan,
+            relations: fixed,
+          };
+        });
+        
+        set({ plans: validatedPlans });
       },
       
       addPlan: (plan) => {
