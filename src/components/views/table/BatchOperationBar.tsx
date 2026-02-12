@@ -2,13 +2,17 @@
  * BatchOperationBar - 批量操作栏
  * 
  * 功能:
+ * - 显示选中数量
+ * - 取消选择
+ * - 批量编辑（打开对话框）
  * - 批量删除
  * - 批量设置状态
  * - 批量设置优先级
  * - 批量分配负责人
+ * - 导出选中任务
  * 
- * @version 1.0.0
- * @date 2026-02-10
+ * @version 2.0.0 - Task 4.3增强
+ * @date 2026-02-12
  */
 
 import React, { useState } from 'react';
@@ -20,7 +24,11 @@ import {
   UserOutlined,
   FlagOutlined,
   CheckCircleOutlined,
+  EditOutlined,
+  ExportOutlined,
+  CloseCircleOutlined,
 } from '@ant-design/icons';
+import { useSelectionStore } from '@/stores/selectionStore';
 
 export interface BatchOperationBarProps {
   selectedCount: number;
@@ -28,6 +36,8 @@ export interface BatchOperationBarProps {
   onBatchSetStatus: (status: string) => void;
   onBatchSetPriority: (priority: string) => void;
   onBatchAssignOwner: (owner: string) => void;
+  onBatchEdit?: () => void; // Task 4.3: 新增批量编辑回调
+  onBatchExport?: () => void; // Task 4.3: 新增导出回调
 }
 
 const BatchOperationBar: React.FC<BatchOperationBarProps> = ({
@@ -36,13 +46,24 @@ const BatchOperationBar: React.FC<BatchOperationBarProps> = ({
   onBatchSetStatus,
   onBatchSetPriority,
   onBatchAssignOwner,
+  onBatchEdit,
+  onBatchExport,
 }) => {
   const [isAssignOwnerVisible, setIsAssignOwnerVisible] = useState(false);
   const [ownerName, setOwnerName] = useState('');
+  
+  // Task 4.3: 集成SelectionStore
+  const { clearSelection } = useSelectionStore();
 
   if (selectedCount === 0) {
     return null;
   }
+  
+  // Task 4.3: 取消选择处理
+  const handleClearSelection = () => {
+    clearSelection();
+    message.info('已取消选择');
+  };
 
   // 状态菜单
   const statusMenuItems: MenuProps['items'] = [
@@ -97,84 +118,122 @@ const BatchOperationBar: React.FC<BatchOperationBarProps> = ({
   ];
 
   return (
-    <Space
+    <div
       style={{
         padding: '12px 16px',
         background: '#e6f4ff',
         borderRadius: 4,
         border: '1px solid #91caff',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
       }}
     >
-      <Tag color="blue" icon={<CheckSquareOutlined />}>
-        已选 {selectedCount} 项
-      </Tag>
-
-      <Popconfirm
-        title={`确定要删除选中的 ${selectedCount} 个任务吗？`}
-        description="此操作不可恢复，相关的依赖关系也会被删除。"
-        onConfirm={onBatchDelete}
-        okText="确定删除"
-        cancelText="取消"
-        okButtonProps={{ danger: true }}
-      >
-        <Button type="primary" danger size="small" icon={<DeleteOutlined />}>
-          批量删除
+      {/* Task 4.3: 左侧 - 选中数量和取消按钮 */}
+      <Space>
+        <Tag color="blue" icon={<CheckSquareOutlined />}>
+          已选中 {selectedCount} 个任务
+        </Tag>
+        <Button 
+          type="text" 
+          size="small" 
+          icon={<CloseCircleOutlined />}
+          onClick={handleClearSelection}
+        >
+          取消选择
         </Button>
-      </Popconfirm>
+      </Space>
 
-      <Dropdown menu={{ items: statusMenuItems }} placement="bottomLeft">
-        <Button size="small" icon={<CheckCircleOutlined />}>
-          批量设置状态
-        </Button>
-      </Dropdown>
+      {/* Task 4.3: 右侧 - 操作按钮组 */}
+      <Space>
+        {/* 批量编辑按钮 */}
+        {onBatchEdit && (
+          <Button 
+            type="primary" 
+            size="small" 
+            icon={<EditOutlined />}
+            onClick={onBatchEdit}
+          >
+            批量编辑
+          </Button>
+        )}
 
-      <Dropdown menu={{ items: priorityMenuItems }} placement="bottomLeft">
-        <Button size="small" icon={<FlagOutlined />}>
-          批量设置优先级
-        </Button>
-      </Dropdown>
+        {/* 导出按钮 */}
+        {onBatchExport && (
+          <Button 
+            size="small" 
+            icon={<ExportOutlined />}
+            onClick={onBatchExport}
+          >
+            导出
+          </Button>
+        )}
 
-      <Popconfirm
-        title="批量分配负责人"
-        description={
-          <Input
-            placeholder="输入负责人姓名"
-            value={ownerName}
-            onChange={(e) => setOwnerName(e.target.value)}
-            onPressEnter={() => {
-              if (ownerName.trim()) {
-                onBatchAssignOwner(ownerName.trim());
-                setOwnerName('');
-                setIsAssignOwnerVisible(false);
-              }
-            }}
-            autoFocus
-          />
-        }
-        open={isAssignOwnerVisible}
-        onOpenChange={(visible) => {
-          setIsAssignOwnerVisible(visible);
-          if (!visible) {
-            setOwnerName('');
+        {/* 快捷操作：状态、优先级、负责人 */}
+        <Dropdown menu={{ items: statusMenuItems }} placement="bottomLeft">
+          <Button size="small" icon={<CheckCircleOutlined />}>
+            设置状态
+          </Button>
+        </Dropdown>
+
+        <Dropdown menu={{ items: priorityMenuItems }} placement="bottomLeft">
+          <Button size="small" icon={<FlagOutlined />}>
+            设置优先级
+          </Button>
+        </Dropdown>
+
+        <Popconfirm
+          title="批量分配负责人"
+          description={
+            <Input
+              placeholder="输入负责人姓名"
+              value={ownerName}
+              onChange={(e) => setOwnerName(e.target.value)}
+              onPressEnter={() => {
+                if (ownerName.trim()) {
+                  onBatchAssignOwner(ownerName.trim());
+                  setOwnerName('');
+                  setIsAssignOwnerVisible(false);
+                }
+              }}
+              autoFocus
+            />
           }
-        }}
-        onConfirm={() => {
-          if (ownerName.trim()) {
-            onBatchAssignOwner(ownerName.trim());
-            setOwnerName('');
-          } else {
-            message.warning('请输入负责人姓名');
-            return Promise.reject();
-          }
-        }}
-        okText="确定"
-        cancelText="取消"
-      >
-        <Button size="small" icon={<UserOutlined />}>
-          批量分配负责人
+          open={isAssignOwnerVisible}
+          onOpenChange={(visible) => {
+            setIsAssignOwnerVisible(visible);
+            if (!visible) {
+              setOwnerName('');
+            }
+          }}
+          onConfirm={() => {
+            if (ownerName.trim()) {
+              onBatchAssignOwner(ownerName.trim());
+              setOwnerName('');
+            } else {
+              message.warning('请输入负责人姓名');
+              return Promise.reject();
+            }
+          }}
+          okText="确定"
+          cancelText="取消"
+        >
+          <Button size="small" icon={<UserOutlined />}>
+            分配负责人
+          </Button>
+        </Popconfirm>
+
+        {/* Task 4.6: 批量删除按钮（打开详细确认对话框） */}
+        <Button 
+          danger 
+          size="small" 
+          icon={<DeleteOutlined />}
+          onClick={onBatchDelete}
+        >
+          删除
         </Button>
-      </Popconfirm>
-    </Space>
+      </Space>
+    </div>
   );
 };
 

@@ -395,7 +395,7 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
         
       case 'matrix':
         // V3版本（默认）：Timeline × TimeNode(里程碑/门禁) 架构
-        return <MatrixViewV3 data={plan} />;
+        return <MatrixViewV3 data={plan} onViewChange={setView} />;
 
       case 'version':
         return (

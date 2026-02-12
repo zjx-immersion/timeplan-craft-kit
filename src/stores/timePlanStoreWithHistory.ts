@@ -60,6 +60,12 @@ interface TimePlanStateWithHistory {
   // Actions - 批量操作
   batchUpdateLines: (planId: string, updates: Array<{ lineId: string; updates: Partial<Line> }>) => void;
   
+  // Task 4.5: 批量更新多个Line（应用相同的更新）
+  batchUpdateLinesSameValue: (planId: string, lineIds: string[], updates: Partial<Line>) => void;
+  
+  // Task 4.6: 批量删除多个Line及其相关关系
+  batchDeleteLines: (planId: string, lineIds: string[]) => { deletedLineCount: number; deletedRelationCount: number };
+  
   // Actions - 历史记录管理
   undo: () => void;
   redo: () => void;
@@ -409,6 +415,132 @@ export const useTimePlanStoreWithHistory = create<TimePlanStateWithHistory>()(
             };
           }),
         }));
+      },
+      
+      /**
+       * Task 4.5: 批量更新多个Line（应用相同的更新）
+       * 
+       * 优化：使用Set加速查找，一次性更新状态
+       * 性能目标：1000任务 < 100ms
+       */
+      batchUpdateLinesSameValue: (planId, lineIds, updates) => {
+        console.log('[TimePlanStore] 🔄 批量更新任务（相同值）:', {
+          planId,
+          lineCount: lineIds.length,
+          updates,
+        });
+        
+        const startTime = performance.now();
+        
+        get().saveSnapshot();
+        
+        // Task 4.5: 使用Set加速查找
+        const lineIdSet = new Set(lineIds);
+        
+        set((state) => ({
+          plans: state.plans.map((p) => {
+            if (p.id !== planId) return p;
+            
+            // Task 4.5: 一次性更新所有匹配的lines
+            const updatedLines = p.lines.map((line) => {
+              if (lineIdSet.has(line.id)) {
+                // 合并attributes（如果updates中有attributes字段）
+                const mergedAttributes = updates.attributes
+                  ? { ...line.attributes, ...updates.attributes }
+                  : line.attributes;
+                
+                return {
+                  ...line,
+                  ...updates,
+                  attributes: mergedAttributes,
+                  updatedAt: new Date(),
+                };
+              }
+              return line;
+            });
+            
+            return {
+              ...p,
+              lines: updatedLines,
+              updatedAt: new Date(),
+            };
+          }),
+        }));
+        
+        const endTime = performance.now();
+        const duration = endTime - startTime;
+        
+        console.log('[TimePlanStore] ✅ 批量更新完成:', {
+          lineCount: lineIds.length,
+          duration: `${duration.toFixed(2)}ms`,
+          performanceOK: duration < 100,
+        });
+        
+        // Task 4.5: 验收标准 - 性能良好（1000任务 < 100ms）
+        if (lineIds.length >= 100 && duration >= 100) {
+          console.warn(`[TimePlanStore] ⚠️ 性能警告: ${lineIds.length}个任务更新耗时${duration.toFixed(2)}ms`);
+        }
+      },
+      
+      /**
+       * Task 4.6: 批量删除多个Line及其相关关系
+       * 
+       * @returns 返回删除的任务数和关系数
+       */
+      batchDeleteLines: (planId, lineIds) => {
+        console.log('[TimePlanStore] 🗑️ 批量删除任务:', {
+          planId,
+          lineCount: lineIds.length,
+        });
+        
+        get().saveSnapshot();
+        
+        // Task 4.6: 使用Set加速查找
+        const lineIdSet = new Set(lineIds);
+        let deletedLineCount = 0;
+        let deletedRelationCount = 0;
+        
+        set((state) => ({
+          plans: state.plans.map((p) => {
+            if (p.id !== planId) return p;
+            
+            // Task 4.6: 删除选中的任务
+            const remainingLines = p.lines.filter((line) => {
+              if (lineIdSet.has(line.id)) {
+                deletedLineCount++;
+                return false;
+              }
+              return true;
+            });
+            
+            // Task 4.6: 删除相关的关系
+            const remainingRelations = p.relations.filter((relation) => {
+              if (lineIdSet.has(relation.from) || lineIdSet.has(relation.to)) {
+                deletedRelationCount++;
+                return false;
+              }
+              return true;
+            });
+            
+            console.log('[TimePlanStore] 🗑️ 删除结果:', {
+              deletedLineCount,
+              deletedRelationCount,
+              remainingLineCount: remainingLines.length,
+              remainingRelationCount: remainingRelations.length,
+            });
+            
+            return {
+              ...p,
+              lines: remainingLines,
+              relations: remainingRelations,
+              updatedAt: new Date(),
+            };
+          }),
+        }));
+        
+        console.log('[TimePlanStore] ✅ 批量删除完成');
+        
+        return { deletedLineCount, deletedRelationCount };
       },
     }),
     {

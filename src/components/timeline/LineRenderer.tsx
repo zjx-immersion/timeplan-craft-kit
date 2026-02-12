@@ -49,6 +49,8 @@ interface LineRendererProps {
   onCompleteConnection?: (targetLineId: string) => void;
   // 关键路径
   isCriticalPath?: boolean;
+  // 高亮状态（从矩阵跳转时）
+  isHighlighted?: boolean;
 }
 
 /**
@@ -70,6 +72,7 @@ const BarRenderer: React.FC<LineRendererProps> = memo(({
   onStartConnection,
   onCompleteConnection,
   isCriticalPath = false,
+  isHighlighted = false,
 }) => {
   // 🎨 获取节点颜色（优先级：attributes.color > line.color > 默认Teal色）
   // ✅ 修复：使用透明度版本，参考源项目
@@ -137,6 +140,8 @@ const BarRenderer: React.FC<LineRendererProps> = memo(({
       placement="top"
     >
     <div
+      data-line-id={line.id}
+      className={isHighlighted ? 'line-highlighted' : undefined}
       onClick={onClick}
       onMouseDown={onMouseDown}
       onMouseEnter={() => setIsHovering(true)}
@@ -160,25 +165,30 @@ const BarRenderer: React.FC<LineRendererProps> = memo(({
         borderRadius: 4,
         // 🎯 选中样式：双层ring效果
         // 🎯 关键路径样式：加粗红色边框 + 红色阴影
-        border: isCriticalPath
-          ? `3px solid #ef4444` // 红色加粗边框
-          : (isSelected
-              ? `2px solid ${timelineColors.selected}`
-              : `1px solid rgba(0,0,0,0.04)`),
-        boxShadow: isCriticalPath
-          ? `0 0 8px rgba(239, 68, 68, 0.5), 0 0 16px rgba(239, 68, 68, 0.3)` // 红色阴影
-          : (isSelected 
-              ? `0 0 0 2px ${timelineColors.selected}, 0 0 0 5px ${timelineColors.selectedRing}, 0 4px 12px rgba(0,0,0,0.15)` // 增强ring + 阴影
-              : (isInteracting
-                  ? timelineShadows.dragging
-                  : (isHovering ? timelineShadows.nodeMd : timelineShadows.nodeSm))),
+        // 🎯 高亮样式：优先级高于其他样式
+        border: isHighlighted
+          ? `2px solid #1890ff` // 高亮时蓝色边框
+          : (isCriticalPath
+              ? `3px solid #ef4444` // 红色加粗边框
+              : (isSelected
+                  ? `2px solid ${timelineColors.selected}`
+                  : `1px solid rgba(0,0,0,0.04)`)),
+        boxShadow: isHighlighted
+          ? `0 0 20px 5px rgba(24, 144, 255, 0.6)` // 高亮时蓝色阴影
+          : (isCriticalPath
+              ? `0 0 8px rgba(239, 68, 68, 0.5), 0 0 16px rgba(239, 68, 68, 0.3)` // 红色阴影
+              : (isSelected 
+                  ? `0 0 0 2px ${timelineColors.selected}, 0 0 0 5px ${timelineColors.selectedRing}, 0 4px 12px rgba(0,0,0,0.15)` // 增强ring + 阴影
+                  : (isInteracting
+                      ? timelineShadows.dragging
+                      : (isHovering ? timelineShadows.nodeMd : timelineShadows.nodeSm)))),
         cursor: isEditMode ? (isInteracting ? 'grabbing' : 'grab') : 'pointer',
         display: 'flex',
         alignItems: 'center',
         padding: `0 6px`,
         transition: isInteracting ? 'none' : `${timelineTransitions.normal}, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)`,
-        zIndex: isSelected ? 10 : (isInteracting ? 5 : 1),  // ✅ 选中时更高zIndex
-        opacity: isInteracting ? 0.7 : (isSelected ? 0.85 : 0.6),  // ✅ 选中时降低透明度
+        zIndex: isHighlighted ? 100 : (isSelected ? 10 : (isInteracting ? 5 : 1)),  // 高亮时最高zIndex
+        opacity: isInteracting ? 0.7 : (isSelected || isHighlighted ? 0.85 : 0.6),
       }}
     >
       {/* ✅ 左侧调整手柄 - 放在连线点右侧 */}
