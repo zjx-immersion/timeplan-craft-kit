@@ -947,42 +947,6 @@ const lines: Line[] = [
     },
   },
 
-  // 规划决策集成测试
-  {
-    id: 'line-pl-003',
-    timelineId: 'tl-planning',
-    label: '规划决策集成测试',
-    startDate: new Date('2026-09-25'),
-    endDate: new Date('2026-10-31'),
-    schemaId: LinePlanSchema.id,
-    attributes: {
-      color: '#8b5cf6',
-      progress: 0,
-      status: '未开始',
-      priority: '高',
-      owner: '规划团队',
-      description: '决策规划模块集成',
-      module: '规划集成',
-      productLine: '规划决策',
-    },
-  },
-  {
-    id: 'line-pl-003-gate',
-    timelineId: 'tl-planning',
-    label: 'FDJ 规划决策完成',
-    startDate: new Date('2026-11-05'),
-    schemaId: GatewaySchema.id,
-    attributes: {
-      color: '#8b5cf6',
-      status: '待决策',
-      priority: '高',
-      owner: '规划团队',
-      description: 'FDJ门禁',
-      module: '规划集成',
-      productLine: '规划决策',
-    },
-  },
-
   // ========================================================================
   // Timeline 6: 软件集成
   // ========================================================================

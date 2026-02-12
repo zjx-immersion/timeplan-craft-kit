@@ -170,9 +170,10 @@ export function printEnhancementStats(plan: TimePlan): void {
  */
 export function setCustomMapping(
   timelineId: string,
-  productId: string,
+  _productId: string,
   teamId: string
 ): void {
-  TIMELINE_TO_PRODUCT_MAP[timelineId] = productId;
+  // Product映射在getProductIdFromPlan函数中处理（基于plan名称）
+  // Team映射基于timelineId
   TIMELINE_TO_TEAM_MAP[timelineId] = teamId;
 }

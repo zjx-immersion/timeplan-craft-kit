@@ -58,8 +58,9 @@ import type { TimeScale } from '@/types/timeplanSchema';
 import type { ViewType } from './ViewSwitcher';
 import TimelinePanel from './TimelinePanel';
 import { EnhancedTableView } from '../views/table'; // ✅ 使用增强的表格视图
-import { MatrixView } from '../views/MatrixView';
-import { MatrixViewV2 } from '../views/MatrixViewV2'; // ✅ 新版矩阵视图
+import { MatrixView } from '../views/MatrixView'; // ✅ V1 - Timeline × 月份 矩阵
+import { MatrixViewV2 } from '../views/MatrixViewV2'; // ✅ V2 - Product × Team 矩阵
+import MatrixViewV3 from '../views/MatrixViewV3'; // ✅ V3 - Timeline × TimeNode 架构
 import { VersionTableView } from '../views/VersionTableView';
 import { VersionPlanView } from '../views/VersionPlanView'; // ✅ 版本计划视图
 import IterationView from '../iteration/IterationView'; // 原时间迭代视图
@@ -136,7 +137,6 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
   const [zoom, setZoom] = useState(initialZoom);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
-  const [useMatrixV2, setUseMatrixV2] = useState(true); // ✅ 使用新版矩阵视图
   const [imageExportDialogOpen, setImageExportDialogOpen] = useState(false);
   const [importDialogVisible, setImportDialogVisible] = useState(false);
   const [exportDialogVisible, setExportDialogVisible] = useState(false);
@@ -385,12 +385,17 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
           />
         );
 
+      case 'matrix-v1':
+        // V1版本：Timeline × 月份 矩阵
+        return <MatrixView data={plan} />;
+        
+      case 'matrix-v2':
+        // V2版本：Product × Team 矩阵
+        return <MatrixViewV2 data={plan} />;
+        
       case 'matrix':
-        return useMatrixV2 ? (
-          <MatrixViewV2 data={plan} />
-        ) : (
-          <MatrixView data={plan} />
-        );
+        // V3版本（默认）：Timeline × TimeNode(里程碑/门禁) 架构
+        return <MatrixViewV3 data={plan} />;
 
       case 'version':
         return (
@@ -522,27 +527,43 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
           >
             表格
           </Button>
-          <Button
-            size="small"
-            icon={<AppstoreOutlined />}
-            type={view === 'matrix' ? 'primary' : 'default'}
-            onClick={() => handleViewChange('matrix')}
-            style={{
-              color: view === 'matrix' ? '#FFFFFF' : undefined,
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  key: 'matrix',
+                  label: '矩阵 V3 (Timeline × 里程碑)',
+                  icon: <AppstoreOutlined />,
+                  onClick: () => handleViewChange('matrix'),
+                },
+                {
+                  key: 'matrix-v2',
+                  label: '矩阵 V2 (Product × Team)',
+                  icon: <AppstoreOutlined />,
+                  onClick: () => handleViewChange('matrix-v2'),
+                },
+                {
+                  key: 'matrix-v1',
+                  label: '矩阵 V1 (Timeline × 月份)',
+                  icon: <AppstoreOutlined />,
+                  onClick: () => handleViewChange('matrix-v1'),
+                },
+              ],
             }}
+            placement="bottomRight"
           >
-            矩阵{view === 'matrix' && useMatrixV2 && <span style={{ fontSize: 10, marginLeft: 4 }}>V2</span>}
-          </Button>
-          {view === 'matrix' && (
-            <Tooltip title={useMatrixV2 ? '切换到旧版矩阵' : '切换到新版矩阵'}>
-              <Button
-                size="small"
-                onClick={() => setUseMatrixV2(!useMatrixV2)}
-              >
-                {useMatrixV2 ? 'V2' : 'V1'}
-              </Button>
-            </Tooltip>
-          )}
+            <Button
+              size="small"
+              icon={<AppstoreOutlined />}
+              type={view.startsWith('matrix') ? 'primary' : 'default'}
+              style={{
+                color: view.startsWith('matrix') ? '#FFFFFF' : undefined,
+              }}
+            >
+              矩阵 {view === 'matrix' ? 'V3' : view === 'matrix-v2' ? 'V2' : view === 'matrix-v1' ? 'V1' : ''}
+              <DownOutlined style={{ fontSize: 10, marginLeft: 4 }} />
+            </Button>
+          </Dropdown>
           <Button
             size="small"
             icon={<HistoryOutlined />}
@@ -863,7 +884,15 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
       </div>
 
       {/* ✏️ 主内容区域 - 根据视图动态切换 */}
-      <div style={{ flex: 1, overflow: 'hidden' }} data-testid={`view-content-${view}`}>
+      <div 
+        style={{ 
+          flex: 1, 
+          // 甘特图需要overflow: hidden（有自己的滚动机制）
+          // 其他视图需要overflow: auto（允许内容滚动）
+          overflow: view === 'gantt' ? 'hidden' : 'auto' 
+        }} 
+        data-testid={`view-content-${view}`}
+      >
         {renderView()}
       </div>
 

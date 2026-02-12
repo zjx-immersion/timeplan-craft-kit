@@ -1,0 +1,117 @@
+# Playwright MCP 配置文件
+# 用于MCP Playwright工具集成
+
+version: '1.0'
+
+# 项目配置
+project:
+  name: timeplan-craft-kit
+  baseUrl: http://localhost:9082
+  testDir: ./e2e
+
+# 测试配置
+test:
+  # 默认视口大小
+  viewport:
+    width: 1280
+    height: 720
+  
+  # 超时配置（毫秒）
+  timeouts:
+    navigation: 10000
+    action: 10000
+    test: 60000
+  
+  # 截图配置
+  screenshots:
+    onFailure: true
+    onSuccess: false
+    fullPage: false
+
+# 浏览器配置
+browsers:
+  - name: chromium
+    channel: chrome
+    headless: false
+  
+  - name: firefox
+    headless: true
+  
+  - name: webkit
+    headless: true
+
+# 报告配置
+reporter:
+  type: html
+  outputDir: ./playwright-report
+
+# 矩阵V3测试特定配置
+matrixV3:
+  testPlanId: orion-x-2026-full-v3
+  testData:
+    timelines:
+      - 项目管理
+      - 电子电器架构
+      - 感知算法
+    
+    milestoneColumns:
+      - PC 项目团队
+      - E2 完成
+      - PA 项目批准
+    
+    gatewayColumns:
+      - PTR 项目技术要求
+      - E0 评审
+      - FC3 功能需求锁定
+
+# 选择器映射（便于维护）
+selectors:
+  matrixView:
+    container: '[data-testid="matrix-view-container"]'
+    table: '.ant-table'
+    
+  milestone:
+    cell: '[data-testid="milestone-cell-content"]'
+    icon: '[data-icon="flag"]'
+    dialog: '[data-testid="milestone-detail-dialog"]'
+    
+  gateway:
+    cell: '[data-testid="gateway-cell-content"]'
+    icon: '[data-icon="safety"]'
+    dialog: '[data-testid="gateway-detail-dialog"]'
+
+# 测试场景
+scenarios:
+  - name: 里程碑单元格显示测试
+    description: 验证里程碑列显示SSTS数量、版本、车型节点
+    steps:
+      - navigate: /orion-x-2026-full-v3
+      - click: 矩阵按钮
+      - click: 矩阵 V3 选项
+      - wait: 1000
+      - assert: 里程碑单元格可见
+      - assert: SSTS数量显示正确
+      
+  - name: 门禁单元格显示测试
+    description: 验证门禁列显示类型、进度、状态
+    steps:
+      - navigate: /orion-x-2026-full-v3
+      - click: 矩阵按钮
+      - click: 矩阵 V3 选项
+      - wait: 1000
+      - assert: 门禁单元格可见
+      - assert: 进度条显示正确
+      
+  - name: 详情对话框测试
+    description: 验证点击单元格打开对应详情对话框
+    steps:
+      - navigate: /orion-x-2026-full-v3
+      - click: 矩阵按钮
+      - click: 矩阵 V3 选项
+      - click: 里程碑单元格
+      - assert: 里程碑详情对话框打开
+      - assert: SSTS列表显示
+      - click: 关闭按钮
+      - click: 门禁单元格
+      - assert: 门禁详情对话框打开
+      - assert: 检查项列表显示

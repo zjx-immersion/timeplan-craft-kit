@@ -33,12 +33,15 @@ import dayjs from 'dayjs';
 const { RangePicker } = DatePicker;
 
 export interface MatrixViewV2Props {
+  /** 当前选中的plan（用于详情展示） */
   data: TimePlan;
+  /** 所有plans（用于矩阵视图显示全量数据） */
+  allPlans?: TimePlan[];
   className?: string;
   style?: React.CSSProperties;
 }
 
-export const MatrixViewV2: React.FC<MatrixViewV2Props> = ({ data, className, style }) => {
+export const MatrixViewV2: React.FC<MatrixViewV2Props> = ({ data, allPlans, className, style }) => {
   const { products, refreshProducts } = useProduct();
   const { teams, refreshTeams } = useTeam();
   
@@ -54,12 +57,15 @@ export const MatrixViewV2: React.FC<MatrixViewV2Props> = ({ data, className, sty
   });
   
   // 扩展Line数据（添加productId、teamId和effort）
+  // 只使用当前计划的数据，不加载所有计划
   const extendedLines = useMemo<LineExtended[]>(() => {
     // 使用数据增强工具，自动为Line添加Product和Team关联
     const enhancedPlan = enhanceTimePlan(data);
     
     // 在开发环境打印统计信息
     if (process.env.NODE_ENV === 'development') {
+      console.log(`[MatrixViewV2] 当前计划: ${data.name || data.id}`);
+      console.log(`[MatrixViewV2] 任务数: ${enhancedPlan.lines.length}`);
       printEnhancementStats(data);
     }
     

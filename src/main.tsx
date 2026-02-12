@@ -18,7 +18,7 @@ console.log('[main] 📥 加载原项目数据...');
 console.log('[main] 共有', allTimePlans.length, '个计划');
 
 // 数据版本号 - 当数据结构变化时更新此版本号
-const DATA_VERSION = '2.0.1'; // 修复日期序列化问题
+const DATA_VERSION = '2.0.3'; // 修复重复的line-pl-003数据，强制重新加载
 const VERSION_KEY = 'timeplan-data-version';
 
 // 检查数据版本
