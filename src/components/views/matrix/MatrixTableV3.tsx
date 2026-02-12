@@ -13,7 +13,7 @@ import type { ColumnsType } from 'antd/es/table';
 import {
   TeamOutlined,
   DashboardOutlined,
-  ProgressOutlined,
+  PercentageOutlined,
   FlagOutlined,
   FileTextOutlined,
 } from '@ant-design/icons';
@@ -122,7 +122,7 @@ const generateTooltipContent = (
         {
           label: '完成率',
           value: `${Math.round(content.completionRate * 100)}%`,
-          icon: <ProgressOutlined />,
+          icon: <PercentageOutlined />,
         },
       ],
       items: [
