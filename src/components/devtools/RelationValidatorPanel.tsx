@@ -13,8 +13,8 @@ import {
   CloseCircleOutlined,
 } from '@ant-design/icons';
 import type { TimePlan } from '@/types/timeplanSchema';
-import { validateRelations, autoFixRelations } from '@/utils/validation';
-import type { ValidationResult, RelationWarning } from '@/utils/validation';
+import { validateRelations, autoFixRelations } from '@/utils/validation/index';
+import type { ValidationResult, RelationWarning } from '@/utils/validation/index';
 
 export interface RelationValidatorPanelProps {
   plan: TimePlan;

@@ -10,7 +10,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { TimePlan, Timeline, Line, Relation } from '@/types/timeplanSchema';
-import { autoFixRelations } from '@/utils/validation';
+import { autoFixRelations } from '@/utils/validation/index';
 
 /**
  * 历史记录项
