@@ -27,6 +27,8 @@ import {
   EditOutlined,
   ExportOutlined,
   CloseCircleOutlined,
+  FileTextOutlined,
+  FileExcelOutlined,
 } from '@ant-design/icons';
 import { useSelectionStore } from '@/stores/selectionStore';
 
@@ -37,7 +39,7 @@ export interface BatchOperationBarProps {
   onBatchSetPriority: (priority: string) => void;
   onBatchAssignOwner: (owner: string) => void;
   onBatchEdit?: () => void; // Task 4.3: 新增批量编辑回调
-  onBatchExport?: () => void; // Task 4.3: 新增导出回调
+  onBatchExport?: (format?: 'json' | 'excel') => void; // Task 2.3: 增强导出（支持格式选择）
 }
 
 const BatchOperationBar: React.FC<BatchOperationBarProps> = ({
@@ -117,6 +119,22 @@ const BatchOperationBar: React.FC<BatchOperationBarProps> = ({
     },
   ];
 
+  // Task 2.3: 导出格式菜单
+  const exportMenuItems: MenuProps['items'] = [
+    {
+      key: 'json',
+      label: 'JSON格式',
+      icon: <FileTextOutlined />,
+      onClick: () => onBatchExport?.('json'),
+    },
+    {
+      key: 'excel',
+      label: 'Excel格式',
+      icon: <FileExcelOutlined />,
+      onClick: () => onBatchExport?.('excel'),
+    },
+  ];
+
   return (
     <div
       style={{
@@ -158,15 +176,13 @@ const BatchOperationBar: React.FC<BatchOperationBarProps> = ({
           </Button>
         )}
 
-        {/* 导出按钮 */}
+        {/* Task 2.3: 导出按钮（支持多种格式） */}
         {onBatchExport && (
-          <Button 
-            size="small" 
-            icon={<ExportOutlined />}
-            onClick={onBatchExport}
-          >
-            导出
-          </Button>
+          <Dropdown menu={{ items: exportMenuItems }} placement="bottomLeft">
+            <Button size="small" icon={<ExportOutlined />}>
+              导出
+            </Button>
+          </Dropdown>
         )}
 
         {/* 快捷操作：状态、优先级、负责人 */}

@@ -8,13 +8,17 @@
  */
 
 import React, { useMemo, useState, useCallback } from 'react';
-import { Card, Space, Typography, Tag, Statistic, Alert, Button, Tooltip, message } from 'antd';
+import { Card, Space, Typography, Tag, Statistic, Alert, Button, Tooltip, message, Dropdown } from 'antd';
+import type { MenuProps } from 'antd';
 import { 
   CalendarOutlined, 
   ProjectOutlined, 
   ClockCircleOutlined,
   CheckSquareOutlined,
-  BorderOutlined 
+  BorderOutlined,
+  ExportOutlined,
+  FileTextOutlined,
+  FileExcelOutlined,
 } from '@ant-design/icons';
 import { format } from 'date-fns';
 import { TimePlan, Line } from '@/types/timeplanSchema';
@@ -30,6 +34,7 @@ import GatewayDetailDialog from './matrix/GatewayDetailDialog';
 import BatchEditDialog from '@/components/dialogs/BatchEditDialog';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { useSelectionStore } from '@/stores/selectionStore';
+import { exportSelectedLinesToExcel } from '@/utils/excelExport';
 
 const { Title, Text } = Typography;
 
@@ -66,6 +71,22 @@ const MatrixViewV3: React.FC<MatrixViewV3Props> = ({ data, onViewChange, onDataC
     selectMultiple,
     getSelectedIds,
   } = useSelectionStore();
+
+  // Task 2.3: 导出格式菜单
+  const exportMenuItems: MenuProps['items'] = [
+    {
+      key: 'json',
+      label: 'JSON格式',
+      icon: <FileTextOutlined />,
+      onClick: handleBatchExportJSON,
+    },
+    {
+      key: 'excel',
+      label: 'Excel格式',
+      icon: <FileExcelOutlined />,
+      onClick: handleBatchExportExcel,
+    },
+  ];
 
   // 计算矩阵数据
   const matrixData = useMemo<MatrixDataV3>(() => {
@@ -200,16 +221,16 @@ const MatrixViewV3: React.FC<MatrixViewV3Props> = ({ data, onViewChange, onDataC
   }, [data, onDataChange, selectedLineIds]);
 
   /**
-   * Task 4.8: 批量导出任务
+   * Task 4.8: 批量导出任务（JSON格式）
    */
-  const handleBatchExport = useCallback(() => {
+  const handleBatchExportJSON = useCallback(() => {
     if (selectedLineIds.size === 0) {
       message.warning('请先选择要导出的任务');
       return;
     }
 
     try {
-      console.log('[MatrixViewV3] 📤 批量导出任务:', selectedLineIds.size);
+      console.log('[MatrixViewV3] 📤 批量导出任务(JSON):', selectedLineIds.size);
       
       const selectedIdSet = selectedLineIds;
       const selectedLines = data.lines.filter((line) => selectedIdSet.has(line.id));
@@ -245,9 +266,32 @@ const MatrixViewV3: React.FC<MatrixViewV3Props> = ({ data, onViewChange, onDataC
       URL.revokeObjectURL(url);
       
       message.success(`已导出 ${selectedLines.length} 个任务到 ${filename}`);
-      console.log('[MatrixViewV3] ✅ 批量导出完成:', filename);
+      console.log('[MatrixViewV3] ✅ JSON导出完成:', filename);
     } catch (error) {
-      console.error('[MatrixViewV3] ❌ 批量导出失败:', error);
+      console.error('[MatrixViewV3] ❌ JSON导出失败:', error);
+      message.error('导出失败，请重试');
+    }
+  }, [data, selectedLineIds]);
+
+  /**
+   * Task 2.3: 批量导出任务（Excel格式）
+   */
+  const handleBatchExportExcel = useCallback(() => {
+    if (selectedLineIds.size === 0) {
+      message.warning('请先选择要导出的任务');
+      return;
+    }
+
+    try {
+      console.log('[MatrixViewV3] 📊 批量导出任务(Excel):', selectedLineIds.size);
+      
+      const selectedIds = Array.from(selectedLineIds);
+      exportSelectedLinesToExcel(data, selectedIds);
+      
+      message.success(`已导出 ${selectedIds.length} 个任务到Excel文件`);
+      console.log('[MatrixViewV3] ✅ Excel导出完成');
+    } catch (error) {
+      console.error('[MatrixViewV3] ❌ Excel导出失败:', error);
       message.error('导出失败，请重试');
     }
   }, [data, selectedLineIds]);
@@ -356,12 +400,12 @@ const MatrixViewV3: React.FC<MatrixViewV3Props> = ({ data, onViewChange, onDataC
               >
                 批量编辑
               </Button>
-              <Button 
-                size="small"
-                onClick={handleBatchExport}
-              >
-                导出
-              </Button>
+              {/* Task 2.3: 导出按钮（支持多种格式） */}
+              <Dropdown menu={{ items: exportMenuItems }} placement="bottomLeft">
+                <Button size="small" icon={<ExportOutlined />}>
+                  导出
+                </Button>
+              </Dropdown>
             </Space>
           </div>
         </Card>

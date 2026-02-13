@@ -29,6 +29,7 @@ import BatchDeleteDialog from '@/components/dialogs/BatchDeleteDialog';
 import type { ColumnConfig } from './column';
 import { getCurrentColumns } from './column';
 import { useSelectionStore } from '@/stores/selectionStore';
+import { exportSelectedLinesToExcel } from '@/utils/excelExport';
 
 export interface EnhancedTableViewProps {
   data: TimePlan;
@@ -339,23 +340,21 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
   }, [data, onDataChange, selectedRowKeys, clearSelection]);
 
   /**
-   * Task 4.7: 批量导出选中的任务
+   * Task 4.7: 批量导出选中的任务（JSON格式）
    */
-  const handleBatchExport = useCallback(() => {
+  const handleBatchExportJSON = useCallback(() => {
     if (selectedRowKeys.length === 0) {
       message.warning('请先选择要导出的任务');
       return;
     }
 
     try {
-      console.log('[EnhancedTableView] 📤 批量导出任务:', selectedRowKeys.length);
+      console.log('[EnhancedTableView] 📤 批量导出任务(JSON):', selectedRowKeys.length);
       
       const selectedIdSet = new Set(selectedRowKeys);
-      
-      // Task 4.7: 过滤选中的任务
       const selectedLines = data.lines.filter((line) => selectedIdSet.has(line.id));
       
-      // Task 4.7: 构建导出数据（包含元数据）
+      // 构建导出数据（包含元数据）
       const exportData = {
         metadata: {
           exportDate: new Date().toISOString(),
@@ -367,34 +366,64 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
         lines: selectedLines,
       };
       
-      // Task 4.7: 导出为JSON文件
+      // 导出为JSON文件
       const jsonString = JSON.stringify(exportData, null, 2);
       const blob = new Blob([jsonString], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       
-      // Task 4.7: 文件命名规范
+      // 文件命名规范
       const timestamp = format(new Date(), 'yyyyMMdd_HHmmss');
       const filename = `timeplan_export_${selectedLines.length}tasks_${timestamp}.json`;
       
-      // 创建下载链接
       const link = document.createElement('a');
       link.href = url;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
-      // 释放URL对象
       URL.revokeObjectURL(url);
       
       message.success(`已导出 ${selectedLines.length} 个任务到 ${filename}`);
-      
-      console.log('[EnhancedTableView] ✅ 批量导出完成:', filename);
+      console.log('[EnhancedTableView] ✅ JSON导出完成:', filename);
     } catch (error) {
-      console.error('[EnhancedTableView] ❌ 批量导出失败:', error);
+      console.error('[EnhancedTableView] ❌ JSON导出失败:', error);
       message.error('导出失败，请重试');
     }
   }, [data, selectedRowKeys]);
+
+  /**
+   * Task 2.3: 批量导出选中的任务（Excel格式）
+   */
+  const handleBatchExportExcel = useCallback(() => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要导出的任务');
+      return;
+    }
+
+    try {
+      console.log('[EnhancedTableView] 📊 批量导出任务(Excel):', selectedRowKeys.length);
+      
+      // 使用新的Excel导出工具
+      exportSelectedLinesToExcel(data, selectedRowKeys as string[]);
+      
+      message.success(`已导出 ${selectedRowKeys.length} 个任务到Excel文件`);
+      console.log('[EnhancedTableView] ✅ Excel导出完成');
+    } catch (error) {
+      console.error('[EnhancedTableView] ❌ Excel导出失败:', error);
+      message.error('导出失败，请重试');
+    }
+  }, [data, selectedRowKeys]);
+
+  /**
+   * 统一导出入口（支持多种格式）
+   */
+  const handleBatchExport = useCallback((format: 'json' | 'excel' = 'json') => {
+    if (format === 'excel') {
+      handleBatchExportExcel();
+    } else {
+      handleBatchExportJSON();
+    }
+  }, [handleBatchExportJSON, handleBatchExportExcel]);
 
   /**
    * 批量设置状态

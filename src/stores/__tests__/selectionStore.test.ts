@@ -10,6 +10,7 @@
  * @date 2026-02-12
  */
 
+import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSelectionStore } from '../selectionStore';
 
