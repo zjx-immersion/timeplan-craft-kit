@@ -17,9 +17,17 @@ import { Line } from '@/types/timeplanSchema';
 import { timelineColors, timelineShadows, timelineTransitions } from '@/theme/timelineColors';
 import ConnectionPoints from './ConnectionPoints';
 import { Tooltip } from 'antd';
+import {
+  CalendarOutlined,
+  TeamOutlined,
+  FieldTimeOutlined,
+  FlagOutlined,
+} from '@ant-design/icons';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { parseDateAsLocal } from '@/utils/dateUtils';
+import { EnhancedTooltip } from '@/components/common/EnhancedTooltip';
+import type { TooltipContent } from '@/components/common/EnhancedTooltip';
 
 // ✅ 性能优化：将默认connectionMode移到组件外部，避免每次渲染创建新对象
 const DEFAULT_CONNECTION_MODE = { lineId: null, direction: 'from' as const };
@@ -41,6 +49,8 @@ interface LineRendererProps {
   onCompleteConnection?: (targetLineId: string) => void;
   // 关键路径
   isCriticalPath?: boolean;
+  // 高亮状态（从矩阵跳转时）
+  isHighlighted?: boolean;
 }
 
 /**
@@ -62,6 +72,7 @@ const BarRenderer: React.FC<LineRendererProps> = memo(({
   onStartConnection,
   onCompleteConnection,
   isCriticalPath = false,
+  isHighlighted = false,
 }) => {
   // 🎨 获取节点颜色（优先级：attributes.color > line.color > 默认Teal色）
   // ✅ 修复：使用透明度版本，参考源项目
@@ -71,24 +82,66 @@ const BarRenderer: React.FC<LineRendererProps> = memo(({
   // 悬停状态
   const [isHovering, setIsHovering] = React.useState(false);
   
-  // ✅ 格式化日期范围用于Tooltip（使用统一的日期解析）
-  const dateRangeText = React.useMemo(() => {
-    try {
-      const startDate = parseDateAsLocal(line.startDate);
-      const endDate = parseDateAsLocal(line.endDate);
-      return `${format(startDate, 'yyyy-MM-dd', { locale: zhCN })} ~ ${format(endDate, 'yyyy-MM-dd', { locale: zhCN })}`;
-    } catch (error) {
-      return '';
-    }
-  }, [line.startDate, line.endDate]);
+  // ✅ 生成增强的Tooltip内容
+  const tooltipContent = React.useMemo((): TooltipContent => {
+    const startDate = parseDateAsLocal(line.startDate);
+    const endDate = parseDateAsLocal(line.endDate);
+    const startDateStr = format(startDate, 'yyyy-MM-dd', { locale: zhCN });
+    const endDateStr = format(endDate, 'yyyy-MM-dd', { locale: zhCN });
+    
+    const effort = line.attributes?.effort || 0;
+    const owner = line.attributes?.owner || '未指定';
+    const priority = line.attributes?.priority || 'P3';
+    const status = line.attributes?.status || line.label?.includes('完成') ? '已完成' : '进行中';
+    
+    return {
+      summary: line.description || line.label,
+      stats: [
+        {
+          label: '开始日期',
+          value: startDateStr,
+          icon: <CalendarOutlined />,
+        },
+        {
+          label: '结束日期',
+          value: endDateStr,
+          icon: <CalendarOutlined />,
+        },
+        effort > 0 ? {
+          label: '工作量',
+          value: `${effort}人/天`,
+          icon: <FieldTimeOutlined />,
+        } : null,
+        {
+          label: '负责人',
+          value: owner,
+          icon: <TeamOutlined />,
+        },
+      ].filter(Boolean) as any,
+      items: [
+        {
+          label: '优先级',
+          value: priority,
+          status: priority === 'P0' ? 'error' : priority === 'P1' ? 'warning' : 'default',
+        },
+        {
+          label: '状态',
+          value: status,
+          status: status === '已完成' ? 'success' : 'default',
+        },
+      ],
+    };
+  }, [line]);
   
   return (
-    <Tooltip 
-      title={dateRangeText} 
+    <EnhancedTooltip
+      title={line.name || line.label}
+      content={tooltipContent}
       placement="top"
-      mouseEnterDelay={0.5}
     >
     <div
+      data-line-id={line.id}
+      className={isHighlighted ? 'line-highlighted' : undefined}
       onClick={onClick}
       onMouseDown={onMouseDown}
       onMouseEnter={() => setIsHovering(true)}
@@ -112,25 +165,30 @@ const BarRenderer: React.FC<LineRendererProps> = memo(({
         borderRadius: 4,
         // 🎯 选中样式：双层ring效果
         // 🎯 关键路径样式：加粗红色边框 + 红色阴影
-        border: isCriticalPath
-          ? `3px solid #ef4444` // 红色加粗边框
-          : (isSelected
-              ? `2px solid ${timelineColors.selected}`
-              : `1px solid rgba(0,0,0,0.04)`),
-        boxShadow: isCriticalPath
-          ? `0 0 8px rgba(239, 68, 68, 0.5), 0 0 16px rgba(239, 68, 68, 0.3)` // 红色阴影
-          : (isSelected 
-              ? `0 0 0 2px ${timelineColors.selected}, 0 0 0 5px ${timelineColors.selectedRing}, 0 4px 12px rgba(0,0,0,0.15)` // 增强ring + 阴影
-              : (isInteracting
-                  ? timelineShadows.dragging
-                  : (isHovering ? timelineShadows.nodeMd : timelineShadows.nodeSm))),
+        // 🎯 高亮样式：优先级高于其他样式
+        border: isHighlighted
+          ? `2px solid #1890ff` // 高亮时蓝色边框
+          : (isCriticalPath
+              ? `3px solid #ef4444` // 红色加粗边框
+              : (isSelected
+                  ? `2px solid ${timelineColors.selected}`
+                  : `1px solid rgba(0,0,0,0.04)`)),
+        boxShadow: isHighlighted
+          ? `0 0 20px 5px rgba(24, 144, 255, 0.6)` // 高亮时蓝色阴影
+          : (isCriticalPath
+              ? `0 0 8px rgba(239, 68, 68, 0.5), 0 0 16px rgba(239, 68, 68, 0.3)` // 红色阴影
+              : (isSelected 
+                  ? `0 0 0 2px ${timelineColors.selected}, 0 0 0 5px ${timelineColors.selectedRing}, 0 4px 12px rgba(0,0,0,0.15)` // 增强ring + 阴影
+                  : (isInteracting
+                      ? timelineShadows.dragging
+                      : (isHovering ? timelineShadows.nodeMd : timelineShadows.nodeSm)))),
         cursor: isEditMode ? (isInteracting ? 'grabbing' : 'grab') : 'pointer',
         display: 'flex',
         alignItems: 'center',
         padding: `0 6px`,
         transition: isInteracting ? 'none' : `${timelineTransitions.normal}, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)`,
-        zIndex: isSelected ? 10 : (isInteracting ? 5 : 1),  // ✅ 选中时更高zIndex
-        opacity: isInteracting ? 0.7 : (isSelected ? 0.85 : 0.6),  // ✅ 选中时降低透明度
+        zIndex: isHighlighted ? 100 : (isSelected ? 10 : (isInteracting ? 5 : 1)),  // 高亮时最高zIndex
+        opacity: isInteracting ? 0.7 : (isSelected || isHighlighted ? 0.85 : 0.6),
       }}
     >
       {/* ✅ 左侧调整手柄 - 放在连线点右侧 */}
@@ -233,7 +291,7 @@ const BarRenderer: React.FC<LineRendererProps> = memo(({
         />
       )}
     </div>
-    </Tooltip>
+    </EnhancedTooltip>
   );
 }); // ✅ 闭合memo
 

@@ -12,18 +12,24 @@
  */
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Table, Input, Button, Space, Tag, Tooltip, Progress, message } from 'antd';
+import { Table, Input, Button, Space, Tag, Tooltip, Progress, message, Checkbox } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import {
   SearchOutlined,
+  CheckSquareOutlined,
+  BorderOutlined,
 } from '@ant-design/icons';
 import type { TimePlan, Line } from '@/types/timeplanSchema';
 import { format, differenceInDays } from 'date-fns';
 import EditableCell from './EditableCell';
 import type { SelectOption } from './EditableCell';
 import BatchOperationBar from './BatchOperationBar';
+import BatchEditDialog from '@/components/dialogs/BatchEditDialog';
+import BatchDeleteDialog from '@/components/dialogs/BatchDeleteDialog';
 import type { ColumnConfig } from './column';
 import { getCurrentColumns } from './column';
+import { useSelectionStore } from '@/stores/selectionStore';
+import { exportSelectedLinesToExcel } from '@/utils/excelExport';
 
 export interface EnhancedTableViewProps {
   data: TimePlan;
@@ -65,21 +71,43 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
   onSelectedRowsChange,
 }) => {
   const [searchText, setSearchText] = useState('');
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [pagination, setPagination] = useState<TablePaginationConfig>({
     current: 1,
     pageSize: 50,
     showSizeChanger: true,
     showTotal: (total) => `共 ${total} 条`,
   });
+  // Task 4.4: 批量编辑对话框状态
+  const [batchEditVisible, setBatchEditVisible] = useState(false);
+  
+  // Task 4.6: 批量删除对话框状态
+  const [batchDeleteVisible, setBatchDeleteVisible] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // 使用外部列配置或默认配置
   const columnConfig = externalColumnConfig || getCurrentColumns();
   
+  // ========== Task 4.2: 集成SelectionStore ==========
+  const {
+    selectedLineIds,
+    selectionMode,
+    toggleSelection,
+    selectAll,
+    clearSelection,
+    enterSelectionMode,
+    exitSelectionMode,
+    getSelectedIds,
+  } = useSelectionStore();
+  
+  // 将Set转换为数组用于Table的rowSelection
+  const selectedRowKeys = useMemo(() => {
+    return Array.from(selectedLineIds);
+  }, [selectedLineIds]);
+  
   // 当选中行变化时通知父组件
   useEffect(() => {
     if (onSelectedRowsChange) {
-      onSelectedRowsChange(selectedRowKeys as string[]);
+      onSelectedRowsChange(selectedRowKeys);
     }
   }, [selectedRowKeys, onSelectedRowsChange]);
 
@@ -254,25 +282,148 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
   }, [data, onDataChange]);
 
   /**
-   * 批量删除
+   * Task 4.6: 打开批量删除确认对话框
    */
   const handleBatchDelete = useCallback(() => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要删除的任务');
+      return;
+    }
+    console.log('[EnhancedTableView] 🗑️ 打开批量删除对话框:', selectedRowKeys.length);
+    setBatchDeleteVisible(true);
+  }, [selectedRowKeys]);
+
+  /**
+   * Task 4.6: 确认批量删除
+   */
+  const handleConfirmBatchDelete = useCallback(async () => {
     if (!onDataChange || selectedRowKeys.length === 0) return;
 
-    const updatedLines = data.lines.filter((l) => !selectedRowKeys.includes(l.id));
-    const updatedRelations = data.relations.filter(
-      (r) => !selectedRowKeys.includes(r.from) && !selectedRowKeys.includes(r.to)
-    );
+    setIsDeleting(true);
+    
+    try {
+      console.log('[EnhancedTableView] 🗑️ 执行批量删除:', selectedRowKeys.length);
+      
+      const selectedIdSet = new Set(selectedRowKeys);
+      
+      // 删除选中的任务
+      const updatedLines = data.lines.filter((l) => !selectedIdSet.has(l.id));
+      
+      // 删除相关的关系
+      const updatedRelations = data.relations.filter(
+        (r) => !selectedIdSet.has(r.from) && !selectedIdSet.has(r.to)
+      );
 
-    onDataChange({
-      ...data,
-      lines: updatedLines,
-      relations: updatedRelations,
-    });
+      const deletedRelationCount = data.relations.length - updatedRelations.length;
 
-    setSelectedRowKeys([]);
-    message.success(`已删除 ${selectedRowKeys.length} 个任务`);
-  }, [data, onDataChange, selectedRowKeys]);
+      onDataChange({
+        ...data,
+        lines: updatedLines,
+        relations: updatedRelations,
+      });
+
+      // 清除选择
+      clearSelection();
+
+      message.success(`已删除 ${selectedRowKeys.length} 个任务${deletedRelationCount > 0 ? `和 ${deletedRelationCount} 个关系` : ''}`);
+      
+      console.log('[EnhancedTableView] ✅ 批量删除完成');
+      
+      // 关闭对话框
+      setBatchDeleteVisible(false);
+    } catch (error) {
+      console.error('[EnhancedTableView] ❌ 批量删除失败:', error);
+      message.error('删除失败，请重试');
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [data, onDataChange, selectedRowKeys, clearSelection]);
+
+  /**
+   * Task 4.7: 批量导出选中的任务（JSON格式）
+   */
+  const handleBatchExportJSON = useCallback(() => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要导出的任务');
+      return;
+    }
+
+    try {
+      console.log('[EnhancedTableView] 📤 批量导出任务(JSON):', selectedRowKeys.length);
+      
+      const selectedIdSet = new Set(selectedRowKeys);
+      const selectedLines = data.lines.filter((line) => selectedIdSet.has(line.id));
+      
+      // 构建导出数据（包含元数据）
+      const exportData = {
+        metadata: {
+          exportDate: new Date().toISOString(),
+          count: selectedLines.length,
+          planName: data.name || 'TimePlan',
+          exportedBy: 'TimePlan Craft Kit',
+          version: '1.0.0',
+        },
+        lines: selectedLines,
+      };
+      
+      // 导出为JSON文件
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      // 文件命名规范
+      const timestamp = format(new Date(), 'yyyyMMdd_HHmmss');
+      const filename = `timeplan_export_${selectedLines.length}tasks_${timestamp}.json`;
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      message.success(`已导出 ${selectedLines.length} 个任务到 ${filename}`);
+      console.log('[EnhancedTableView] ✅ JSON导出完成:', filename);
+    } catch (error) {
+      console.error('[EnhancedTableView] ❌ JSON导出失败:', error);
+      message.error('导出失败，请重试');
+    }
+  }, [data, selectedRowKeys]);
+
+  /**
+   * Task 2.3: 批量导出选中的任务（Excel格式）
+   */
+  const handleBatchExportExcel = useCallback(() => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要导出的任务');
+      return;
+    }
+
+    try {
+      console.log('[EnhancedTableView] 📊 批量导出任务(Excel):', selectedRowKeys.length);
+      
+      // 使用新的Excel导出工具
+      exportSelectedLinesToExcel(data, selectedRowKeys as string[]);
+      
+      message.success(`已导出 ${selectedRowKeys.length} 个任务到Excel文件`);
+      console.log('[EnhancedTableView] ✅ Excel导出完成');
+    } catch (error) {
+      console.error('[EnhancedTableView] ❌ Excel导出失败:', error);
+      message.error('导出失败，请重试');
+    }
+  }, [data, selectedRowKeys]);
+
+  /**
+   * 统一导出入口（支持多种格式）
+   */
+  const handleBatchExport = useCallback((format: 'json' | 'excel' = 'json') => {
+    if (format === 'excel') {
+      handleBatchExportExcel();
+    } else {
+      handleBatchExportJSON();
+    }
+  }, [handleBatchExportJSON, handleBatchExportExcel]);
 
   /**
    * 批量设置状态
@@ -353,6 +504,53 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
     });
 
     message.success(`已分配负责人给 ${selectedRowKeys.length} 个任务`);
+  }, [data, onDataChange, selectedRowKeys]);
+
+  /**
+   * Task 4.4: 打开批量编辑对话框
+   */
+  const handleOpenBatchEdit = useCallback(() => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要编辑的任务');
+      return;
+    }
+    console.log('[EnhancedTableView] 📝 打开批量编辑对话框:', selectedRowKeys.length);
+    setBatchEditVisible(true);
+  }, [selectedRowKeys]);
+
+  /**
+   * Task 4.4: 批量更新任务
+   */
+  const handleBatchUpdate = useCallback(async (updates: Partial<Line>) => {
+    if (!onDataChange || selectedRowKeys.length === 0) {
+      throw new Error('无法更新：缺少必要的参数');
+    }
+
+    console.log('[EnhancedTableView] 🔄 批量更新任务:', {
+      count: selectedRowKeys.length,
+      updates,
+    });
+
+    const selectedIdSet = new Set(selectedRowKeys);
+    const updatedLines = data.lines.map((line) => {
+      if (selectedIdSet.has(line.id)) {
+        return {
+          ...line,
+          attributes: {
+            ...line.attributes,
+            ...(updates.attributes || {}),
+          },
+        };
+      }
+      return line;
+    });
+
+    onDataChange({
+      ...data,
+      lines: updatedLines,
+    });
+
+    console.log('[EnhancedTableView] ✅ 批量更新完成');
   }, [data, onDataChange, selectedRowKeys]);
 
   // 定义列
@@ -600,22 +798,68 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
     return allColumns;
   }, [handleCellSave, readonly, columnConfig]);
 
-  // 行选择配置
-  const rowSelection = useMemo(() => ({
-    selectedRowKeys,
-    onChange: (newSelectedRowKeys: React.Key[]) => {
-      console.log('[EnhancedTableView] 选中行变更:', newSelectedRowKeys);
-      setSelectedRowKeys(newSelectedRowKeys);
-    },
-  }), [selectedRowKeys]);
+  // ========== Task 4.2: 更新行选择配置 ==========
+  // 处理全选/取消全选
+  const handleSelectAll = useCallback((selected: boolean) => {
+    if (selected) {
+      const allLineIds = filteredData.map(row => row.id);
+      selectAll(allLineIds);
+      console.log('[EnhancedTableView] ✅ 全选:', allLineIds.length, '个任务');
+    } else {
+      clearSelection();
+      console.log('[EnhancedTableView] ❌ 取消全选');
+    }
+  }, [filteredData, selectAll, clearSelection]);
+  
+  // 行选择配置（使用SelectionStore）
+  const rowSelection = useMemo(() => {
+    // 如果不在选择模式或只读模式，不显示复选框
+    if (readonly || !selectionMode) {
+      return undefined;
+    }
+    
+    return {
+      selectedRowKeys,
+      onChange: (newSelectedRowKeys: React.Key[]) => {
+        console.log('[EnhancedTableView] 🔄 选中行变更:', newSelectedRowKeys.length);
+        
+        // 计算新增和移除的项
+        const currentSet = new Set(selectedRowKeys);
+        const newSet = new Set(newSelectedRowKeys);
+        
+        newSelectedRowKeys.forEach(key => {
+          if (!currentSet.has(key)) {
+            toggleSelection(key as string);
+          }
+        });
+        
+        selectedRowKeys.forEach(key => {
+          if (!newSet.has(key)) {
+            toggleSelection(key as string);
+          }
+        });
+      },
+      // 自定义全选复选框
+      columnTitle: (
+        <Checkbox
+          checked={selectedRowKeys.length > 0 && selectedRowKeys.length === filteredData.length}
+          indeterminate={selectedRowKeys.length > 0 && selectedRowKeys.length < filteredData.length}
+          onChange={(e) => handleSelectAll(e.target.checked)}
+        />
+      ),
+      // 固定复选框列在左侧
+      fixed: true,
+    };
+  }, [selectedRowKeys, filteredData, readonly, selectionMode, toggleSelection, handleSelectAll]);
 
-  // 调试输出
+  // Task 4.2: 调试输出
   console.log('[EnhancedTableView] 渲染状态:', {
     readonly,
     showSearch,
+    selectionMode,
     dataSourceCount: filteredData.length,
     selectedCount: selectedRowKeys.length,
-    hasRowSelection: !readonly,
+    hasRowSelection: !readonly && selectionMode,
   });
 
   return (
@@ -643,12 +887,32 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
           )}
         </Space>
 
-        {/* 工具栏按钮已移至UnifiedTimelinePanelV2 */}
-        <Space></Space>
+        {/* Task 4.2: 选择模式切换按钮 */}
+        <Space>
+          {!readonly && (
+            <Tooltip title={selectionMode ? '退出选择模式' : '进入选择模式'}>
+              <Button
+                type={selectionMode ? 'primary' : 'default'}
+                icon={selectionMode ? <CheckSquareOutlined /> : <BorderOutlined />}
+                onClick={() => {
+                  if (selectionMode) {
+                    exitSelectionMode();
+                    console.log('[EnhancedTableView] 🚪 退出选择模式');
+                  } else {
+                    enterSelectionMode();
+                    console.log('[EnhancedTableView] 🎯 进入选择模式');
+                  }
+                }}
+              >
+                {selectionMode ? '退出选择' : '批量选择'}
+              </Button>
+            </Tooltip>
+          )}
+        </Space>
       </Space>
 
-      {/* 批量操作栏 */}
-      {!readonly && selectedRowKeys.length > 0 && (
+      {/* Task 4.2 & 4.4 & 4.7: 批量操作栏（仅在选择模式下显示） */}
+      {!readonly && selectionMode && selectedRowKeys.length > 0 && (
         <div style={{ marginBottom: 16, flexShrink: 0 }}>
           <BatchOperationBar
             selectedCount={selectedRowKeys.length}
@@ -656,6 +920,8 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
             onBatchSetStatus={handleBatchSetStatus}
             onBatchSetPriority={handleBatchSetPriority}
             onBatchAssignOwner={handleBatchAssignOwner}
+            onBatchEdit={handleOpenBatchEdit}
+            onBatchExport={handleBatchExport}
           />
         </div>
       )}
@@ -663,7 +929,7 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
       {/* 表格容器 - 填充所有剩余空间 */}
       <div style={{ flex: 1, minHeight: 0 }}>
         <Table<TableRow>
-          rowSelection={readonly ? undefined : rowSelection}
+          rowSelection={rowSelection}
           columns={columns}
           dataSource={filteredData}
           pagination={{
@@ -673,7 +939,7 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
           onChange={(newPagination) => setPagination(newPagination)}
           scroll={{ 
             x: 1500, 
-            y: selectedRowKeys.length > 0 
+            y: selectionMode && selectedRowKeys.length > 0 
               ? 'calc(100vh - 340px)'  // 有批量操作栏时减去更多高度
               : 'calc(100vh - 240px)'   // 没有批量操作栏时
           }}
@@ -681,6 +947,24 @@ export const EnhancedTableView: React.FC<EnhancedTableViewProps> = ({
           sticky
         />
       </div>
+
+      {/* Task 4.4: 批量编辑对话框 */}
+      <BatchEditDialog
+        visible={batchEditVisible}
+        selectedLineIds={selectedRowKeys as string[]}
+        onClose={() => setBatchEditVisible(false)}
+        onBatchUpdate={handleBatchUpdate}
+      />
+
+      {/* Task 4.6: 批量删除确认对话框 */}
+      <BatchDeleteDialog
+        visible={batchDeleteVisible}
+        selectedLineIds={selectedRowKeys as string[]}
+        data={data}
+        onClose={() => setBatchDeleteVisible(false)}
+        onConfirm={handleConfirmBatchDelete}
+        loading={isDeleting}
+      />
     </div>
   );
 };

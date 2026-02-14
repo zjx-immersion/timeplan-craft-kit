@@ -75,6 +75,8 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
 }) => {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [mousePosition, setMousePosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  // ✅ 选中时的鼠标位置（只在点击时更新，避免hover时改变tooltip位置）
+  const [selectedPosition, setSelectedPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   
   // 构建 Line 位置映射
   const linePositions = useMemo(() => {
@@ -302,12 +304,13 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
                   onMouseEnter={() => setHoveredId(relation.id)}
                   onMouseLeave={() => setHoveredId(null)}
                   onMouseMove={(e) => {
+                    // ✅ 仅用于hover时的视觉反馈，不影响tooltip显示位置
                     setMousePosition({ x: e.clientX, y: e.clientY });
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    // 更新鼠标位置，用于显示 Tooltip
-                    setMousePosition({ x: e.clientX, y: e.clientY });
+                    // ✅ 点击时记录位置，用于显示 Tooltip
+                    setSelectedPosition({ x: e.clientX, y: e.clientY });
                     // ✅ 在查看模式和编辑模式下都允许点击选中
                     if (onRelationClick) {
                       onRelationClick(relation.id);
@@ -416,7 +419,7 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
       </g>
     </svg>
     
-    {/* ✅ 选中时显示详细 Tooltip */}
+    {/* ✅ 选中时显示详细 Tooltip（点击连线后显示，非hover） */}
     {selectedRelationId && (() => {
       const selectedRelation = relations.find(r => r.id === selectedRelationId);
       if (!selectedRelation) return null;
@@ -431,8 +434,9 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
           relation={selectedRelation}
           fromLine={fromLine}
           toLine={toLine}
-          position={mousePosition}
+          position={selectedPosition}
           isCriticalPath={isCriticalPath}
+          onClose={() => onRelationClick?.(selectedRelationId)} // 点击关闭按钮，取消选中
         />
       );
     })()}

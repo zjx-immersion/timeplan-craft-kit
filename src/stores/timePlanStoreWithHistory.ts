@@ -10,6 +10,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { TimePlan, Timeline, Line, Relation } from '@/types/timeplanSchema';
+import { autoFixRelations } from '@/utils/validation/index';
 
 /**
  * 历史记录项
@@ -58,6 +59,12 @@ interface TimePlanStateWithHistory {
   
   // Actions - 批量操作
   batchUpdateLines: (planId: string, updates: Array<{ lineId: string; updates: Partial<Line> }>) => void;
+  
+  // Task 4.5: 批量更新多个Line（应用相同的更新）
+  batchUpdateLinesSameValue: (planId: string, lineIds: string[], updates: Partial<Line>) => void;
+  
+  // Task 4.6: 批量删除多个Line及其相关关系
+  batchDeleteLines: (planId: string, lineIds: string[]) => { deletedLineCount: number; deletedRelationCount: number };
   
   // Actions - 历史记录管理
   undo: () => void;
@@ -172,7 +179,32 @@ export const useTimePlanStoreWithHistory = create<TimePlanStateWithHistory>()(
       // 项目管理
       setPlans: (plans) => {
         get().saveSnapshot();
-        set({ plans });
+        
+        // 验证并修复每个计划的关系数据
+        const validatedPlans = plans.map(plan => {
+          if (!plan.relations || plan.relations.length === 0) {
+            return plan;
+          }
+          
+          // 自动修复无效关系
+          const { fixed, removed, warnings } = autoFixRelations(
+            plan.relations,
+            plan.lines
+          );
+          
+          if (removed > 0) {
+            console.warn(
+              `[TimePlanStore] 计划 "${plan.name}" 已移除 ${removed} 个无效关系`
+            );
+          }
+          
+          return {
+            ...plan,
+            relations: fixed,
+          };
+        });
+        
+        set({ plans: validatedPlans });
       },
       
       addPlan: (plan) => {
@@ -384,87 +416,214 @@ export const useTimePlanStoreWithHistory = create<TimePlanStateWithHistory>()(
           }),
         }));
       },
+      
+      /**
+       * Task 4.5: 批量更新多个Line（应用相同的更新）
+       * 
+       * 优化：使用Set加速查找，一次性更新状态
+       * 性能目标：1000任务 < 100ms
+       */
+      batchUpdateLinesSameValue: (planId, lineIds, updates) => {
+        console.log('[TimePlanStore] 🔄 批量更新任务（相同值）:', {
+          planId,
+          lineCount: lineIds.length,
+          updates,
+        });
+        
+        const startTime = performance.now();
+        
+        get().saveSnapshot();
+        
+        // Task 4.5: 使用Set加速查找
+        const lineIdSet = new Set(lineIds);
+        
+        set((state) => ({
+          plans: state.plans.map((p) => {
+            if (p.id !== planId) return p;
+            
+            // Task 4.5: 一次性更新所有匹配的lines
+            const updatedLines = p.lines.map((line) => {
+              if (lineIdSet.has(line.id)) {
+                // 合并attributes（如果updates中有attributes字段）
+                const mergedAttributes = updates.attributes
+                  ? { ...line.attributes, ...updates.attributes }
+                  : line.attributes;
+                
+                return {
+                  ...line,
+                  ...updates,
+                  attributes: mergedAttributes,
+                  updatedAt: new Date(),
+                };
+              }
+              return line;
+            });
+            
+            return {
+              ...p,
+              lines: updatedLines,
+              updatedAt: new Date(),
+            };
+          }),
+        }));
+        
+        const endTime = performance.now();
+        const duration = endTime - startTime;
+        
+        console.log('[TimePlanStore] ✅ 批量更新完成:', {
+          lineCount: lineIds.length,
+          duration: `${duration.toFixed(2)}ms`,
+          performanceOK: duration < 100,
+        });
+        
+        // Task 4.5: 验收标准 - 性能良好（1000任务 < 100ms）
+        if (lineIds.length >= 100 && duration >= 100) {
+          console.warn(`[TimePlanStore] ⚠️ 性能警告: ${lineIds.length}个任务更新耗时${duration.toFixed(2)}ms`);
+        }
+      },
+      
+      /**
+       * Task 4.6: 批量删除多个Line及其相关关系
+       * 
+       * @returns 返回删除的任务数和关系数
+       */
+      batchDeleteLines: (planId, lineIds) => {
+        console.log('[TimePlanStore] 🗑️ 批量删除任务:', {
+          planId,
+          lineCount: lineIds.length,
+        });
+        
+        get().saveSnapshot();
+        
+        // Task 4.6: 使用Set加速查找
+        const lineIdSet = new Set(lineIds);
+        let deletedLineCount = 0;
+        let deletedRelationCount = 0;
+        
+        set((state) => ({
+          plans: state.plans.map((p) => {
+            if (p.id !== planId) return p;
+            
+            // Task 4.6: 删除选中的任务
+            const remainingLines = p.lines.filter((line) => {
+              if (lineIdSet.has(line.id)) {
+                deletedLineCount++;
+                return false;
+              }
+              return true;
+            });
+            
+            // Task 4.6: 删除相关的关系
+            const remainingRelations = p.relations.filter((relation) => {
+              if (lineIdSet.has(relation.from) || lineIdSet.has(relation.to)) {
+                deletedRelationCount++;
+                return false;
+              }
+              return true;
+            });
+            
+            console.log('[TimePlanStore] 🗑️ 删除结果:', {
+              deletedLineCount,
+              deletedRelationCount,
+              remainingLineCount: remainingLines.length,
+              remainingRelationCount: remainingRelations.length,
+            });
+            
+            return {
+              ...p,
+              lines: remainingLines,
+              relations: remainingRelations,
+              updatedAt: new Date(),
+            };
+          }),
+        }));
+        
+        console.log('[TimePlanStore] ✅ 批量删除完成');
+        
+        return { deletedLineCount, deletedRelationCount };
+      },
     }),
     {
       name: 'timeplan-craft-storage-with-history',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => localStorage, {
+        // 自定义序列化/反序列化，处理 Date 对象
+        serialize: (state) => {
+          return JSON.stringify(state);
+        },
+        deserialize: (str) => {
+          const state = JSON.parse(str);
+          
+          // 将日期字符串转换回 Date 对象
+          if (state?.state?.plans) {
+            state.state.plans = state.state.plans.map((plan: any) => ({
+              ...plan,
+              createdAt: plan.createdAt ? new Date(plan.createdAt) : undefined,
+              lastAccessTime: plan.lastAccessTime ? new Date(plan.lastAccessTime) : undefined,
+              updatedAt: plan.updatedAt ? new Date(plan.updatedAt) : undefined,
+              lines: plan.lines?.map((line: any) => ({
+                ...line,
+                startDate: line.startDate ? new Date(line.startDate) : undefined,
+                endDate: line.endDate ? new Date(line.endDate) : undefined,
+                createdAt: line.createdAt ? new Date(line.createdAt) : undefined,
+                updatedAt: line.updatedAt ? new Date(line.updatedAt) : undefined,
+              })),
+              relations: plan.relations?.map((relation: any) => ({
+                ...relation,
+                createdAt: relation.createdAt ? new Date(relation.createdAt) : undefined,
+                updatedAt: relation.updatedAt ? new Date(relation.updatedAt) : undefined,
+              })),
+              baselines: plan.baselines?.map((baseline: any) => ({
+                ...baseline,
+                date: baseline.date ? new Date(baseline.date) : undefined,
+              })),
+              viewConfig: plan.viewConfig ? {
+                ...plan.viewConfig,
+                startDate: plan.viewConfig.startDate ? new Date(plan.viewConfig.startDate) : undefined,
+                endDate: plan.viewConfig.endDate ? new Date(plan.viewConfig.endDate) : undefined,
+              } : undefined,
+            }));
+          }
+          
+          // 处理 currentPlan
+          if (state?.state?.currentPlan) {
+            const plan = state.state.currentPlan;
+            state.state.currentPlan = {
+              ...plan,
+              createdAt: plan.createdAt ? new Date(plan.createdAt) : undefined,
+              lastAccessTime: plan.lastAccessTime ? new Date(plan.lastAccessTime) : undefined,
+              updatedAt: plan.updatedAt ? new Date(plan.updatedAt) : undefined,
+              lines: plan.lines?.map((line: any) => ({
+                ...line,
+                startDate: line.startDate ? new Date(line.startDate) : undefined,
+                endDate: line.endDate ? new Date(line.endDate) : undefined,
+                createdAt: line.createdAt ? new Date(line.createdAt) : undefined,
+                updatedAt: line.updatedAt ? new Date(line.updatedAt) : undefined,
+              })),
+              relations: plan.relations?.map((relation: any) => ({
+                ...relation,
+                createdAt: relation.createdAt ? new Date(relation.createdAt) : undefined,
+                updatedAt: relation.updatedAt ? new Date(relation.updatedAt) : undefined,
+              })),
+              baselines: plan.baselines?.map((baseline: any) => ({
+                ...baseline,
+                date: baseline.date ? new Date(baseline.date) : undefined,
+              })),
+              viewConfig: plan.viewConfig ? {
+                ...plan.viewConfig,
+                startDate: plan.viewConfig.startDate ? new Date(plan.viewConfig.startDate) : undefined,
+                endDate: plan.viewConfig.endDate ? new Date(plan.viewConfig.endDate) : undefined,
+              } : undefined,
+            };
+          }
+          
+          return state;
+        },
+      }),
       partialize: (state) => ({
         plans: state.plans,
         currentPlan: state.currentPlan,
         // 不持久化历史记录（避免存储过大）
       }),
-      // 自定义序列化/反序列化，处理 Date 对象
-      serialize: (state) => {
-        return JSON.stringify(state);
-      },
-      deserialize: (str) => {
-        const state = JSON.parse(str);
-        
-        // 将日期字符串转换回 Date 对象
-        if (state?.state?.plans) {
-          state.state.plans = state.state.plans.map((plan: any) => ({
-            ...plan,
-            createdAt: plan.createdAt ? new Date(plan.createdAt) : undefined,
-            lastAccessTime: plan.lastAccessTime ? new Date(plan.lastAccessTime) : undefined,
-            updatedAt: plan.updatedAt ? new Date(plan.updatedAt) : undefined,
-            lines: plan.lines?.map((line: any) => ({
-              ...line,
-              startDate: line.startDate ? new Date(line.startDate) : undefined,
-              endDate: line.endDate ? new Date(line.endDate) : undefined,
-              createdAt: line.createdAt ? new Date(line.createdAt) : undefined,
-              updatedAt: line.updatedAt ? new Date(line.updatedAt) : undefined,
-            })),
-            relations: plan.relations?.map((relation: any) => ({
-              ...relation,
-              createdAt: relation.createdAt ? new Date(relation.createdAt) : undefined,
-              updatedAt: relation.updatedAt ? new Date(relation.updatedAt) : undefined,
-            })),
-            baselines: plan.baselines?.map((baseline: any) => ({
-              ...baseline,
-              date: baseline.date ? new Date(baseline.date) : undefined,
-            })),
-            viewConfig: plan.viewConfig ? {
-              ...plan.viewConfig,
-              startDate: plan.viewConfig.startDate ? new Date(plan.viewConfig.startDate) : undefined,
-              endDate: plan.viewConfig.endDate ? new Date(plan.viewConfig.endDate) : undefined,
-            } : undefined,
-          }));
-        }
-        
-        // 处理 currentPlan
-        if (state?.state?.currentPlan) {
-          const plan = state.state.currentPlan;
-          state.state.currentPlan = {
-            ...plan,
-            createdAt: plan.createdAt ? new Date(plan.createdAt) : undefined,
-            lastAccessTime: plan.lastAccessTime ? new Date(plan.lastAccessTime) : undefined,
-            updatedAt: plan.updatedAt ? new Date(plan.updatedAt) : undefined,
-            lines: plan.lines?.map((line: any) => ({
-              ...line,
-              startDate: line.startDate ? new Date(line.startDate) : undefined,
-              endDate: line.endDate ? new Date(line.endDate) : undefined,
-              createdAt: line.createdAt ? new Date(line.createdAt) : undefined,
-              updatedAt: line.updatedAt ? new Date(line.updatedAt) : undefined,
-            })),
-            relations: plan.relations?.map((relation: any) => ({
-              ...relation,
-              createdAt: relation.createdAt ? new Date(relation.createdAt) : undefined,
-              updatedAt: relation.updatedAt ? new Date(relation.updatedAt) : undefined,
-            })),
-            baselines: plan.baselines?.map((baseline: any) => ({
-              ...baseline,
-              date: baseline.date ? new Date(baseline.date) : undefined,
-            })),
-            viewConfig: plan.viewConfig ? {
-              ...plan.viewConfig,
-              startDate: plan.viewConfig.startDate ? new Date(plan.viewConfig.startDate) : undefined,
-              endDate: plan.viewConfig.endDate ? new Date(plan.viewConfig.endDate) : undefined,
-            } : undefined,
-          };
-        }
-        
-        return state;
-      },
     }
   )
 );

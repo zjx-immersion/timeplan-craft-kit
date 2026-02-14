@@ -13,8 +13,8 @@
  */
 
 import React, { useMemo } from 'react';
-import { Card, Descriptions, Tag, Space } from 'antd';
-import { ThunderboltOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { Card, Descriptions, Tag, Space, Button } from 'antd';
+import { ThunderboltOutlined, ClockCircleOutlined, CloseOutlined } from '@ant-design/icons';
 import type { Relation, Line } from '@/types/timeplanSchema';
 import { parseDateAsLocal } from '@/utils/dateUtils';
 
@@ -24,11 +24,12 @@ export interface RelationTooltipProps {
   toLine?: Line;
   position: { x: number; y: number };
   isCriticalPath?: boolean;
+  onClose?: () => void; // 新增关闭回调
 }
 
 /**
  * RelationTooltip 组件
- * 在鼠标悬停连线时显示详细信息
+ * 在选中连线时显示详细信息
  */
 export const RelationTooltip: React.FC<RelationTooltipProps> = ({
   relation,
@@ -36,6 +37,7 @@ export const RelationTooltip: React.FC<RelationTooltipProps> = ({
   toLine,
   position,
   isCriticalPath = false,
+  onClose,
 }) => {
   // 依赖类型标签映射
   const typeLabels: Record<string, string> = {
@@ -110,7 +112,7 @@ export const RelationTooltip: React.FC<RelationTooltipProps> = ({
         left: position.x + 15,
         top: position.y - 10,
         zIndex: 1000,
-        pointerEvents: 'none',
+        pointerEvents: 'auto', // 允许点击关闭按钮
       }}
     >
       <Card
@@ -125,6 +127,22 @@ export const RelationTooltip: React.FC<RelationTooltipProps> = ({
             )}
           </Space>
         }
+        extra={
+          onClose && (
+            <Button
+              type="text"
+              size="small"
+              icon={<CloseOutlined />}
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
+              style={{
+                color: '#999',
+              }}
+            />
+          )
+        }
         style={{
           width: 320,
           boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
@@ -132,7 +150,7 @@ export const RelationTooltip: React.FC<RelationTooltipProps> = ({
       >
         <Descriptions column={1} size="small" bordered>
           <Descriptions.Item label="依赖类型">
-            <Space direction="vertical" size={0}>
+            <Space orientation="vertical" size={0}>
               <Tag color="blue">{typeLabels[typeKey] || typeKey}</Tag>
               <span style={{ fontSize: 12, color: '#666' }}>
                 {typeDescriptions[typeKey]}

@@ -1599,7 +1599,7 @@ const relations: Relation[] = [
     id: 'rel-pl-internal-001',
     type: 'dependency',
     fromLineId: 'line-pl-001-gate',
-    toLineId: 'line-pl-002',
+    toLineId: 'line-pl-002-mr1', // 修复: line-pl-002已拆分为多个MR，指向第一个MR
     properties: {
       dependencyType: 'finish-to-start',
       lag: 2,
