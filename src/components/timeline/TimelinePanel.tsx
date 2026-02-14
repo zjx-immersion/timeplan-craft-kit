@@ -1019,7 +1019,13 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     
     // 同时保持单选逻辑（兼容非编辑模式）
     setSelectedLineId(line.id === selectedLineId ? null : line.id);
-  }, [selectedLineId, isEditMode, selection]);
+    
+    // ✅ 点击任务节点时，取消连线选中
+    if (selectedRelationId) {
+      setSelectedRelationId(null);
+      console.log('[TimelinePanel] 🔗 取消连线选中（点击任务节点）');
+    }
+  }, [selectedLineId, isEditMode, selection, selectedRelationId]);
 
   /**
    * 编辑 Timeline
@@ -2630,6 +2636,16 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
               width: totalWidth,
               minWidth: '100%',
               paddingTop: 0,
+            }}
+            onClick={(e) => {
+              // 点击空白画布或其他元素时，取消连线选中
+              // 确保点击的是画布本身，而不是子元素
+              if (e.target === e.currentTarget) {
+                if (selectedRelationId) {
+                  setSelectedRelationId(null);
+                  console.log('[TimelinePanel] 🔗 取消连线选中（点击空白区域）');
+                }
+              }
             }}
           >
             {/* 依赖关系线 */}

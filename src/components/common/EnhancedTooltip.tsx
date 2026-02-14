@@ -126,7 +126,7 @@ export const EnhancedTooltip: React.FC<EnhancedTooltipProps> = React.memo(({
       {/* 统计信息 */}
       {content.stats && content.stats.length > 0 && (
         <Space
-          direction="vertical"
+          orientation="vertical"
           size={4}
           style={{ width: '100%', marginBottom: content.items ? 8 : 0 }}
         >
@@ -189,7 +189,7 @@ export const EnhancedTooltip: React.FC<EnhancedTooltipProps> = React.memo(({
     <Tooltip
       title={tooltipContent}
       placement={placement}
-      overlayStyle={{ maxWidth: 450 }}
+      styles={{ root: { maxWidth: 450 } }}
       {...restProps}
     >
       {children}
