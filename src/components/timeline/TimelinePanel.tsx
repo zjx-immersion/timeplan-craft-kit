@@ -105,6 +105,7 @@ import { NodeEditDialog } from '../dialogs/NodeEditDialog';
 import { RelationEditDialog } from '../dialogs/RelationEditDialog';
 import { TimelineTimeShiftDialog } from '../dialogs/TimelineTimeShiftDialog';
 import { calculateCriticalPath } from '@/utils/criticalPath';
+import { useNavigationStore } from '@/stores/navigationStore';
 
 /**
  * TimelinePanel 组件属性
@@ -258,6 +259,11 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   const [internalShowCriticalPath, setInternalShowCriticalPath] = useState(false);
   const showCriticalPath = externalShowCriticalPath !== undefined ? externalShowCriticalPath : internalShowCriticalPath;
 
+  // ==================== 防止重复滚动 ====================
+  
+  const isScrollingRef = useRef(false);
+  const lastScrollTargetRef = useRef<string | null>(null);
+
   const handleSaveTitle = useCallback(() => {
     if (editedTitle.trim() && editedTitle !== initialData.title) {
       onTitleChange?.(editedTitle.trim());
@@ -317,6 +323,22 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
 
     return () => clearTimeout(timeoutId);
   }, [data, onDataChange, initialData]);
+
+  // ==================== 导航Store ====================
+  
+  const { 
+    targetLineIds, 
+    currentTaskIndex,
+    highlight, 
+    autoScroll, 
+    highlightDuration,
+    clearNavigation,
+    navigateToNextTask,
+    navigateToPreviousTask,
+  } = useNavigationStore();
+  
+  // 高亮的Line IDs（用于动画）
+  const [highlightedLineIds, setHighlightedLineIds] = useState<Set<string>>(new Set());
 
   // ==================== 状态管理 ====================
 
@@ -379,7 +401,9 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   }, [onEditModeChange]);
 
   // ✅ V10: 注入磁吸脉冲动画CSS
+  // ✅ Task 3.4: 注入高亮动画CSS
   useEffect(() => {
+    // 磁吸脉冲动画
     const styleId = 'magnetic-pulse-animation';
     if (!document.getElementById(styleId)) {
       const style = document.createElement('style');
@@ -397,6 +421,42 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
         }
       `;
       document.head.appendChild(style);
+    }
+    
+    // 高亮动画（Task 3.4）
+    const highlightStyleId = 'highlight-pulse-animation';
+    if (!document.getElementById(highlightStyleId)) {
+      const highlightStyle = document.createElement('style');
+      highlightStyle.id = highlightStyleId;
+      highlightStyle.textContent = `
+        @keyframes highlight-pulse {
+          0%, 100% {
+            box-shadow: 0 0 0 0 rgba(24, 144, 255, 0);
+            background-color: transparent;
+          }
+          50% {
+            box-shadow: 0 0 20px 5px rgba(24, 144, 255, 0.6);
+            background-color: rgba(24, 144, 255, 0.1);
+          }
+        }
+        
+        @keyframes pulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.1);
+            opacity: 0.8;
+          }
+        }
+        
+        .line-highlighted {
+          animation: highlight-pulse 2s ease-in-out;
+          z-index: 100;
+        }
+      `;
+      document.head.appendChild(highlightStyle);
     }
   }, []);
 
@@ -635,6 +695,151 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     prevViewTypeRef.current = viewType;
   }, [viewType, scrollToToday]);
 
+  // ==================== 导航响应逻辑（Task 3.3） ====================
+  
+  /**
+   * 响应从矩阵视图跳转到甘特图的导航请求
+   * ✅ 修复：保持完整视图范围（2024-2028），只滚动到目标位置，不调整视图范围
+   */
+  useEffect(() => {
+    // 如果没有目标Line IDs，不执行任何操作
+    if (targetLineIds.length === 0) return;
+    
+    console.log('[TimelinePanel] 🎯 响应导航请求:', {
+      targetLineIds,
+      currentTaskIndex,
+      highlight,
+      autoScroll,
+      highlightDuration,
+      currentViewStart: normalizedViewStartDate.toISOString(),
+      currentViewEnd: normalizedViewEndDate.toISOString(),
+    });
+    
+    // ✅ 修复：不再调整视图范围，保持完整的 2024-2028 时间轴
+    // 只获取目标Line信息用于滚动和高亮
+    const targetLines = data.lines.filter(line => targetLineIds.includes(line.id));
+    
+    if (targetLines.length > 0) {
+      console.log('[TimelinePanel] 📍 目标Line信息:', {
+        targetLines: targetLines.length,
+        lineNames: targetLines.map(l => l.label).join(', '),
+        // 保持当前视图范围，不调整
+        viewStart: normalizedViewStartDate.toISOString().split('T')[0],
+        viewEnd: normalizedViewEndDate.toISOString().split('T')[0],
+      });
+    }
+    
+    // 1. 滚动到当前任务索引对应的Line（使用当前视图范围）
+    if (autoScroll && targetLineIds.length > 0 && scrollContainerRef.current && targetLines.length > 0) {
+      const currentLineId = targetLineIds[currentTaskIndex] || targetLineIds[0];
+      // 使用当前视图范围进行滚动，不传递自定义范围
+      setTimeout(() => {
+        scrollToLine(currentLineId);
+      }, 100);
+    }
+    
+    // 2. 触发高亮动画
+    if (highlight) {
+      setHighlightedLineIds(new Set(targetLineIds));
+      
+      // highlightDuration毫秒后清除高亮（但不清除导航状态，保留任务列表用于导航）
+      setTimeout(() => {
+        setHighlightedLineIds(new Set());
+      }, highlightDuration);
+    }
+  }, [targetLineIds, currentTaskIndex, highlight, autoScroll, highlightDuration, data.lines, normalizedViewStartDate, normalizedViewEndDate]);
+  
+  /**
+   * Task 3.7：响应任务索引变化（用户点击上一个/下一个任务）
+   */
+  useEffect(() => {
+    if (targetLineIds.length === 0) return;
+    
+    // 滚动到当前索引的任务
+    const currentLineId = targetLineIds[currentTaskIndex];
+    if (currentLineId && scrollContainerRef.current) {
+      setTimeout(() => {
+        // ✅ 使用当前视图范围进行滚动
+        scrollToLine(currentLineId);
+      }, 100);
+    }
+  }, [currentTaskIndex, targetLineIds]);
+  
+  /**
+   * 滚动到指定Line（居中显示）
+   * ✅ 修复：使用基于日期的计算，而不是DOM位置，确保视图范围改变后仍能正确定位
+   * ✅ 修复：防止重复滚动到同一目标
+   * @param lineId - 要滚动到的Line ID
+   * @param customViewStartDate - 可选，自定义视图开始日期（用于在调整视图范围后立即滚动）
+   */
+  const scrollToLine = useCallback((lineId: string, customViewStartDate?: Date) => {
+    // ✅ 防重复：如果正在滚动到相同目标，跳过
+    if (isScrollingRef.current && lastScrollTargetRef.current === lineId) {
+      console.log('[TimelinePanel] ⏭️ 跳过重复滚动:', lineId);
+      return;
+    }
+
+    const line = data.lines.find(l => l.id === lineId);
+    const container = scrollContainerRef.current;
+    
+    if (!line || !container) {
+      console.warn('[TimelinePanel] 滚动失败 - Line或容器未找到:', lineId);
+      return;
+    }
+
+    // ✅ 标记正在滚动
+    isScrollingRef.current = true;
+    lastScrollTargetRef.current = lineId;
+    
+    // 使用传入的自定义视图开始日期，或当前的 state
+    const effectiveViewStartDate = customViewStartDate || normalizedViewStartDate;
+    
+    // 使用基于日期的计算获取Line的水平位置
+    const lineStartDate = new Date(line.startDate);
+    const linePosition = getPositionFromDate(lineStartDate, effectiveViewStartDate, scale);
+    
+    // 估算Line宽度（用于居中计算）
+    const lineWidth = line.endDate 
+      ? getPositionFromDate(new Date(line.endDate), effectiveViewStartDate, scale) - linePosition
+      : 100; // 默认宽度
+    
+    // 获取Line的垂直位置（通过查找timeline索引）
+    const timelineIndex = data.timelines.findIndex(t => t.id === line.timelineId);
+    const rowHeight = ROW_HEIGHT;
+    const lineTop = timelineIndex >= 0 ? timelineIndex * rowHeight + rowHeight / 2 : 0;
+    
+    // 计算目标滚动位置（使Line居中）
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+    
+    const targetScrollLeft = Math.max(0, linePosition + lineWidth / 2 - containerWidth / 2);
+    const targetScrollTop = Math.max(0, lineTop - containerHeight / 2);
+    
+    console.log('[TimelinePanel] 📍 滚动到Line:', {
+      lineId,
+      lineLabel: line.label,
+      lineDate: line.startDate,
+      linePosition,
+      targetScrollTop,
+      targetScrollLeft,
+      viewStart: effectiveViewStartDate,
+      customViewStartDate: customViewStartDate ? format(customViewStartDate, 'yyyy-MM-dd') : undefined,
+      scale,
+    });
+    
+    // 平滑滚动
+    container.scrollTo({
+      top: targetScrollTop,
+      left: targetScrollLeft,
+      behavior: 'smooth',
+    });
+
+    // ✅ 500ms 后解除锁定（平滑滚动动画时间）
+    setTimeout(() => {
+      isScrollingRef.current = false;
+    }, 500);
+  }, [data.lines, data.timelines, normalizedViewStartDate, scale]);
+
   // ==================== 全局快捷键 ====================
   
   useKeyboardShortcuts({
@@ -716,6 +921,26 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
           message.info('已取消选择');
         }
       }),
+      
+      // Task 3.7: 左箭头 - 上一个任务
+      {
+        key: 'ArrowLeft',
+        handler: () => {
+          if (targetLineIds.length > 1) {
+            navigateToPreviousTask();
+          }
+        },
+      },
+      
+      // Task 3.7: 右箭头 - 下一个任务
+      {
+        key: 'ArrowRight',
+        handler: () => {
+          if (targetLineIds.length > 1) {
+            navigateToNextTask();
+          }
+        },
+      },
     ],
   });
 
@@ -835,7 +1060,13 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     
     // 同时保持单选逻辑（兼容非编辑模式）
     setSelectedLineId(line.id === selectedLineId ? null : line.id);
-  }, [selectedLineId, isEditMode, selection]);
+    
+    // ✅ 点击任务节点时，取消连线选中
+    if (selectedRelationId) {
+      setSelectedRelationId(null);
+      console.log('[TimelinePanel] 🔗 取消连线选中（点击任务节点）');
+    }
+  }, [selectedLineId, isEditMode, selection, selectedRelationId]);
 
   /**
    * 编辑 Timeline
@@ -2447,6 +2678,16 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
               minWidth: '100%',
               paddingTop: 0,
             }}
+            onClick={(e) => {
+              // 点击空白画布或其他元素时，取消连线选中
+              // 确保点击的是画布本身，而不是子元素
+              if (e.target === e.currentTarget) {
+                if (selectedRelationId) {
+                  setSelectedRelationId(null);
+                  console.log('[TimelinePanel] 🔗 取消连线选中（点击空白区域）');
+                }
+              }
+            }}
           >
             {/* 依赖关系线 */}
             {data.relations && data.relations.length > 0 && (
@@ -2572,6 +2813,28 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
               onCancel={handleRangeDragCancel}
             />
 
+            {/* ✅ 全量日志：输出所有任务位置计算信息 */}
+            {(() => {
+              console.log('[TimelinePanel] 📋 任务位置计算全量日志:');
+              console.log(`  - 视图起始日期: ${normalizedViewStartDate.toISOString().split('T')[0]}`);
+              console.log(`  - 时间刻度: ${scale}`);
+              console.log(`  - Timeline数量: ${data.timelines.length}`);
+              console.log(`  - 总任务数: ${data.lines.length}`);
+              console.log('  - 各Timeline任务分布:');
+              data.timelines.forEach((t, i) => {
+                const tLines = data.lines.filter(l => l.timelineId === t.id);
+                console.log(`    ${i + 1}. ${t.label || t.name}: ${tLines.length}个任务`);
+              });
+              console.log('  - 任务位置计算详情:');
+              data.lines.forEach((line, idx) => {
+                const startPos = getPositionFromDate(parseDateAsLocal(line.startDate), normalizedViewStartDate, scale);
+                const endPos = line.endDate ? getPositionFromDate(parseDateAsLocal(line.endDate), normalizedViewStartDate, scale) : startPos;
+                const width = endPos - startPos;
+                console.log(`    ${(idx + 1).toString().padStart(3)}. ${(line.label || '未命名').padEnd(20)} | 开始: ${line.startDate.split('T')[0]} | 位置: ${Math.round(startPos).toString().padStart(5)}px | 宽度: ${Math.round(width).toString().padStart(5)}px | 高亮: ${highlightedLineIds.has(line.id) ? '✓' : ' '}`);
+              });
+              return null;
+            })()}
+
             {data.timelines.map((timeline, index) => {
               const lines = getLinesByTimelineId(timeline.id);
               
@@ -2660,6 +2923,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                           isHovered={line.id === hoveredLineId}
                           connectionMode={connectionMode}
                           isCriticalPath={criticalPathNodeIds.has(line.id)}
+                          isHighlighted={highlightedLineIds.has(line.id)}
             onMouseDown={(e) => {
               if (isEditMode) {
                 handleDragStart(e, line);
@@ -2836,6 +3100,84 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
         lines={data.lines}
         onConfirm={handleConfirmTimeShift}
       />
+
+      {/* Task 3.7: 批量跳转导航控制面板 */}
+      {targetLineIds.length > 1 && (
+        <div
+          style={{
+            position: 'fixed',
+            right: 24,
+            bottom: 24,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            borderRadius: 8,
+            padding: '12px 16px',
+            color: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
+            zIndex: 1000,
+          }}
+        >
+          {/* 上一个任务按钮 */}
+          <Tooltip title="上一个任务 (←)">
+            <Button
+              type="text"
+              size="small"
+              icon={<ArrowLeftOutlined style={{ color: '#fff' }} />}
+              onClick={navigateToPreviousTask}
+              style={{
+                backgroundColor: 'transparent',
+                border: 'none',
+                color: '#fff',
+              }}
+            />
+          </Tooltip>
+          
+          {/* 当前任务指示器 */}
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 600,
+              minWidth: 60,
+              textAlign: 'center',
+            }}
+          >
+            {currentTaskIndex + 1} / {targetLineIds.length}
+          </div>
+          
+          {/* 下一个任务按钮 */}
+          <Tooltip title="下一个任务 (→)">
+            <Button
+              type="text"
+              size="small"
+              icon={<RightOutlined style={{ color: '#fff' }} />}
+              onClick={navigateToNextTask}
+              style={{
+                backgroundColor: 'transparent',
+                border: 'none',
+                color: '#fff',
+              }}
+            />
+          </Tooltip>
+          
+          {/* 关闭按钮 */}
+          <Tooltip title="关闭导航">
+            <Button
+              type="text"
+              size="small"
+              icon={<CloseOutlined style={{ color: '#fff' }} />}
+              onClick={clearNavigation}
+              style={{
+                backgroundColor: 'transparent',
+                border: 'none',
+                color: '#fff',
+                marginLeft: 8,
+              }}
+            />
+          </Tooltip>
+        </div>
+      )}
 
       {/* 连线模式指示器 */}
       <ConnectionMode

@@ -10,12 +10,21 @@
 import React, { useMemo } from 'react';
 import { Table, Tag, Tooltip, Space } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import {
+  TeamOutlined,
+  DashboardOutlined,
+  PercentageOutlined,
+  FlagOutlined,
+  FileTextOutlined,
+} from '@ant-design/icons';
 import { 
   MatrixDataV3, 
   TimeNode, 
   getCell 
 } from '@/utils/matrix-v3';
 import { getHeatmapColor, getTextColor } from '@/utils/matrix-v3/heatmap';
+import { EnhancedTooltip } from '@/components/common/EnhancedTooltip';
+import type { TooltipContent } from '@/components/common/EnhancedTooltip';
 
 import { MilestoneCellContent } from './MilestoneCellContent';
 import { GatewayCellContent } from './GatewayCellContent';
@@ -23,6 +32,10 @@ import { GatewayCellContent } from './GatewayCellContent';
 interface MatrixTableV3Props {
   matrixData: MatrixDataV3;
   onCellClick?: (timelineId: string, timeNodeId: string) => void;
+  onNavigateToGantt?: (lineIds: string[]) => void;
+  // Task 4.8: 批量选择支持
+  selectionMode?: boolean;
+  selectedLineIds?: Set<string>;
 }
 
 /**
@@ -48,6 +61,113 @@ const TimeNodeLabel: React.FC<{ node: TimeNode }> = ({ node }) => {
 
 
 /**
+ * 生成单元格Tooltip内容
+ */
+const generateTooltipContent = (
+  cell: any,
+  timeNodeType: 'milestone' | 'gateway',
+  timelineName: string,
+  timeNodeName: string
+): TooltipContent => {
+  if (timeNodeType === 'milestone' && cell.milestoneContent) {
+    const content = cell.milestoneContent;
+    return {
+      summary: content.objectiveSummary || '完成本阶段里程碑目标',
+      stats: [
+        {
+          label: 'SSTS需求数',
+          value: content.sstsCount,
+          icon: <FileTextOutlined />,
+        },
+        {
+          label: '交付版本',
+          value: content.deliverableVersion || '待定',
+          icon: <FlagOutlined />,
+        },
+        {
+          label: '交付物数量',
+          value: content.deliverableCount,
+          icon: <FileTextOutlined />,
+        },
+      ],
+      items: content.sstsList.slice(0, 3).map((ssts: string) => ({
+        label: ssts,
+        value: '待评审',
+        status: 'default' as const,
+      })),
+      extra: content.sstsList.length > 3 ? (
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>
+          还有 {content.sstsList.length - 3} 个需求...
+        </div>
+      ) : undefined,
+    };
+  } else if (timeNodeType === 'gateway' && cell.gatewayContent) {
+    const content = cell.gatewayContent;
+    const statusLabels = {
+      pending: '待决策',
+      'in-review': '审核中',
+      approved: '已通过',
+      rejected: '未通过',
+    };
+    
+    return {
+      summary: `${content.gatewayType}质量门禁`,
+      stats: [
+        {
+          label: '检查项总数',
+          value: content.checkItemCount,
+          icon: <FileTextOutlined />,
+        },
+        {
+          label: '已通过',
+          value: content.passedCount,
+          icon: <TeamOutlined />,
+        },
+        {
+          label: '完成率',
+          value: `${Math.round(content.completionRate * 100)}%`,
+          icon: <PercentageOutlined />,
+        },
+      ],
+      items: [
+        {
+          label: '整体状态',
+          value: statusLabels[content.overallStatus] || content.overallStatus,
+          status: content.overallStatus === 'approved' ? 'success' : 'warning',
+        },
+        {
+          label: '已通过',
+          value: `${content.passedCount}项`,
+          status: 'success',
+        },
+        content.failedCount > 0 ? {
+          label: '未通过',
+          value: `${content.failedCount}项`,
+          status: 'error',
+        } : null,
+        content.pendingCount > 0 ? {
+          label: '待完成',
+          value: `${content.pendingCount}项`,
+          status: 'default',
+        } : null,
+      ].filter(Boolean) as any,
+    };
+  }
+  
+  // 默认Tooltip
+  return {
+    summary: '暂无详细信息',
+    stats: [
+      {
+        label: '任务数',
+        value: cell.lines.length,
+        icon: <FileTextOutlined />,
+      },
+    ],
+  };
+};
+
+/**
  * 渲染单元格内容 - 根据时间节点类型差异化显示
  */
 const CellContent: React.FC<{
@@ -55,8 +175,14 @@ const CellContent: React.FC<{
   timeNodeId: string;
   matrixData: MatrixDataV3;
   timeNodeType: 'milestone' | 'gateway';
+  timelineName: string;
+  timeNodeName: string;
   onClick?: () => void;
-}> = ({ timelineId, timeNodeId, matrixData, timeNodeType, onClick }) => {
+  onNavigateToGantt?: (lineIds: string[]) => void;
+  // Task 4.8: 选择状态
+  isSelected?: boolean;
+  selectionMode?: boolean;
+}> = ({ timelineId, timeNodeId, matrixData, timeNodeType, timelineName, timeNodeName, onClick, onNavigateToGantt, isSelected, selectionMode }) => {
   const cell = getCell(matrixData, timelineId, timeNodeId);
 
   if (!cell || cell.lines.length === 0) {
@@ -82,40 +208,99 @@ const CellContent: React.FC<{
 
   const bgColor = getHeatmapColor(cell);
   const textColor = getTextColor(bgColor);
+  
+  // 生成Tooltip内容
+  const tooltipContent = generateTooltipContent(cell, timeNodeType, timelineName, timeNodeName);
+
+  // 处理单元格点击 - 导航到甘特图
+  const handleCellClick = () => {
+    // 先触发原有的onClick（打开详情对话框）
+    onClick?.();
+    
+    // 如果有Line数据且配置了导航函数，触发跳转到甘特图
+    if (cell.lines.length > 0 && onNavigateToGantt) {
+      const lineIds = cell.lines.map(line => line.id);
+      console.log('[MatrixTableV3] 单元格点击 - 导航到甘特图:', {
+        timelineId,
+        timeNodeId,
+        lineIds,
+        lineCount: lineIds.length,
+      });
+      onNavigateToGantt(lineIds);
+    }
+  };
+
+  // Task 4.8: 选择状态样式
+  const cellStyle: React.CSSProperties = {
+    padding: '6px',
+    backgroundColor: bgColor,
+    color: textColor,
+    minHeight: '90px',
+    cursor: 'pointer',
+    position: 'relative',
+    transition: 'all 0.2s',
+    // Task 4.8: 选中样式
+    ...(isSelected && {
+      border: '2px solid #1890ff',
+      background: `linear-gradient(rgba(24, 144, 255, 0.15), rgba(24, 144, 255, 0.15)), ${bgColor}`,
+      boxShadow: '0 0 8px rgba(24, 144, 255, 0.5)',
+    }),
+  };
 
   return (
-    <div
-      style={{
-        padding: '6px',
-        backgroundColor: bgColor,
-        color: textColor,
-        minHeight: '90px',
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-      }}
-      onClick={onClick}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'scale(1.05)';
-        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'scale(1)';
-        e.currentTarget.style.boxShadow = 'none';
-      }}
+    <EnhancedTooltip
+      title={`${timelineName} × ${timeNodeName}`}
+      content={tooltipContent}
+      placement="top"
     >
-      {timeNodeType === 'milestone' ? (
-        <MilestoneCellContent content={cell.milestoneContent} compact />
-      ) : (
-        <GatewayCellContent content={cell.gatewayContent} compact />
-      )}
-    </div>
+      <div
+        style={cellStyle}
+        onClick={handleCellClick}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.05)';
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = isSelected ? '0 0 8px rgba(24, 144, 255, 0.5)' : 'none';
+        }}
+      >
+        {/* Task 4.8: 选中标记 */}
+        {isSelected && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 4,
+              right: 4,
+              color: '#1890ff',
+              fontSize: '16px',
+              fontWeight: 'bold',
+            }}
+          >
+            ✓
+          </div>
+        )}
+        
+        {timeNodeType === 'milestone' ? (
+          <MilestoneCellContent content={cell.milestoneContent} compact />
+        ) : (
+          <GatewayCellContent content={cell.gatewayContent} compact />
+        )}
+      </div>
+    </EnhancedTooltip>
   );
 };
 
 /**
  * 矩阵表格V3
  */
-const MatrixTableV3: React.FC<MatrixTableV3Props> = ({ matrixData, onCellClick }) => {
+const MatrixTableV3: React.FC<MatrixTableV3Props> = ({ 
+  matrixData, 
+  onCellClick, 
+  onNavigateToGantt,
+  selectionMode = false,
+  selectedLineIds = new Set(),
+}) => {
   // 构建表格列
   const columns = useMemo<ColumnsType<any>>(() => {
     const cols: ColumnsType<any> = [
@@ -145,15 +330,26 @@ const MatrixTableV3: React.FC<MatrixTableV3Props> = ({ matrixData, onCellClick }
         key: node.id,
         width: 120,
         align: 'center',
-        render: (_: any, record: any) => (
-          <CellContent
-            timelineId={record.id}
-            timeNodeId={node.id}
-            matrixData={matrixData}
-            timeNodeType={node.type}
-            onClick={() => onCellClick?.(record.id, node.id)}
-          />
-        ),
+        render: (_: any, record: any) => {
+          // Task 4.8: 检查单元格是否被选中（单元格中有任何任务被选中）
+          const cell = getCell(matrixData, record.id, node.id);
+          const isSelected = cell && cell.lines.some(line => selectedLineIds.has(line.id));
+          
+          return (
+            <CellContent
+              timelineId={record.id}
+              timeNodeId={node.id}
+              matrixData={matrixData}
+              timeNodeType={node.type}
+              timelineName={record.name}
+              timeNodeName={node.label}
+              onClick={() => onCellClick?.(record.id, node.id)}
+              onNavigateToGantt={onNavigateToGantt}
+              isSelected={isSelected}
+              selectionMode={selectionMode}
+            />
+          );
+        },
       });
     });
 

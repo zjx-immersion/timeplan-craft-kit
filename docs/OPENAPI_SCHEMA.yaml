@@ -1,0 +1,1209 @@
+openapi: 3.0.3
+info:
+  title: TimePlan Craft Kit API
+  description: |
+    TimePlan Craft Kit 后端服务API规范
+    
+    ## 功能模块
+    - 认证授权 (JWT)
+    - 用户管理
+    - 团队管理
+    - 项目管理
+    - 时间规划 (TimePlan)
+    - 时间线 (Timeline)
+    - 任务节点 (Line)
+    - 依赖关系 (Relation)
+    - 基线管理 (Baseline)
+    
+    ## 实时通信
+    - WebSocket: /api/ws/plans/{planId}
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@timeplan.example.com
+
+servers:
+  - url: http://localhost:8000
+    description: 开发环境
+  - url: https://api-dev.timeplan.example.com
+    description: 测试环境
+  - url: https://api.timeplan.example.com
+    description: 生产环境
+
+tags:
+  - name: auth
+    description: 认证授权
+  - name: users
+    description: 用户管理
+  - name: teams
+    description: 团队管理
+  - name: projects
+    description: 项目管理
+  - name: plans
+    description: 时间规划
+  - name: timelines
+    description: 时间线
+  - name: lines
+    description: 任务节点
+  - name: relations
+    description: 依赖关系
+  - name: baselines
+    description: 基线管理
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ==================== 认证授权 ====================
+  /api/v1/auth/register:
+    post:
+      tags: [auth]
+      summary: 用户注册
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: 用户已存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/auth/login:
+    post:
+      tags: [auth]
+      summary: 用户登录
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: 认证失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [auth]
+      summary: 刷新Token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+              required: [refresh_token]
+      responses:
+        '200':
+          description: Token刷新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      summary: 用户登出
+      responses:
+        '200':
+          description: 登出成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  # ==================== 用户管理 ====================
+  /api/v1/users/me:
+    get:
+      tags: [users]
+      summary: 获取当前用户信息
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    
+    put:
+      tags: [users]
+      summary: 更新当前用户信息
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+
+  /api/v1/users/me/preferences:
+    get:
+      tags: [users]
+      summary: 获取用户配置
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+    
+    put:
+      tags: [users]
+      summary: 更新用户配置
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPreferences'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+
+  # ==================== 时间规划 ====================
+  /api/v1/plans:
+    get:
+      tags: [plans]
+      summary: 获取计划列表
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: name
+          in: query
+          schema:
+            type: string
+          description: 按名称筛选
+        - name: owner_id
+          in: query
+          schema:
+            type: string
+          description: 按所有者筛选
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimePlanListResponse'
+
+    post:
+      tags: [plans]
+      summary: 创建计划
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTimePlanRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimePlanResponse'
+
+  /api/v1/plans/{planId}:
+    parameters:
+      - $ref: '#/components/parameters/PlanIdParam'
+    
+    get:
+      tags: [plans]
+      summary: 获取计划详情
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimePlanDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    
+    put:
+      tags: [plans]
+      summary: 更新计划
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTimePlanRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimePlanResponse'
+    
+    delete:
+      tags: [plans]
+      summary: 删除计划
+      responses:
+        '204':
+          description: 删除成功
+
+  # ==================== 时间线 ====================
+  /api/v1/plans/{planId}/timelines:
+    parameters:
+      - $ref: '#/components/parameters/PlanIdParam'
+    
+    get:
+      tags: [timelines]
+      summary: 获取时间线列表
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TimelineResponse'
+    
+    post:
+      tags: [timelines]
+      summary: 创建时间线
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTimelineRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimelineResponse'
+
+  /api/v1/plans/{planId}/timelines/{timelineId}:
+    parameters:
+      - $ref: '#/components/parameters/PlanIdParam'
+      - $ref: '#/components/parameters/TimelineIdParam'
+    
+    get:
+      tags: [timelines]
+      summary: 获取时间线详情
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimelineResponse'
+    
+    put:
+      tags: [timelines]
+      summary: 更新时间线
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTimelineRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimelineResponse'
+    
+    delete:
+      tags: [timelines]
+      summary: 删除时间线
+      responses:
+        '204':
+          description: 删除成功
+
+  # ==================== 任务节点 ====================
+  /api/v1/plans/{planId}/lines:
+    parameters:
+      - $ref: '#/components/parameters/PlanIdParam'
+    
+    get:
+      tags: [lines]
+      summary: 获取任务节点列表
+      parameters:
+        - name: timeline_id
+          in: query
+          schema:
+            type: string
+          description: 按时间线筛选
+        - name: schema_id
+          in: query
+          schema:
+            type: string
+            enum: [lineplan, milestone, gateway]
+          description: 按类型筛选
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LineListResponse'
+    
+    post:
+      tags: [lines]
+      summary: 创建任务节点
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLineRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LineResponse'
+
+  /api/v1/plans/{planId}/lines/{lineId}:
+    parameters:
+      - $ref: '#/components/parameters/PlanIdParam'
+      - $ref: '#/components/parameters/LineIdParam'
+    
+    get:
+      tags: [lines]
+      summary: 获取任务节点详情
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LineResponse'
+    
+    put:
+      tags: [lines]
+      summary: 更新任务节点
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLineRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LineResponse'
+    
+    delete:
+      tags: [lines]
+      summary: 删除任务节点
+      responses:
+        '204':
+          description: 删除成功
+
+  /api/v1/plans/{planId}/lines/batch:
+    parameters:
+      - $ref: '#/components/parameters/PlanIdParam'
+    
+    post:
+      tags: [lines]
+      summary: 批量创建任务节点
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lines:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/CreateLineRequest'
+              required: [lines]
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lines:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LineResponse'
+    
+    put:
+      tags: [lines]
+      summary: 批量更新任务节点
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchUpdateLinesRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated_count:
+                    type: integer
+                  lines:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LineResponse'
+
+  # ==================== 依赖关系 ====================
+  /api/v1/plans/{planId}/relations:
+    parameters:
+      - $ref: '#/components/parameters/PlanIdParam'
+    
+    get:
+      tags: [relations]
+      summary: 获取依赖关系列表
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RelationResponse'
+    
+    post:
+      tags: [relations]
+      summary: 创建依赖关系
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRelationRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelationResponse'
+        '400':
+          description: 验证失败（循环依赖等）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /api/v1/plans/{planId}/relations/{relationId}:
+    parameters:
+      - $ref: '#/components/parameters/PlanIdParam'
+      - $ref: '#/components/parameters/RelationIdParam'
+    
+    delete:
+      tags: [relations]
+      summary: 删除依赖关系
+      responses:
+        '204':
+          description: 删除成功
+
+  /api/v1/plans/{planId}/relations/validate:
+    parameters:
+      - $ref: '#/components/parameters/PlanIdParam'
+    
+    post:
+      tags: [relations]
+      summary: 验证依赖关系
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateRelationsRequest'
+      responses:
+        '200':
+          description: 验证结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResult'
+
+  /api/v1/plans/{planId}/relations/critical-path:
+    parameters:
+      - $ref: '#/components/parameters/PlanIdParam'
+    
+    get:
+      tags: [relations]
+      summary: 计算关键路径
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CriticalPathResponse'
+
+# ==================== Components ====================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      description: 页码
+    
+    PageSizeParam:
+      name: page_size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: 每页数量
+    
+    PlanIdParam:
+      name: planId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: 计划ID
+    
+    TimelineIdParam:
+      name: timelineId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: 时间线ID
+    
+    LineIdParam:
+      name: lineId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: 任务节点ID
+    
+    RelationIdParam:
+      name: relationId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: 依赖关系ID
+
+  schemas:
+    # ==================== 认证相关 ====================
+    RegisterRequest:
+      type: object
+      required: [email, username, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          example: johndoe
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: SecurePass123!
+        display_name:
+          type: string
+          example: John Doe
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          example: johndoe
+        password:
+          type: string
+          format: password
+          example: SecurePass123!
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          example: bearer
+        expires_in:
+          type: integer
+          description: 过期时间（秒）
+          example: 1800
+
+    # ==================== 用户相关 ====================
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        display_name:
+          type: string
+        avatar:
+          type: string
+          format: uri
+        role:
+          type: string
+          enum: [admin, manager, member, viewer]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        display_name:
+          type: string
+        avatar:
+          type: string
+          format: uri
+
+    UserPreferences:
+      type: object
+      properties:
+        theme:
+          type: string
+          enum: [light, dark, auto]
+          default: auto
+        language:
+          type: string
+          enum: [zh-CN, en-US]
+          default: zh-CN
+        default_view:
+          type: string
+          enum: [gantt, table, matrix, iteration]
+          default: gantt
+        view_config:
+          type: object
+          additionalProperties: true
+
+    # ==================== 时间规划 ====================
+    CreateTimePlanRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: Q1 2026产品规划
+        description:
+          type: string
+          example: 2026年第一季度产品开发计划
+        project_id:
+          type: string
+          format: uuid
+
+    UpdateTimePlanRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        view_config:
+          type: object
+          additionalProperties: true
+
+    TimePlanResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        owner:
+          $ref: '#/components/schemas/UserResponse'
+        project_id:
+          type: string
+          format: uuid
+        view_config:
+          type: object
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        last_accessed_at:
+          type: string
+          format: date-time
+
+    TimePlanDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/TimePlanResponse'
+        - type: object
+          properties:
+            timelines:
+              type: array
+              items:
+                $ref: '#/components/schemas/TimelineResponse'
+            lines:
+              type: array
+              items:
+                $ref: '#/components/schemas/LineResponse'
+            relations:
+              type: array
+              items:
+                $ref: '#/components/schemas/RelationResponse'
+
+    TimePlanListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimePlanResponse'
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+        pages:
+          type: integer
+
+    # ==================== 时间线 ====================
+    CreateTimelineRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: 前端开发
+        description:
+          type: string
+        color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          example: '#1890ff'
+        order:
+          type: integer
+          minimum: 0
+
+    UpdateTimelineRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        color:
+          type: string
+        order:
+          type: integer
+
+    TimelineResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        plan_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        color:
+          type: string
+        order:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    # ==================== 任务节点 ====================
+    CreateLineRequest:
+      type: object
+      required: [timeline_id, schema_id, label, start_date]
+      properties:
+        timeline_id:
+          type: string
+          format: uuid
+        schema_id:
+          type: string
+          enum: [lineplan, milestone, gateway]
+          example: lineplan
+        label:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: 实现用户认证模块
+        start_date:
+          type: string
+          format: date-time
+          example: '2026-02-14T00:00:00Z'
+        end_date:
+          type: string
+          format: date-time
+          example: '2026-02-20T23:59:59Z'
+        attributes:
+          type: object
+          additionalProperties: true
+          example:
+            owner: 张三
+            status: 进行中
+            priority: high
+            tags: [前端, 重要]
+
+    UpdateLineRequest:
+      type: object
+      properties:
+        timeline_id:
+          type: string
+        label:
+          type: string
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+        attributes:
+          type: object
+          additionalProperties: true
+
+    BatchUpdateLinesRequest:
+      type: object
+      required: [line_ids, updates]
+      properties:
+        line_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        mode:
+          type: string
+          enum: [merge, replace]
+          default: merge
+          description: merge=合并更新，replace=完全替换
+        updates:
+          type: object
+          additionalProperties: true
+          example:
+            attributes.owner: 李四
+            attributes.status: 已完成
+
+    LineResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        plan_id:
+          type: string
+          format: uuid
+        timeline_id:
+          type: string
+          format: uuid
+        schema_id:
+          type: string
+        label:
+          type: string
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+        attributes:
+          type: object
+          additionalProperties: true
+        order:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    LineListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineResponse'
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+        pages:
+          type: integer
+
+    # ==================== 依赖关系 ====================
+    CreateRelationRequest:
+      type: object
+      required: [from_line_id, to_line_id, type]
+      properties:
+        from_line_id:
+          type: string
+          format: uuid
+        to_line_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [FS, SS, FF, SF]
+          description: FS=完成-开始, SS=开始-开始, FF=完成-完成, SF=开始-完成
+          example: FS
+        lag:
+          type: integer
+          default: 0
+          description: 延迟天数（可为负）
+          example: 2
+        notes:
+          type: string
+
+    RelationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        plan_id:
+          type: string
+          format: uuid
+        from_line_id:
+          type: string
+          format: uuid
+        to_line_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [FS, SS, FF, SF]
+        lag:
+          type: integer
+        notes:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ValidateRelationsRequest:
+      type: object
+      required: [relations]
+      properties:
+        relations:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateRelationRequest'
+
+    ValidationResult:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: [circular, missing_node, duplicate, invalid_type]
+              relation_id:
+                type: string
+              message:
+                type: string
+              details:
+                type: object
+
+    ValidationError:
+      type: object
+      properties:
+        error:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              message:
+                type: string
+              path:
+                type: array
+                items:
+                  type: string
+
+    CriticalPathResponse:
+      type: object
+      properties:
+        critical_path:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: 关键路径上的Line ID列表
+        total_duration:
+          type: integer
+          description: 总工期（天）
+        earliest_start:
+          type: object
+          additionalProperties:
+            type: string
+            format: date-time
+          description: 每个Line的最早开始时间
+        latest_finish:
+          type: object
+          additionalProperties:
+            type: string
+            format: date-time
+          description: 每个Line的最晚完成时间
+        slack:
+          type: object
+          additionalProperties:
+            type: integer
+          description: 每个Line的时间松弛（天）
+
+    # ==================== 通用错误 ====================
+    Error:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          example: invalid_request
+        message:
+          type: string
+          example: The request is invalid
+        details:
+          type: object
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: 请求参数错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    Unauthorized:
+      description: 未授权
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    Forbidden:
+      description: 无权限
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

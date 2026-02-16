@@ -7,7 +7,7 @@
  * @date 2026-02-11
  */
 
-import { TimePlan, Line, Timeline } from '@/types/timeplanSchema';
+import { TimePlan, Line, Timeline, Relation } from '@/types/timeplanSchema';
 import { GatewaySchema, MilestoneSchema } from '@/schemas/defaultSchemas';
 import { 
   TimeNode, 
@@ -144,28 +144,55 @@ function calculateEffortByPriority(lines: Line[]): EffortByPriority {
 
 /**
  * 从Line提取里程碑内容
+ * 支持聚合多个Line的SSTS数据（用于矩阵视图）
  */
-function extractMilestoneContent(line: Line): MilestoneContent {
+function extractMilestoneContent(line: Line, relatedLines: Line[] = []): MilestoneContent {
   const attrs = line.attributes || {};
   
-  // 提取SSTS列表
-  const sstsList = attrs.sstsList || [];
+  // 提取SSTS列表（从里程碑自身）
+  const ownSstsList = attrs.sstsList || [];
   
-  // 提取车型节点
-  const vehicleDeliverables = attrs.vehicleDeliverables || [];
-  const vehicleNodes = vehicleDeliverables.map((v: any) => v.node).filter(Boolean);
+  // 从关联的Line中聚合SSTS数据
+  const relatedSstsList: any[] = [];
+  relatedLines.forEach(relatedLine => {
+    const relatedAttrs = relatedLine.attributes || {};
+    const lineSsts = relatedAttrs.sstsList || [];
+    lineSsts.forEach((ssts: any) => {
+      relatedSstsList.push({
+        ...ssts,
+        sourceLine: relatedLine.label || relatedLine.id, // 标记来源
+      });
+    });
+  });
+  
+  // 合并所有SSTS
+  const allSstsList = [...ownSstsList, ...relatedSstsList];
+  
+  // 提取车型节点（从自身和关联Line）
+  const ownVehicleDeliverables = attrs.vehicleDeliverables || [];
+  const relatedVehicleDeliverables = relatedLines.flatMap((l: Line) => 
+    (l.attributes?.vehicleDeliverables || []).map((v: any) => ({
+      ...v,
+      sourceLine: l.label || l.id,
+    }))
+  );
+  const allVehicleDeliverables = [...ownVehicleDeliverables, ...relatedVehicleDeliverables];
+  const vehicleNodes = allVehicleDeliverables.map((v: any) => v.node).filter(Boolean);
   
   // 计算交付物数量
-  const deliverableCount = vehicleDeliverables.reduce(
+  const deliverableCount = allVehicleDeliverables.reduce(
     (sum: number, v: any) => sum + (v.items?.length || 0), 0
   );
   
   return {
-    sstsCount: sstsList.length,
-    sstsList: sstsList.slice(0, 3).map((s: any) => s.name || s.id || '未命名'),
-    objectiveSummary: attrs.objectives?.[0] || attrs.description || attrs.goal || '暂无目标描述',
+    sstsCount: allSstsList.length,
+    sstsList: allSstsList.slice(0, 5).map((s: any) => 
+      `${s.name || s.id || '未命名'}${s.sourceLine ? ` (${s.sourceLine})` : ''}`
+    ),
+    objectiveSummary: attrs.objectives?.[0] || attrs.description || attrs.goal || 
+      (relatedLines.length > 0 ? `关联 ${relatedLines.length} 个前置任务` : '暂无目标描述'),
     deliverableVersion: attrs.deliverableVersion?.version || attrs.version,
-    vehicleNodes: vehicleNodes.slice(0, 3),
+    vehicleNodes: vehicleNodes.slice(0, 5),
     deliverableCount,
   };
 }
@@ -257,7 +284,7 @@ export function groupTimeNodesByQuarter(nodes: TimeNode[]): TimeNodeGroup[] {
  * @returns 矩阵数据
  */
 export function calculateMatrixV3(timePlan: TimePlan): MatrixDataV3 {
-  const { timelines, lines } = timePlan;
+  const { timelines, lines, relations = [] } = timePlan;
 
   // 1. 提取所有时间节点（Milestone和Gateway）
   const timeNodes: TimeNode[] = [];
@@ -268,6 +295,21 @@ export function calculateMatrixV3(timePlan: TimePlan): MatrixDataV3 {
     const node = extractTimeNode(line);
     if (node) {
       timeNodes.push(node);
+    }
+  });
+
+  // 构建关系映射：milestoneId -> 前置Line列表
+  const milestoneToLinesMap = new Map<string, Line[]>();
+  relations.forEach((rel: Relation) => {
+    // 只处理 dependency 类型的关系，且目标是 milestone
+    if (rel.type === 'dependency') {
+      const targetLine = lineMap.get(rel.toLineId);
+      const sourceLine = lineMap.get(rel.fromLineId);
+      if (targetLine && sourceLine && targetLine.schemaId === MilestoneSchema.id) {
+        const existing = milestoneToLinesMap.get(targetLine.id) || [];
+        existing.push(sourceLine);
+        milestoneToLinesMap.set(targetLine.id, existing);
+      }
     }
   });
 
@@ -290,24 +332,38 @@ export function calculateMatrixV3(timePlan: TimePlan): MatrixDataV3 {
         cellLines.push(timeNode.line);
       }
 
-      // 计算工作量
-      const cellEffort = cellLines.reduce((sum, line) => sum + estimateEffort(line), 0);
+      // 计算工作量（包含关联Line的工作量）
+      let cellEffort = cellLines.reduce((sum, line) => sum + estimateEffort(line), 0);
+      
+      // 找到关联到该里程碑的前置Line（用于SSTS聚合）
+      let relatedLines: Line[] = [];
+      if (timeNode.line) {
+        relatedLines = milestoneToLinesMap.get(timeNode.line.id) || [];
+        // 只累加同一Timeline下的关联Line的工作量
+        cellEffort += relatedLines
+          .filter(l => l.timelineId === timeline.id)
+          .reduce((sum, line) => sum + estimateEffort(line), 0);
+      }
+      
       totalEffort += cellEffort;
 
       // 计算状态和负载率
-      const status = calculateCellStatus(cellLines);
+      const allLines = [...cellLines, ...relatedLines.filter(l => l.timelineId === timeline.id)];
+      const status = calculateCellStatus(allLines);
       const loadRate = calculateLoadRate(cellEffort);
 
       // 确定时间节点类型
       const timeNodeType: 'milestone' | 'gateway' = 
         timeNode.line?.schemaId === MilestoneSchema.id ? 'milestone' : 'gateway';
       
-      // 提取特定内容
+      // 提取特定内容（聚合关联Line的SSTS数据）
       let milestoneContent: MilestoneContent | undefined;
       let gatewayContent: GatewayContent | undefined;
       
-      if (timeNodeType === 'milestone' && cellLines.length > 0) {
-        milestoneContent = extractMilestoneContent(cellLines[0]);
+      if (timeNodeType === 'milestone' && timeNode.line) {
+        // 只取同一Timeline下的关联Line
+        const timelineRelatedLines = relatedLines.filter(l => l.timelineId === timeline.id);
+        milestoneContent = extractMilestoneContent(timeNode.line, timelineRelatedLines);
       } else if (timeNodeType === 'gateway' && cellLines.length > 0) {
         gatewayContent = extractGatewayContent(cellLines[0]);
       }
@@ -320,8 +376,8 @@ export function calculateMatrixV3(timePlan: TimePlan): MatrixDataV3 {
         status,
         loadRate,
         timeNodeType,
-        priorityDistribution: calculatePriorityDistribution(cellLines),
-        effortByPriority: calculateEffortByPriority(cellLines),
+        priorityDistribution: calculatePriorityDistribution(allLines),
+        effortByPriority: calculateEffortByPriority(allLines),
         milestoneContent,
         gatewayContent,
       });

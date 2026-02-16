@@ -1,0 +1,474 @@
+{
+  "$schema": "test-data-schema",
+  "version": "1.0.0",
+  "description": "TimePlan Craft Kit API测试数据集",
+  
+  "users": [
+    {
+      "id": "user-test-001",
+      "email": "admin@timeplan.test",
+      "username": "admin",
+      "password": "Admin123!@#",
+      "display_name": "系统管理员",
+      "role": "admin",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=admin"
+    },
+    {
+      "id": "user-test-002",
+      "email": "pm@timeplan.test",
+      "username": "pm_zhang",
+      "password": "Test123!@#",
+      "display_name": "张三（项目经理）",
+      "role": "manager",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=pm"
+    },
+    {
+      "id": "user-test-003",
+      "email": "dev1@timeplan.test",
+      "username": "dev_li",
+      "password": "Test123!@#",
+      "display_name": "李四（开发）",
+      "role": "member",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=dev1"
+    },
+    {
+      "id": "user-test-004",
+      "email": "dev2@timeplan.test",
+      "username": "dev_wang",
+      "password": "Test123!@#",
+      "display_name": "王五（开发）",
+      "role": "member",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=dev2"
+    }
+  ],
+
+  "teams": [
+    {
+      "id": "team-test-001",
+      "name": "前端团队",
+      "description": "负责前端开发的团队",
+      "members": ["user-test-002", "user-test-003"]
+    },
+    {
+      "id": "team-test-002",
+      "name": "后端团队",
+      "description": "负责后端开发的团队",
+      "members": ["user-test-002", "user-test-004"]
+    }
+  ],
+
+  "projects": [
+    {
+      "id": "project-test-001",
+      "name": "TimePlan Craft Kit",
+      "description": "智能时间线管理平台开发项目",
+      "team_id": "team-test-001",
+      "owner_id": "user-test-002"
+    }
+  ],
+
+  "plans": [
+    {
+      "id": "plan-test-001",
+      "name": "Phase 4 - 后端开发计划",
+      "description": "2026年Q1后端服务开发",
+      "project_id": "project-test-001",
+      "owner_id": "user-test-002",
+      "view_config": {
+        "scale": "week",
+        "startDate": "2026-02-14",
+        "endDate": "2026-04-30"
+      }
+    },
+    {
+      "id": "plan-test-002",
+      "name": "测试数据计划",
+      "description": "用于集成测试的完整数据集",
+      "project_id": "project-test-001",
+      "owner_id": "user-test-002",
+      "view_config": {
+        "scale": "month",
+        "startDate": "2026-01-01",
+        "endDate": "2026-12-31"
+      }
+    }
+  ],
+
+  "timelines": [
+    {
+      "id": "timeline-test-001",
+      "plan_id": "plan-test-001",
+      "name": "认证授权模块",
+      "description": "用户认证和权限管理",
+      "color": "#1890ff",
+      "order": 0
+    },
+    {
+      "id": "timeline-test-002",
+      "plan_id": "plan-test-001",
+      "name": "计划管理模块",
+      "description": "TimePlan CRUD功能",
+      "color": "#52c41a",
+      "order": 1
+    },
+    {
+      "id": "timeline-test-003",
+      "plan_id": "plan-test-001",
+      "name": "实时协同模块",
+      "description": "WebSocket + OT算法",
+      "color": "#faad14",
+      "order": 2
+    }
+  ],
+
+  "lines": [
+    {
+      "id": "line-test-001",
+      "plan_id": "plan-test-001",
+      "timeline_id": "timeline-test-001",
+      "schema_id": "milestone",
+      "label": "✅ 认证系统设计完成",
+      "start_date": "2026-02-14T00:00:00Z",
+      "end_date": "2026-02-14T23:59:59Z",
+      "attributes": {
+        "owner": "张三",
+        "status": "已完成",
+        "priority": "high",
+        "tags": ["设计", "里程碑"]
+      }
+    },
+    {
+      "id": "line-test-002",
+      "plan_id": "plan-test-001",
+      "timeline_id": "timeline-test-001",
+      "schema_id": "lineplan",
+      "label": "实现用户注册API",
+      "start_date": "2026-02-15T00:00:00Z",
+      "end_date": "2026-02-16T23:59:59Z",
+      "attributes": {
+        "owner": "李四",
+        "status": "进行中",
+        "priority": "high",
+        "tags": ["开发", "API"],
+        "story_points": 3
+      }
+    },
+    {
+      "id": "line-test-003",
+      "plan_id": "plan-test-001",
+      "timeline_id": "timeline-test-001",
+      "schema_id": "lineplan",
+      "label": "实现JWT认证",
+      "start_date": "2026-02-17T00:00:00Z",
+      "end_date": "2026-02-19T23:59:59Z",
+      "attributes": {
+        "owner": "李四",
+        "status": "待开始",
+        "priority": "high",
+        "tags": ["开发", "认证"],
+        "story_points": 5
+      }
+    },
+    {
+      "id": "line-test-004",
+      "plan_id": "plan-test-001",
+      "timeline_id": "timeline-test-001",
+      "schema_id": "gateway",
+      "label": "🚪 认证模块完成",
+      "start_date": "2026-02-20T00:00:00Z",
+      "end_date": "2026-02-20T23:59:59Z",
+      "attributes": {
+        "type": "decision",
+        "description": "认证模块测试通过，可进入下一阶段"
+      }
+    },
+    {
+      "id": "line-test-005",
+      "plan_id": "plan-test-001",
+      "timeline_id": "timeline-test-002",
+      "schema_id": "lineplan",
+      "label": "实现Plan CRUD API",
+      "start_date": "2026-02-21T00:00:00Z",
+      "end_date": "2026-02-25T23:59:59Z",
+      "attributes": {
+        "owner": "王五",
+        "status": "待开始",
+        "priority": "medium",
+        "tags": ["开发", "CRUD"],
+        "story_points": 8
+      }
+    },
+    {
+      "id": "line-test-006",
+      "plan_id": "plan-test-001",
+      "timeline_id": "timeline-test-002",
+      "schema_id": "lineplan",
+      "label": "实现Timeline CRUD API",
+      "start_date": "2026-02-26T00:00:00Z",
+      "end_date": "2026-02-28T23:59:59Z",
+      "attributes": {
+        "owner": "王五",
+        "status": "待开始",
+        "priority": "medium",
+        "tags": ["开发", "CRUD"],
+        "story_points": 5
+      }
+    },
+    {
+      "id": "line-test-007",
+      "plan_id": "plan-test-001",
+      "timeline_id": "timeline-test-002",
+      "schema_id": "lineplan",
+      "label": "实现Line CRUD + 批量操作",
+      "start_date": "2026-03-01T00:00:00Z",
+      "end_date": "2026-03-07T23:59:59Z",
+      "attributes": {
+        "owner": "李四",
+        "status": "待开始",
+        "priority": "high",
+        "tags": ["开发", "CRUD", "批量操作"],
+        "story_points": 13
+      }
+    }
+  ],
+
+  "relations": [
+    {
+      "id": "relation-test-001",
+      "plan_id": "plan-test-001",
+      "from_line_id": "line-test-001",
+      "to_line_id": "line-test-002",
+      "type": "FS",
+      "lag": 0,
+      "notes": "设计完成后才能开发"
+    },
+    {
+      "id": "relation-test-002",
+      "plan_id": "plan-test-001",
+      "from_line_id": "line-test-002",
+      "to_line_id": "line-test-003",
+      "type": "FS",
+      "lag": 0,
+      "notes": "用户注册完成后实现JWT"
+    },
+    {
+      "id": "relation-test-003",
+      "plan_id": "plan-test-001",
+      "from_line_id": "line-test-003",
+      "to_line_id": "line-test-004",
+      "type": "FS",
+      "lag": 0,
+      "notes": "JWT完成后进入门禁"
+    },
+    {
+      "id": "relation-test-004",
+      "plan_id": "plan-test-001",
+      "from_line_id": "line-test-004",
+      "to_line_id": "line-test-005",
+      "type": "FS",
+      "lag": 0,
+      "notes": "认证完成后开发CRUD"
+    }
+  ],
+
+  "baselines": [
+    {
+      "id": "baseline-test-001",
+      "plan_id": "plan-test-001",
+      "name": "Phase 4 启动基线",
+      "description": "2026-02-14 Phase 4开始时的计划状态",
+      "date": "2026-02-14T00:00:00Z",
+      "snapshot": {
+        "timelines_count": 3,
+        "lines_count": 7,
+        "relations_count": 4
+      }
+    }
+  ],
+
+  "test_scenarios": {
+    "scenario_1_auth_flow": {
+      "description": "完整的认证流程测试",
+      "steps": [
+        {
+          "step": 1,
+          "action": "register",
+          "data": {
+            "email": "newuser@test.com",
+            "username": "newuser",
+            "password": "New123!@#"
+          },
+          "expected_status": 201
+        },
+        {
+          "step": 2,
+          "action": "login",
+          "data": {
+            "username": "newuser",
+            "password": "New123!@#"
+          },
+          "expected_status": 200
+        },
+        {
+          "step": 3,
+          "action": "get_current_user",
+          "expected_status": 200
+        },
+        {
+          "step": 4,
+          "action": "logout",
+          "expected_status": 200
+        }
+      ]
+    },
+
+    "scenario_2_create_full_plan": {
+      "description": "创建完整的计划（含Timeline、Line、Relation）",
+      "steps": [
+        {
+          "step": 1,
+          "action": "create_plan",
+          "data": {
+            "name": "集成测试计划"
+          },
+          "expected_status": 201,
+          "save_id": "plan_id"
+        },
+        {
+          "step": 2,
+          "action": "create_timeline",
+          "use_plan_id": "plan_id",
+          "data": {
+            "name": "开发泳道"
+          },
+          "expected_status": 201,
+          "save_id": "timeline_id"
+        },
+        {
+          "step": 3,
+          "action": "create_line",
+          "use_plan_id": "plan_id",
+          "data": {
+            "timeline_id": "$timeline_id",
+            "schema_id": "lineplan",
+            "label": "开发任务1",
+            "start_date": "2026-02-14T00:00:00Z"
+          },
+          "expected_status": 201,
+          "save_id": "line1_id"
+        },
+        {
+          "step": 4,
+          "action": "create_line",
+          "use_plan_id": "plan_id",
+          "data": {
+            "timeline_id": "$timeline_id",
+            "schema_id": "lineplan",
+            "label": "开发任务2",
+            "start_date": "2026-02-17T00:00:00Z"
+          },
+          "expected_status": 201,
+          "save_id": "line2_id"
+        },
+        {
+          "step": 5,
+          "action": "create_relation",
+          "use_plan_id": "plan_id",
+          "data": {
+            "from_line_id": "$line1_id",
+            "to_line_id": "$line2_id",
+            "type": "FS"
+          },
+          "expected_status": 201
+        },
+        {
+          "step": 6,
+          "action": "get_plan_detail",
+          "use_plan_id": "plan_id",
+          "expected_status": 200,
+          "assertions": [
+            "timelines.length == 1",
+            "lines.length == 2",
+            "relations.length == 1"
+          ]
+        }
+      ]
+    },
+
+    "scenario_3_batch_operations": {
+      "description": "批量操作测试",
+      "pre_conditions": "已有计划，含10个Line",
+      "steps": [
+        {
+          "step": 1,
+          "action": "batch_update_lines",
+          "data": {
+            "line_ids": ["$line1", "$line2", "$line3"],
+            "mode": "merge",
+            "updates": {
+              "attributes.status": "进行中"
+            }
+          },
+          "expected_status": 200,
+          "assertions": [
+            "updated_count == 3"
+          ]
+        }
+      ]
+    },
+
+    "scenario_4_circular_dependency": {
+      "description": "循环依赖检测",
+      "pre_conditions": "已有计划，含A、B、C三个Line",
+      "steps": [
+        {
+          "step": 1,
+          "action": "create_relation",
+          "description": "创建A→B",
+          "data": {
+            "from_line_id": "$lineA",
+            "to_line_id": "$lineB",
+            "type": "FS"
+          },
+          "expected_status": 201
+        },
+        {
+          "step": 2,
+          "action": "create_relation",
+          "description": "创建B→C",
+          "data": {
+            "from_line_id": "$lineB",
+            "to_line_id": "$lineC",
+            "type": "FS"
+          },
+          "expected_status": 201
+        },
+        {
+          "step": 3,
+          "action": "create_relation",
+          "description": "创建C→A（应被拒绝）",
+          "data": {
+            "from_line_id": "$lineC",
+            "to_line_id": "$lineA",
+            "type": "FS"
+          },
+          "expected_status": 400,
+          "assertions": [
+            "error == 'validation_error'",
+            "errors[0].type == 'circular'"
+          ]
+        }
+      ]
+    }
+  },
+
+  "performance_test_data": {
+    "large_plan": {
+      "description": "大型计划性能测试数据",
+      "timelines_count": 20,
+      "lines_per_timeline": 50,
+      "total_lines": 1000,
+      "relations_count": 300
+    }
+  }
+}
