@@ -278,7 +278,7 @@ export const RelationValidatorPanel: React.FC<RelationValidatorPanelProps> = ({
       {/* 初始提示 */}
       {!validationResult && !isValidating && (
         <Alert
-          message="点击"验证关系"开始检查"
+          message='点击"验证关系"开始检查'
           description="验证工具将检查所有关系的完整性，包括：源任务是否存在、目标任务是否存在、是否有自引用、是否有重复关系。"
           type="info"
           showIcon

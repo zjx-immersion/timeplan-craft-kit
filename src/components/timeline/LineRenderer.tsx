@@ -303,6 +303,7 @@ const MilestoneRenderer: React.FC<LineRendererProps> = memo(({
   line,
   startPos,
   isSelected,
+  isHighlighted = false,
   isCriticalPath = false,
   isInteracting,
   isEditMode,
@@ -337,6 +338,7 @@ const MilestoneRenderer: React.FC<LineRendererProps> = memo(({
       mouseEnterDelay={0.5}
     >
     <div
+      data-line-id={line.id}
       onClick={onClick}
       onMouseDown={onMouseDown}
       onMouseEnter={() => setIsHovering(true)}
@@ -349,15 +351,33 @@ const MilestoneRenderer: React.FC<LineRendererProps> = memo(({
         width: hitAreaSize,
         height: hitAreaSize,
         cursor: isEditMode ? (isInteracting ? 'grabbing' : 'grab') : 'pointer',
-        zIndex: isSelected ? 12 : (isInteracting ? 10 : 2),
+        zIndex: isHighlighted ? 100 : (isSelected ? 12 : (isInteracting ? 10 : 2)),
+        border: isHighlighted ? '2px solid #1890ff' : undefined,
+        borderRadius: '50%',
+        boxShadow: isHighlighted ? '0 0 20px 5px rgba(24, 144, 255, 0.6)' : undefined,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         transition: isInteracting ? 'none' : `${timelineTransitions.normal}`,
       }}
     >
+      {/* ✅ 高亮时的外圈（从矩阵跳转时） */}
+      {isHighlighted && (
+        <div
+          style={{
+            position: 'absolute',
+            width: 44,
+            height: 44,
+            borderRadius: '50%',
+            border: '3px solid #1890ff',  // 蓝色边框
+            backgroundColor: 'rgba(24, 144, 255, 0.15)',  // 淡蓝色背景
+            zIndex: -1,
+            animation: 'pulse 1.5s ease-in-out infinite',
+          }}
+        />
+      )}
       {/* ✅ 选中时的外圈（参考截图3） */}
-      {isSelected && (
+      {isSelected && !isHighlighted && (
         <div
           style={{
             position: 'absolute',
@@ -425,6 +445,7 @@ const GatewayRenderer: React.FC<LineRendererProps> = memo(({
   line,
   startPos,
   isSelected,
+  isHighlighted = false,
   isCriticalPath = false,
   isInteracting,
   isEditMode,
@@ -459,6 +480,7 @@ const GatewayRenderer: React.FC<LineRendererProps> = memo(({
       mouseEnterDelay={0.5}
     >
     <div
+      data-line-id={line.id}
       onClick={onClick}
       onMouseDown={onMouseDown}
       onMouseEnter={() => setIsHovering(true)}
@@ -471,15 +493,33 @@ const GatewayRenderer: React.FC<LineRendererProps> = memo(({
         width: hitAreaSize,
         height: hitAreaSize,
         cursor: isEditMode ? (isInteracting ? 'grabbing' : 'grab') : 'pointer',
-        zIndex: isSelected ? 12 : (isInteracting ? 10 : 1),
+        zIndex: isHighlighted ? 100 : (isSelected ? 12 : (isInteracting ? 10 : 1)),
+        border: isHighlighted ? '2px solid #1890ff' : undefined,
+        borderRadius: '50%',
+        boxShadow: isHighlighted ? '0 0 20px 5px rgba(24, 144, 255, 0.6)' : undefined,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         transition: isInteracting ? 'none' : `${timelineTransitions.normal}`,
       }}
     >
+      {/* ✅ 高亮时的外圈（从矩阵跳转时） */}
+      {isHighlighted && (
+        <div
+          style={{
+            position: 'absolute',
+            width: 44,
+            height: 44,
+            borderRadius: '50%',
+            border: '3px solid #1890ff',  // 蓝色边框
+            backgroundColor: 'rgba(24, 144, 255, 0.15)',  // 淡蓝色背景
+            zIndex: -1,
+            animation: 'pulse 1.5s ease-in-out infinite',
+          }}
+        />
+      )}
       {/* ✅ 选中时的外圈（参考截图3） */}
-      {isSelected && (
+      {isSelected && !isHighlighted && (
         <div
           style={{
             position: 'absolute',

@@ -259,6 +259,11 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   const [internalShowCriticalPath, setInternalShowCriticalPath] = useState(false);
   const showCriticalPath = externalShowCriticalPath !== undefined ? externalShowCriticalPath : internalShowCriticalPath;
 
+  // ==================== 防止重复滚动 ====================
+  
+  const isScrollingRef = useRef(false);
+  const lastScrollTargetRef = useRef<string | null>(null);
+
   const handleSaveTitle = useCallback(() => {
     if (editedTitle.trim() && editedTitle !== initialData.title) {
       onTitleChange?.(editedTitle.trim());
@@ -432,6 +437,17 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
           50% {
             box-shadow: 0 0 20px 5px rgba(24, 144, 255, 0.6);
             background-color: rgba(24, 144, 255, 0.1);
+          }
+        }
+        
+        @keyframes pulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.1);
+            opacity: 0.8;
           }
         }
         
@@ -683,6 +699,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   
   /**
    * 响应从矩阵视图跳转到甘特图的导航请求
+   * ✅ 修复：保持完整视图范围（2024-2028），只滚动到目标位置，不调整视图范围
    */
   useEffect(() => {
     // 如果没有目标Line IDs，不执行任何操作
@@ -694,42 +711,34 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
       highlight,
       autoScroll,
       highlightDuration,
+      currentViewStart: normalizedViewStartDate.toISOString(),
+      currentViewEnd: normalizedViewEndDate.toISOString(),
     });
     
-    // 1. 计算并调整时间范围（显示所有目标Line）
+    // ✅ 修复：不再调整视图范围，保持完整的 2024-2028 时间轴
+    // 只获取目标Line信息用于滚动和高亮
     const targetLines = data.lines.filter(line => targetLineIds.includes(line.id));
+    
     if (targetLines.length > 0) {
-      const startDates = targetLines.map(line => new Date(line.startDate));
-      const endDates = targetLines.map(line => 
-        line.endDate ? new Date(line.endDate) : new Date(line.startDate)
-      );
-      
-      const minDate = new Date(Math.min(...startDates.map(d => d.getTime())));
-      const maxDate = new Date(Math.max(...endDates.map(d => d.getTime())));
-      
-      // 添加一些边距（前后各1个月）
-      const rangeStart = addMonths(minDate, -1);
-      const rangeEnd = addMonths(maxDate, 1);
-      
-      console.log('[TimelinePanel] 📅 调整时间范围:', {
-        rangeStart: format(rangeStart, 'yyyy-MM-dd'),
-        rangeEnd: format(rangeEnd, 'yyyy-MM-dd'),
+      console.log('[TimelinePanel] 📍 目标Line信息:', {
+        targetLines: targetLines.length,
+        lineNames: targetLines.map(l => l.label).join(', '),
+        // 保持当前视图范围，不调整
+        viewStart: normalizedViewStartDate.toISOString().split('T')[0],
+        viewEnd: normalizedViewEndDate.toISOString().split('T')[0],
       });
-      
-      setViewStartDate(rangeStart);
-      setViewEndDate(rangeEnd);
     }
     
-    // 2. 滚动到当前任务索引对应的Line（Task 3.7：批量跳转优化）
-    if (autoScroll && targetLineIds.length > 0 && scrollContainerRef.current) {
+    // 1. 滚动到当前任务索引对应的Line（使用当前视图范围）
+    if (autoScroll && targetLineIds.length > 0 && scrollContainerRef.current && targetLines.length > 0) {
       const currentLineId = targetLineIds[currentTaskIndex] || targetLineIds[0];
-      // 延迟执行，确保时间范围调整后DOM已更新
+      // 使用当前视图范围进行滚动，不传递自定义范围
       setTimeout(() => {
         scrollToLine(currentLineId);
-      }, 200);
+      }, 100);
     }
     
-    // 3. 触发高亮动画
+    // 2. 触发高亮动画
     if (highlight) {
       setHighlightedLineIds(new Set(targetLineIds));
       
@@ -738,7 +747,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
         setHighlightedLineIds(new Set());
       }, highlightDuration);
     }
-  }, [targetLineIds, currentTaskIndex, highlight, autoScroll, highlightDuration, data.lines]);
+  }, [targetLineIds, currentTaskIndex, highlight, autoScroll, highlightDuration, data.lines, normalizedViewStartDate, normalizedViewEndDate]);
   
   /**
    * Task 3.7：响应任务索引变化（用户点击上一个/下一个任务）
@@ -750,6 +759,7 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
     const currentLineId = targetLineIds[currentTaskIndex];
     if (currentLineId && scrollContainerRef.current) {
       setTimeout(() => {
+        // ✅ 使用当前视图范围进行滚动
         scrollToLine(currentLineId);
       }, 100);
     }
@@ -757,47 +767,78 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
   
   /**
    * 滚动到指定Line（居中显示）
+   * ✅ 修复：使用基于日期的计算，而不是DOM位置，确保视图范围改变后仍能正确定位
+   * ✅ 修复：防止重复滚动到同一目标
+   * @param lineId - 要滚动到的Line ID
+   * @param customViewStartDate - 可选，自定义视图开始日期（用于在调整视图范围后立即滚动）
    */
-  const scrollToLine = useCallback((lineId: string) => {
-    const lineElement = document.querySelector(`[data-line-id="${lineId}"]`) as HTMLElement;
-    const container = scrollContainerRef.current;
-    
-    if (!lineElement || !container) {
-      console.warn('[TimelinePanel] 滚动失败 - 元素未找到:', lineId);
+  const scrollToLine = useCallback((lineId: string, customViewStartDate?: Date) => {
+    // ✅ 防重复：如果正在滚动到相同目标，跳过
+    if (isScrollingRef.current && lastScrollTargetRef.current === lineId) {
+      console.log('[TimelinePanel] ⏭️ 跳过重复滚动:', lineId);
       return;
     }
+
+    const line = data.lines.find(l => l.id === lineId);
+    const container = scrollContainerRef.current;
     
-    const lineRect = lineElement.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
+    if (!line || !container) {
+      console.warn('[TimelinePanel] 滚动失败 - Line或容器未找到:', lineId);
+      return;
+    }
+
+    // ✅ 标记正在滚动
+    isScrollingRef.current = true;
+    lastScrollTargetRef.current = lineId;
+    
+    // 使用传入的自定义视图开始日期，或当前的 state
+    const effectiveViewStartDate = customViewStartDate || normalizedViewStartDate;
+    
+    // 使用基于日期的计算获取Line的水平位置
+    const lineStartDate = new Date(line.startDate);
+    const linePosition = getPositionFromDate(lineStartDate, effectiveViewStartDate, scale);
+    
+    // 估算Line宽度（用于居中计算）
+    const lineWidth = line.endDate 
+      ? getPositionFromDate(new Date(line.endDate), effectiveViewStartDate, scale) - linePosition
+      : 100; // 默认宽度
+    
+    // 获取Line的垂直位置（通过查找timeline索引）
+    const timelineIndex = data.timelines.findIndex(t => t.id === line.timelineId);
+    const rowHeight = ROW_HEIGHT;
+    const lineTop = timelineIndex >= 0 ? timelineIndex * rowHeight + rowHeight / 2 : 0;
     
     // 计算目标滚动位置（使Line居中）
-    const targetScrollTop = 
-      container.scrollTop + 
-      lineRect.top - 
-      containerRect.top - 
-      (containerRect.height / 2) + 
-      (lineRect.height / 2);
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
     
-    const targetScrollLeft = 
-      container.scrollLeft + 
-      lineRect.left - 
-      containerRect.left - 
-      (containerRect.width / 2) + 
-      (lineRect.width / 2);
+    const targetScrollLeft = Math.max(0, linePosition + lineWidth / 2 - containerWidth / 2);
+    const targetScrollTop = Math.max(0, lineTop - containerHeight / 2);
     
     console.log('[TimelinePanel] 📍 滚动到Line:', {
       lineId,
+      lineLabel: line.label,
+      lineDate: line.startDate,
+      linePosition,
       targetScrollTop,
       targetScrollLeft,
+      viewStart: effectiveViewStartDate,
+      customViewStartDate: customViewStartDate ? format(customViewStartDate, 'yyyy-MM-dd') : undefined,
+      scale,
     });
     
     // 平滑滚动
     container.scrollTo({
-      top: Math.max(0, targetScrollTop),
-      left: Math.max(0, targetScrollLeft),
+      top: targetScrollTop,
+      left: targetScrollLeft,
       behavior: 'smooth',
     });
-  }, []);
+
+    // ✅ 500ms 后解除锁定（平滑滚动动画时间）
+    setTimeout(() => {
+      isScrollingRef.current = false;
+    }, 500);
+  }, [data.lines, data.timelines, normalizedViewStartDate, scale]);
 
   // ==================== 全局快捷键 ====================
   
@@ -2771,6 +2812,28 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
               onComplete={handleRangeDragComplete}
               onCancel={handleRangeDragCancel}
             />
+
+            {/* ✅ 全量日志：输出所有任务位置计算信息 */}
+            {(() => {
+              console.log('[TimelinePanel] 📋 任务位置计算全量日志:');
+              console.log(`  - 视图起始日期: ${normalizedViewStartDate.toISOString().split('T')[0]}`);
+              console.log(`  - 时间刻度: ${scale}`);
+              console.log(`  - Timeline数量: ${data.timelines.length}`);
+              console.log(`  - 总任务数: ${data.lines.length}`);
+              console.log('  - 各Timeline任务分布:');
+              data.timelines.forEach((t, i) => {
+                const tLines = data.lines.filter(l => l.timelineId === t.id);
+                console.log(`    ${i + 1}. ${t.label || t.name}: ${tLines.length}个任务`);
+              });
+              console.log('  - 任务位置计算详情:');
+              data.lines.forEach((line, idx) => {
+                const startPos = getPositionFromDate(parseDateAsLocal(line.startDate), normalizedViewStartDate, scale);
+                const endPos = line.endDate ? getPositionFromDate(parseDateAsLocal(line.endDate), normalizedViewStartDate, scale) : startPos;
+                const width = endPos - startPos;
+                console.log(`    ${(idx + 1).toString().padStart(3)}. ${(line.label || '未命名').padEnd(20)} | 开始: ${line.startDate.split('T')[0]} | 位置: ${Math.round(startPos).toString().padStart(5)}px | 宽度: ${Math.round(width).toString().padStart(5)}px | 高亮: ${highlightedLineIds.has(line.id) ? '✓' : ' '}`);
+              });
+              return null;
+            })()}
 
             {data.timelines.map((timeline, index) => {
               const lines = getLinesByTimelineId(timeline.id);

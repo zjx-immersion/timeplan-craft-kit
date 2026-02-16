@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { Tooltip, Tag, Progress, Space } from 'antd';
+import { Tag, Progress, Space } from 'antd';
 import { 
   SafetyOutlined, 
   CheckCircleOutlined, 
@@ -185,12 +185,12 @@ export const GatewayCellContent: React.FC<GatewayCellContentProps> = ({
   }
 
   if (compact) {
+    // 注意：外层 MatrixTableV3 已经使用了 EnhancedTooltip 包裹单元格
+    // 这里不再使用 Tooltip，避免双重 tooltip 重叠问题
     return (
-      <Tooltip title={<DetailTooltip content={content} />} placement="top">
-        <div style={{ cursor: 'pointer' }}>
-          <CompactView content={content} />
-        </div>
-      </Tooltip>
+      <div style={{ cursor: 'pointer' }}>
+        <CompactView content={content} />
+      </div>
     );
   }
 

@@ -290,6 +290,12 @@ const lines: Line[] = [
       description: '域控制器架构方案设计',
       module: 'E0架构',
       productLine: '电子架构',
+      // SSTS 需求列表
+      sstsList: [
+        { id: 'SSTS-E0-001', name: '域控制器功能定义', status: '已完成' },
+        { id: 'SSTS-E0-002', name: '传感器接口规范', status: '已完成' },
+        { id: 'SSTS-E0-003', name: '网络通信协议', status: '评审中' },
+      ],
     },
   },
   {
@@ -359,6 +365,13 @@ const lines: Line[] = [
       description: '详细架构方案设计',
       module: 'E1架构',
       productLine: '电子架构',
+      // SSTS 需求列表
+      sstsList: [
+        { id: 'SSTS-E1-001', name: 'E1架构总体设计', status: '已完成' },
+        { id: 'SSTS-E1-002', name: '计算资源分配方案', status: '已完成' },
+        { id: 'SSTS-E1-003', name: '功能安全设计', status: '评审中' },
+        { id: 'SSTS-E1-004', name: '信息安全设计', status: '开发中' },
+      ],
     },
   },
   {
@@ -410,6 +423,21 @@ const lines: Line[] = [
       description: 'E2架构开发完成',
       module: 'E2架构',
       productLine: '电子架构',
+      // SSTS 需求列表
+      sstsList: [
+        { id: 'SSTS-EE-001', name: 'E2架构设计规范', status: '已完成' },
+        { id: 'SSTS-EE-002', name: '域控制器接口定义', status: '已完成' },
+        { id: 'SSTS-EE-003', name: '网络拓扑设计', status: '评审中' },
+        { id: 'SSTS-EE-004', name: '电源分配方案', status: '开发中' },
+        { id: 'SSTS-EE-005', name: 'ECU部署规划', status: '待启动' },
+      ],
+      // 车型交付物
+      vehicleDeliverables: [
+        { node: 'C1', items: ['E2架构设计文档', '接口规范V2.0'] },
+        { node: 'C2', items: ['域控部署方案'] },
+      ],
+      // 交付版本
+      deliverableVersion: { version: 'v2.0.0', tag: 'E2-Release' },
     },
   },
   // E3 信号架构改造
@@ -477,6 +505,21 @@ const lines: Line[] = [
       status: '计划中',
       priority: '高',
       owner: '架构团队',
+      // SSTS 需求列表
+      sstsList: [
+        { id: 'SSTS-FDJ-001', name: '整车电气原理图', status: '已完成' },
+        { id: 'SSTS-FDJ-002', name: '线束布置图', status: '已完成' },
+        { id: 'SSTS-FDJ-003', name: '接插件定义书', status: '评审中' },
+        { id: 'SSTS-FDJ-004', name: 'ECU安装图纸', status: '开发中' },
+      ],
+      // 车型交付物
+      vehicleDeliverables: [
+        { node: 'C1', items: ['FDJ图纸包', '电气BOM'] },
+        { node: 'C2', items: ['FDJ图纸包', '线束BOM'] },
+        { node: 'P1', items: ['FDJ图纸包'] },
+      ],
+      // 交付版本
+      deliverableVersion: { version: 'v1.0.0', tag: 'FDJ-Release' },
       description: '最终数据判定',
       module: 'E4架构',
       productLine: '电子架构',
@@ -503,6 +546,12 @@ const lines: Line[] = [
       description: '图像去畸变、增强、ROI提取',
       module: '视觉感知',
       productLine: '感知算法',
+      // SSTS 需求列表
+      sstsList: [
+        { id: 'SSTS-VIS-001', name: '相机标定参数管理', status: '已完成' },
+        { id: 'SSTS-VIS-002', name: '图像去畸变算法', status: '已完成' },
+        { id: 'SSTS-VIS-003', name: '图像增强处理', status: '评审中' },
+      ],
     },
   },
   {
@@ -521,6 +570,14 @@ const lines: Line[] = [
       description: 'YOLO/Transformer目标检测',
       module: '视觉感知',
       productLine: '感知算法',
+      // SSTS 需求列表
+      sstsList: [
+        { id: 'SSTS-DET-001', name: '车辆检测算法', status: '已完成' },
+        { id: 'SSTS-DET-002', name: '行人检测算法', status: '已完成' },
+        { id: 'SSTS-DET-003', name: '交通标志检测', status: '评审中' },
+        { id: 'SSTS-DET-004', name: '车道线检测', status: '开发中' },
+        { id: 'SSTS-DET-005', name: '红绿灯检测', status: '已完成' },
+      ],
     },
   },
   {
@@ -590,6 +647,15 @@ const lines: Line[] = [
       description: '多线激光雷达融合',
       module: '雷达感知',
       productLine: '感知算法',
+      // SSTS 需求列表
+      sstsList: [
+        { id: 'SSTS-LID-001', name: '点云配准算法', status: '已完成' },
+        { id: 'SSTS-LID-002', name: '障碍物分割算法', status: '已完成' },
+        { id: 'SSTS-LID-003', name: '地面分割算法', status: '评审中' },
+        { id: 'SSTS-LID-004', name: '点云聚类算法', status: '开发中' },
+        { id: 'SSTS-LID-005', name: '3D目标检测', status: '已完成' },
+        { id: 'SSTS-LID-006', name: '点云追踪算法', status: '开发中' },
+      ],
     },
   },
   {
@@ -606,6 +672,21 @@ const lines: Line[] = [
       description: '雷达算法交付',
       module: '雷达感知',
       productLine: '感知算法',
+      // SSTS 需求列表
+      sstsList: [
+        { id: 'SSTS-RAD-001', name: '前向雷达目标检测', status: '已完成' },
+        { id: 'SSTS-RAD-002', name: '角雷达盲区监测', status: '已完成' },
+        { id: 'SSTS-RAD-003', name: '4D雷达点云处理', status: '评审中' },
+        { id: 'SSTS-RAD-004', name: '雷达相机融合', status: '开发中' },
+        { id: 'SSTS-RAD-005', name: '毫米波信号处理', status: '已完成' },
+      ],
+      // 车型交付物
+      vehicleDeliverables: [
+        { node: 'C1', items: ['雷达算法SDK', '标定参数'] },
+        { node: 'C2', items: ['雷达算法SDK'] },
+      ],
+      // 交付版本
+      deliverableVersion: { version: 'v1.2.0', tag: 'Radar-Release' },
     },
   },
   // 感知算法集成测试
@@ -676,6 +757,24 @@ const lines: Line[] = [
       description: '感知算法正式发布',
       module: '感知集成',
       productLine: '感知算法',
+      // SSTS 需求列表
+      sstsList: [
+        { id: 'SSTS-PER-001', name: '视觉目标检测算法', status: '已完成' },
+        { id: 'SSTS-PER-002', name: '雷达目标跟踪算法', status: '已完成' },
+        { id: 'SSTS-PER-003', name: '多传感器融合算法', status: '已完成' },
+        { id: 'SSTS-PER-004', name: '车道线检测算法', status: '评审中' },
+        { id: 'SSTS-PER-005', name: '交通标志识别算法', status: '已完成' },
+        { id: 'SSTS-PER-006', name: '行人检测算法', status: '已完成' },
+        { id: 'SSTS-PER-007', name: '场景理解算法', status: '开发中' },
+      ],
+      // 车型交付物
+      vehicleDeliverables: [
+        { node: 'C1', items: ['感知算法v1.0', '模型文件', '标定工具'] },
+        { node: 'C2', items: ['感知算法v1.0', '模型文件'] },
+        { node: 'P1', items: ['感知算法v1.0'] },
+      ],
+      // 交付版本
+      deliverableVersion: { version: 'v1.0.0', tag: 'Perception-v1.0' },
     },
   },
 
@@ -699,6 +798,12 @@ const lines: Line[] = [
       description: '有限状态机和场景切换',
       module: '行为决策',
       productLine: '规划决策',
+      // SSTS 需求列表
+      sstsList: [
+        { id: 'SSTS-DEC-001', name: '驾驶场景分类', status: '已完成' },
+        { id: 'SSTS-DEC-002', name: '状态机框架设计', status: '已完成' },
+        { id: 'SSTS-DEC-003', name: '场景切换逻辑', status: '评审中' },
+      ],
     },
   },
   {
@@ -717,6 +822,13 @@ const lines: Line[] = [
       description: 'DQN/PPO策略训练',
       module: '行为决策',
       productLine: '规划决策',
+      // SSTS 需求列表
+      sstsList: [
+        { id: 'SSTS-RL-001', name: 'DQN算法实现', status: '已完成' },
+        { id: 'SSTS-RL-002', name: 'PPO算法实现', status: '评审中' },
+        { id: 'SSTS-RL-003', name: '奖励函数设计', status: '开发中' },
+        { id: 'SSTS-RL-004', name: '策略网络训练', status: '开发中' },
+      ],
     },
   },
   {
@@ -800,6 +912,21 @@ const lines: Line[] = [
       priority: '高',
       owner: '规划团队',
       description: '规划算法交付',
+      // SSTS 需求列表
+      sstsList: [
+        { id: 'SSTS-PLN-001', name: '全局路径规划算法', status: '已完成' },
+        { id: 'SSTS-PLN-002', name: '局部轨迹规划算法', status: '已完成' },
+        { id: 'SSTS-PLN-003', name: '动态障碍物避障算法', status: '评审中' },
+        { id: 'SSTS-PLN-004', name: '交通规则处理算法', status: '开发中' },
+        { id: 'SSTS-PLN-005', name: '决策状态机设计', status: '已完成' },
+      ],
+      // 车型交付物
+      vehicleDeliverables: [
+        { node: 'C1', items: ['规划算法SDK', '配置参数'] },
+        { node: 'C2', items: ['规划算法SDK'] },
+      ],
+      // 交付版本
+      deliverableVersion: { version: 'v1.0.0', tag: 'Planning-v1.0' },
     },
   },
   // 规划决策集成测试
@@ -909,6 +1036,21 @@ const lines: Line[] = [
       description: '控制算法交付',
       module: '纵向控制',
       productLine: '控制执行',
+      // SSTS 需求列表
+      sstsList: [
+        { id: 'SSTS-CTL-001', name: '纵向控制算法', status: '已完成' },
+        { id: 'SSTS-CTL-002', name: '横向控制算法', status: '已完成' },
+        { id: 'SSTS-CTL-003', name: '轨迹跟踪算法', status: '评审中' },
+        { id: 'SSTS-CTL-004', name: '舒适停车算法', status: '开发中' },
+        { id: 'SSTS-CTL-005', name: '坡度补偿算法', status: '已完成' },
+      ],
+      // 车型交付物
+      vehicleDeliverables: [
+        { node: 'C1', items: ['控制算法SDK', '标定参数'] },
+        { node: 'C2', items: ['控制算法SDK'] },
+      ],
+      // 交付版本
+      deliverableVersion: { version: 'v1.0.0', tag: 'Control-v1.0' },
     },
   },
   // 控制模块集成测试
@@ -1499,7 +1641,49 @@ const relations: Relation[] = [
   // ========================================================================
   // 同Timeline内的顺序依赖（确保不重叠）
   // ========================================================================
-  // 电子电器架构内部依赖
+  // 电子电器架构内部依赖（指向Milestone，用于SSTS聚合）
+  {
+    id: 'rel-ee-to-milestone-001',
+    type: 'dependency',
+    fromLineId: 'line-ee-001', // E0.1域控架构方案设计（有SSTS）
+    toLineId: 'line-ee-003-milestone', // E2完成
+    properties: {
+      dependencyType: 'finish-to-start',
+      lag: 0,
+    },
+    attributes: {
+      critical: true,
+      description: 'E0.1的SSTS归属到E2里程碑',
+    },
+  },
+  {
+    id: 'rel-ee-to-milestone-002',
+    type: 'dependency',
+    fromLineId: 'line-ee-002', // E1架构方案设计（有SSTS）
+    toLineId: 'line-ee-003-milestone', // E2完成
+    properties: {
+      dependencyType: 'finish-to-start',
+      lag: 0,
+    },
+    attributes: {
+      critical: true,
+      description: 'E1的SSTS归属到E2里程碑',
+    },
+  },
+  {
+    id: 'rel-ee-to-milestone-003',
+    type: 'dependency',
+    fromLineId: 'line-ee-003', // E2架构
+    toLineId: 'line-ee-005-milestone', // FDJ图纸发布
+    properties: {
+      dependencyType: 'finish-to-start',
+      lag: 0,
+    },
+    attributes: {
+      critical: true,
+      description: 'E2的SSTS归属到FDJ里程碑',
+    },
+  },
   {
     id: 'rel-ee-internal-001',
     type: 'dependency',
@@ -1553,7 +1737,49 @@ const relations: Relation[] = [
     },
   },
 
-  // 感知算法内部依赖
+  // 感知算法内部依赖（指向Milestone，用于SSTS聚合）
+  {
+    id: 'rel-p-to-milestone-001',
+    type: 'dependency',
+    fromLineId: 'line-p-001-mr1', // P1.1图像预处理（有SSTS）
+    toLineId: 'line-p-002-milestone', // 雷达算法完成
+    properties: {
+      dependencyType: 'finish-to-start',
+      lag: 0,
+    },
+    attributes: {
+      critical: true,
+      description: '图像预处理的SSTS归属到雷达算法里程碑',
+    },
+  },
+  {
+    id: 'rel-p-to-milestone-002',
+    type: 'dependency',
+    fromLineId: 'line-p-001-mr2', // P1.2目标检测（有SSTS）
+    toLineId: 'line-p-002-milestone', // 雷达算法完成
+    properties: {
+      dependencyType: 'finish-to-start',
+      lag: 0,
+    },
+    attributes: {
+      critical: true,
+      description: '目标检测的SSTS归属到雷达算法里程碑',
+    },
+  },
+  {
+    id: 'rel-p-to-milestone-003',
+    type: 'dependency',
+    fromLineId: 'line-p-002', // 激光雷达（有SSTS）
+    toLineId: 'line-p-002-milestone', // 雷达算法完成
+    properties: {
+      dependencyType: 'finish-to-start',
+      lag: 0,
+    },
+    attributes: {
+      critical: true,
+      description: '激光雷达的SSTS归属到雷达算法里程碑',
+    },
+  },
   {
     id: 'rel-p-internal-001',
     type: 'dependency',
@@ -1594,7 +1820,35 @@ const relations: Relation[] = [
     },
   },
 
-  // 规划决策内部依赖
+  // 规划决策内部依赖（指向Milestone，用于SSTS聚合）
+  {
+    id: 'rel-pl-to-milestone-001',
+    type: 'dependency',
+    fromLineId: 'line-pl-001-mr1', // PL1.1决策状态机（有SSTS）
+    toLineId: 'line-pl-002-milestone', // 规划算法完成
+    properties: {
+      dependencyType: 'finish-to-start',
+      lag: 0,
+    },
+    attributes: {
+      critical: true,
+      description: '决策状态机的SSTS归属到规划算法里程碑',
+    },
+  },
+  {
+    id: 'rel-pl-to-milestone-002',
+    type: 'dependency',
+    fromLineId: 'line-pl-001-mr2', // PL1.2强化学习（有SSTS）
+    toLineId: 'line-pl-002-milestone', // 规划算法完成
+    properties: {
+      dependencyType: 'finish-to-start',
+      lag: 0,
+    },
+    attributes: {
+      critical: true,
+      description: '强化学习的SSTS归属到规划算法里程碑',
+    },
+  },
   {
     id: 'rel-pl-internal-001',
     type: 'dependency',

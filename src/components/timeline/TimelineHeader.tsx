@@ -427,36 +427,50 @@ const TimelineHeader: React.FC<TimelineHeaderProps> = React.memo(({
   const childHeaders = useMemo(() => {
     const headers = getChildHeaders(startDate, endDate, scale);
     
-    // 输出前10个子级表头的详细信息
+    // ✅ 全量日志：输出所有子级表头的详细信息
     console.log(`[TimelineHeader] 📅 子级表头计算完成:`);
     console.log(`  - 总数: ${headers.length}`);
-    console.log(`  - 前10个表头:`);
-    headers.slice(0, 10).forEach((h, idx) => {
+    console.log(`  - 视图范围: ${startDate.toISOString().split('T')[0]} ~ ${endDate.toISOString().split('T')[0]}`);
+    console.log(`  - 时间刻度: ${scale}`);
+    
+    // 输出所有表头的完整列表
+    console.log(`  - 完整表头列表 (${headers.length}个):`);
+    headers.forEach((h, idx) => {
       const date = h.date;
       const dateStr = date ? `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}` : 'null';
-      console.log(`    ${idx + 1}. ${h.label} | 日期: ${dateStr} | 位置: ${Math.round(h.position)}px | 宽度: ${Math.round(h.width)}px`);
+      const isWeekend = h.isWeekend ? '周末' : '';
+      const isHoliday = h.isHoliday ? '假日' : '';
+      const isToday = h.isToday ? '今天' : '';
+      const flags = [isWeekend, isHoliday, isToday].filter(Boolean).join(',') || '-';
+      console.log(`    ${(idx + 1).toString().padStart(3)}. ${h.label.padEnd(6)} | 日期: ${dateStr} | 位置: ${Math.round(h.position).toString().padStart(5)}px | 宽度: ${Math.round(h.width).toString().padStart(4)}px | ${flags}`);
     });
     
-    console.log('[TimelineHeader] 📅 子级表头汇总:', {
+    // 计算总宽度并验证
+    const totalCalculatedWidth = headers.reduce((sum, h) => sum + h.width, 0);
+    const lastHeader = headers[headers.length - 1];
+    const expectedTotalWidth = lastHeader ? lastHeader.position + lastHeader.width : 0;
+    
+    console.log('[TimelineHeader] 📊 表头统计:', {
       count: headers.length,
       firstLabel: headers[0]?.label,
-      lastLabel: headers[headers.length - 1]?.label,
+      firstDate: headers[0]?.date?.toISOString().split('T')[0],
+      lastLabel: lastHeader?.label,
+      lastDate: lastHeader?.date?.toISOString().split('T')[0],
+      totalCalculatedWidth: Math.round(totalCalculatedWidth),
+      expectedTotalWidth: Math.round(expectedTotalWidth),
+      widthMatch: Math.abs(totalCalculatedWidth - expectedTotalWidth) < 1,
     });
     
     // ✅ 输出关键月份的位置（用于验证对齐）
-    const year2026Index = headers.findIndex(h => {
-      const date = h.date;
-      return date && date.getFullYear() === 2026 && date.getMonth() === 0; // 2026年1月
-    });
-    if (year2026Index !== -1) {
-      const month2026_01 = headers[year2026Index];
-      const month2026_02 = headers[year2026Index + 1];
-      console.log(`[TimelineHeader] 🎯 关键月份位置（用于验证）:`);
-      console.log(`  - 2026年1月: 位置=${month2026_01.position}px, 宽度=${month2026_01.width}px`);
-      if (month2026_02) {
-        console.log(`  - 2026年2月: 位置=${month2026_02.position}px, 宽度=${month2026_02.width}px`);
+    const sampleIndices = [0, Math.floor(headers.length / 2), headers.length - 1];
+    console.log(`[TimelineHeader] 🎯 关键位置采样（用于验证）:`);
+    sampleIndices.forEach(idx => {
+      if (headers[idx]) {
+        const h = headers[idx];
+        const dateStr = h.date ? `${h.date.getFullYear()}-${(h.date.getMonth() + 1).toString().padStart(2, '0')}-${h.date.getDate().toString().padStart(2, '0')}` : 'null';
+        console.log(`  - [${idx}] ${h.label} | 日期: ${dateStr} | 位置: ${Math.round(h.position)}px | 宽度: ${Math.round(h.width)}px`);
       }
-    }
+    });
     
     return headers;
   }, [startDate, endDate, scale]);

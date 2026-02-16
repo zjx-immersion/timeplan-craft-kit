@@ -7,7 +7,7 @@
  * @date 2026-02-11
  */
 
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import { Card, Space, Typography, Tag, Statistic, Alert, Button, Tooltip, message, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
 import { 
@@ -72,24 +72,41 @@ const MatrixViewV3: React.FC<MatrixViewV3Props> = ({ data, onViewChange, onDataC
     getSelectedIds,
   } = useSelectionStore();
 
-  // Task 2.3: 导出格式菜单
-  const exportMenuItems: MenuProps['items'] = [
+  // 使用 ref 存储导出函数，避免暂时性死区问题
+  const handleBatchExportJSONRef = useRef<(() => void) | null>(null);
+  const handleBatchExportExcelRef = useRef<(() => void) | null>(null);
+
+  // Task 2.3: 导出格式菜单（使用 useMemo 避免暂时性死区问题）
+  const exportMenuItems: MenuProps['items'] = useMemo(() => [
     {
       key: 'json',
       label: 'JSON格式',
       icon: <FileTextOutlined />,
-      onClick: handleBatchExportJSON,
+      onClick: () => handleBatchExportJSONRef.current?.(),
     },
     {
       key: 'excel',
       label: 'Excel格式',
       icon: <FileExcelOutlined />,
-      onClick: handleBatchExportExcel,
+      onClick: () => handleBatchExportExcelRef.current?.(),
     },
-  ];
+  ], []);
 
   // 计算矩阵数据
   const matrixData = useMemo<MatrixDataV3>(() => {
+    // 调试：检查输入数据
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[MatrixViewV3] 输入数据:`, {
+        planId: data.id,
+        planName: data.name,
+        timelinesCount: data.timelines?.length,
+        linesCount: data.lines?.length,
+        relationsCount: data.relations?.length,
+        sampleRelations: data.relations?.slice(0, 3),
+        sampleLines: data.lines?.slice(0, 3).map(l => ({ id: l.id, label: l.label, hasSsts: !!l.attributes?.sstsList, sstsCount: l.attributes?.sstsList?.length })),
+      });
+    }
+    
     const result = calculateMatrixV3(data);
     
     // 开发环境：打印统计信息
@@ -114,6 +131,18 @@ const MatrixViewV3: React.FC<MatrixViewV3Props> = ({ data, onViewChange, onDataC
         return acc;
       }, {} as Record<string, number>);
       console.log('[MatrixViewV3] 时间节点类型分布:', nodeTypeStats);
+      
+      // 打印里程碑单元格的SSTS数据
+      const milestoneCells = Array.from(result.cells.values())
+        .filter(c => c.timeNodeType === 'milestone' && c.milestoneContent)
+        .slice(0, 5);
+      console.log('[MatrixViewV3] 里程碑SSTS数据样例:', milestoneCells.map(c => ({
+        timelineId: c.timelineId,
+        timeNodeId: c.timeNodeId,
+        sstsCount: c.milestoneContent?.sstsCount,
+        sstsList: c.milestoneContent?.sstsList,
+        linesCount: c.lines.length,
+      })));
     }
 
     return result;
@@ -295,6 +324,10 @@ const MatrixViewV3: React.FC<MatrixViewV3Props> = ({ data, onViewChange, onDataC
       message.error('导出失败，请重试');
     }
   }, [data, selectedLineIds]);
+
+  // 更新 ref，使菜单可以访问到这些函数
+  handleBatchExportJSONRef.current = handleBatchExportJSON;
+  handleBatchExportExcelRef.current = handleBatchExportExcel;
 
   return (
     <div style={{ padding: '24px' }}>
