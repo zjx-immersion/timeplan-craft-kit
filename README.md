@@ -202,26 +202,52 @@
 
 ## 📦 技术栈
 
-### 核心框架
+### 前端技术栈
+
+#### 核心框架
 - **React**: 19.0.0
 - **TypeScript**: 5.6.2
 - **Vite**: 6.0.3
 
-### UI 组件库
-- **Ant Design**: 5.22.6（替代 Shadcn/ui）
+#### UI 组件库
+- **Ant Design**: 6.2.1（最新版本，支持 blur 效果）
 
-### 状态管理
+#### 状态管理
 - **Zustand**: 5.0.3（替代 Context API）
 - 支持持久化、撤销/重做
 
-### 日期处理
+#### 日期处理
 - **date-fns**: 4.1.0
 - **dayjs**: 1.11.13
 
-### 测试框架
+#### 测试框架
 - **Vitest**: 2.1.8
 - **React Testing Library**: 16.1.0
 - **Jest DOM**: 6.6.3
+
+### 后端技术栈 🔗
+
+#### 后端项目
+- **仓库**: [timeplan-backend](https://github.com/zjx-immersion/timeplan-backend)
+- **技术**: Python 3.11+ + FastAPI + SQLAlchemy 2.0
+- **状态**: ✅ Phase 7 完成 - 所有功能已实现
+
+#### API 能力
+- ✅ **35 个 API 端点**
+- ✅ **193 个测试用例**（100% 通过）
+- ✅ **94% 代码覆盖率**
+- ✅ **完整的 CRUD 操作**
+- ✅ **高级功能**：循环依赖检测、基线快照、批量操作
+
+#### API 模块
+1. **认证模块**（6个端点）- JWT 认证
+2. **Plans API**（5个端点）- 计划管理
+3. **Timelines API**（7个端点）- 时间线管理
+4. **Nodes API**（10个端点）- 节点管理
+5. **Dependencies API**（8个端点）- 依赖关系
+6. **Baselines API**（5个端点）- 基线快照
+
+**API 文档**: 启动后端服务后访问 http://localhost:8000/docs
 
 ---
 
@@ -350,13 +376,15 @@ npm run test:coverage
 
 ## 🚀 快速开始
 
-### 安装依赖
+### 前端启动
+
+#### 安装依赖
 
 ```bash
 npm install
 ```
 
-### 开发模式
+#### 开发模式
 
 ```bash
 npm run dev
@@ -364,10 +392,46 @@ npm run dev
 
 访问：http://localhost:9081
 
-### 构建
+#### 构建
 
 ```bash
 npm run build
+```
+
+### 后端启动（可选）
+
+如果需要完整的前后端联调：
+
+```bash
+# 进入后端目录
+cd ../timeplan-backend
+
+# 安装依赖
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+
+# 启动服务
+uvicorn app.main:app --reload
+
+# 访问 API 文档
+open http://localhost:8000/docs
+```
+
+**后端仓库**: https://github.com/zjx-immersion/timeplan-backend
+
+### 完整项目架构
+
+```
+devops-component-design/
+├── timeplan-craft-kit/     # 前端项目（本仓库）
+│   ├── React 19 + TypeScript
+│   ├── Ant Design 6.2.1
+│   └── 甘特图可视化
+└── timeplan-backend/       # 后端项目
+    ├── FastAPI + SQLAlchemy
+    ├── 35 个 API 端点
+    └── 94% 测试覆盖率
 ```
 
 ### 使用统一面板（推荐）
@@ -585,19 +649,132 @@ import 'antd/dist/reset.css';
 
 ---
 
+## 🔗 后端集成指南
+
+### 集成状态概览
+
+| 模块 | 前端状态 | 后端状态 | 集成状态 |
+|------|---------|---------|---------|
+| **认证** | ✅ UI 完成 | ✅ API 完成 | ⏳ 待集成 |
+| **Plans** | ✅ CRUD 完成 | ✅ 5个端点 | ⏳ 待集成 |
+| **Timelines** | ✅ CRUD 完成 | ✅ 7个端点 | ⏳ 待集成 |
+| **Nodes** | ✅ 甘特图完成 | ✅ 10个端点 | ⏳ 待集成 |
+| **Dependencies** | ✅ 连线功能 | ✅ 8个端点 | ⏳ 待集成 |
+| **Baselines** | ✅ 基线功能 | ✅ 5个端点 | ⏳ 待集成 |
+
+### 后端 API 地址
+
+**开发环境**: http://localhost:8000  
+**API 文档**: http://localhost:8000/docs  
+**ReDoc**: http://localhost:8000/redoc
+
+### API 端点映射
+
+#### 认证相关
+```typescript
+POST   /api/v1/auth/register     // 用户注册
+POST   /api/v1/auth/token        // 登录获取 Token
+POST   /api/v1/auth/refresh      // 刷新 Token
+GET    /api/v1/auth/me           // 获取当前用户
+POST   /api/v1/auth/logout       // 登出
+```
+
+#### Plans 管理
+```typescript
+POST   /api/v1/plans              // 创建计划
+GET    /api/v1/plans              // 获取计划列表
+GET    /api/v1/plans/{id}         // 获取计划详情
+PUT    /api/v1/plans/{id}         // 更新计划
+DELETE /api/v1/plans/{id}         // 删除计划
+```
+
+#### Timelines 管理
+```typescript
+POST   /api/v1/timelines          // 创建时间线
+GET    /api/v1/plans/{id}/timelines  // 获取时间线列表
+GET    /api/v1/timelines/{id}     // 获取时间线详情
+PUT    /api/v1/timelines/{id}     // 更新时间线
+DELETE /api/v1/timelines/{id}     // 删除时间线
+```
+
+#### Nodes 管理（对应前端 Line/Milestone/Gateway）
+```typescript
+POST   /api/v1/nodes              // 创建节点
+GET    /api/v1/plans/{id}/nodes   // 获取节点列表
+GET    /api/v1/nodes/{id}         // 获取节点详情
+PUT    /api/v1/nodes/{id}         // 更新节点
+DELETE /api/v1/nodes/{id}         // 删除节点
+POST   /api/v1/nodes/batch        // 批量创建
+PUT    /api/v1/nodes/batch        // 批量更新
+```
+
+#### Dependencies（依赖关系）
+```typescript
+POST   /api/v1/dependencies       // 创建依赖
+GET    /api/v1/nodes/{id}/dependencies  // 获取节点依赖
+GET    /api/v1/dependencies/{id}  // 获取依赖详情
+PUT    /api/v1/dependencies/{id}  // 更新依赖
+DELETE /api/v1/dependencies/{id}  // 删除依赖
+POST   /api/v1/dependencies/batch // 批量创建
+POST   /api/v1/dependencies/check-cycle  // 循环检测
+```
+
+#### Baselines（基线快照）
+```typescript
+POST   /api/v1/plans/{id}/baselines  // 创建基线
+GET    /api/v1/plans/{id}/baselines  // 获取基线列表
+GET    /api/v1/baselines/{id}        // 获取基线详情
+PUT    /api/v1/baselines/{id}        // 更新基线
+DELETE /api/v1/baselines/{id}        // 删除基线
+```
+
+### 下一步集成计划
+
+1. **配置 API 客户端**
+   - 创建 Axios 实例
+   - 配置拦截器（Token、错误处理）
+   - 环境变量配置
+
+2. **实现 API Service 层**
+   - AuthService（认证）
+   - PlanService（计划管理）
+   - TimelineService（时间线）
+   - NodeService（节点）
+   - DependencyService（依赖）
+   - BaselineService（基线）
+
+3. **Store 集成**
+   - 将 Zustand Store 数据源改为 API
+   - 实现乐观更新
+   - 错误处理和重试
+
+4. **实时协作**（可选）
+   - WebSocket 连接
+   - OT 算法集成
+   - 冲突解决
+
+---
+
 ## 📞 支持
 
+### 前端相关
 - **完整文档**: 查看 [PROJECT-FINAL-SUMMARY.md](../PROJECT-FINAL-SUMMARY.md)
 - **测试用例**: 查看 `src/__tests__` 目录
 - **示例**: 查看 `src/pages` 目录
 
+### 后端相关
+- **后端仓库**: https://github.com/zjx-immersion/timeplan-backend
+- **API 文档**: http://localhost:8000/docs（启动服务后）
+- **开发文档**: 查看 `../timeplan-backend/docs/`
+
 ---
 
-**项目版本**: v0.1.0  
-**最后更新**: 2026-02-08  
-**维护者**: 前端团队  
+**前端版本**: v2.0.1  
+**后端版本**: v1.0.0  
+**最后更新**: 2026-02-16  
+**维护者**: 全栈团队  
 **许可证**: MIT  
-**状态**: ✅ **核心功能完成，持续优化中**
+**状态**: ✅ **前后端核心功能完成，集成进行中**
 
 ## 📋 版本历史
 
