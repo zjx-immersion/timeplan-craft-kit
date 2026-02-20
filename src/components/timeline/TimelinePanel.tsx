@@ -2830,7 +2830,8 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
                 const startPos = getPositionFromDate(parseDateAsLocal(line.startDate), normalizedViewStartDate, scale);
                 const endPos = line.endDate ? getPositionFromDate(parseDateAsLocal(line.endDate), normalizedViewStartDate, scale) : startPos;
                 const width = endPos - startPos;
-                console.log(`    ${(idx + 1).toString().padStart(3)}. ${(line.label || '未命名').padEnd(20)} | 开始: ${line.startDate.split('T')[0]} | 位置: ${Math.round(startPos).toString().padStart(5)}px | 宽度: ${Math.round(width).toString().padStart(5)}px | 高亮: ${highlightedLineIds.has(line.id) ? '✓' : ' '}`);
+                const startDateStr = typeof line.startDate === 'string' ? line.startDate : String(line.startDate);
+                console.log(`    ${(idx + 1).toString().padStart(3)}. ${(line.label || '未命名').padEnd(20)} | 开始: ${startDateStr.split('T')[0]} | 位置: ${Math.round(startPos).toString().padStart(5)}px | 宽度: ${Math.round(width).toString().padStart(5)}px | 高亮: ${highlightedLineIds.has(line.id) ? '✓' : ' '}`);
               });
               return null;
             })()}

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createNewPlan, clearLocalStorage } from './helpers';
+import { createNewPlan, clearLocalStorage, ensureLoggedIn } from './helpers';
 
 /**
  * Project List Page E2E Tests
@@ -11,9 +11,8 @@ test.describe.configure({ mode: 'serial' });
 test.describe('Project List', () => {
   
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await ensureLoggedIn(page);
     await clearLocalStorage(page);
-    await page.reload();
   });
 
   test('should display project list page', async ({ page }) => {
@@ -62,8 +61,8 @@ test.describe('Project List', () => {
     // Create a project first
     await createNewPlan(page, 'Searchable Plan');
     
-    // Go back to list
-    await page.click('button[title="返回"]');
+    // Go back to list - click the back arrow button in the top left
+    await page.click('.ant-btn-text .anticon-arrow-left');
     await page.waitForTimeout(500);
     
     // Search for the project
@@ -78,8 +77,8 @@ test.describe('Project List', () => {
     // Create a project first
     await createNewPlan(page, 'Editable Plan');
     
-    // Go back to list
-    await page.click('button[title="返回"]');
+    // Go back to list - click the back arrow button in the top left
+    await page.click('.ant-btn-text .anticon-arrow-left');
     await page.waitForTimeout(500);
     
     // Click more actions menu
@@ -108,8 +107,8 @@ test.describe('Project List', () => {
     // Create a project first
     await createNewPlan(page, 'Deletable Plan');
     
-    // Go back to list
-    await page.click('button[title="返回"]');
+    // Go back to list - click the back arrow button in the top left
+    await page.click('.ant-btn-text .anticon-arrow-left');
     await page.waitForTimeout(500);
     
     // Click more actions menu
@@ -119,10 +118,10 @@ test.describe('Project List', () => {
     await page.waitForSelector('.ant-dropdown-menu');
     await page.click('text=删除');
     
-    // Confirm deletion in modal
-    await page.click('.ant-modal-confirm-btns button.ant-btn-primary');
+    // Confirm deletion in modal - click the red delete button (second button in footer)
+    await page.locator('.ant-modal-confirm-btns button').nth(1).click();
     
-    // Verify success message
-    await expect(page.locator('.ant-message-success')).toContainText('已删除');
+    // Verify success message - look for text containing '已删除' in any success message
+    await expect(page.locator('.ant-message-success:has-text("已删除")')).toBeVisible();
   });
 });

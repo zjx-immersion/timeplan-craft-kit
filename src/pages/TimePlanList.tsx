@@ -30,8 +30,8 @@ import {
   Form,
   message,
   theme,
-  Checkbox,
   Dropdown,
+  Spin,
 } from 'antd';
 import type { MenuProps, TableColumnsType } from 'antd';
 import {
@@ -43,11 +43,12 @@ import {
   DeleteOutlined,
   CopyOutlined,
   HolderOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons';
-import { useTimePlanStoreWithHistory } from '@/stores/timePlanStoreWithHistory';
-import { TimePlan } from '@/types/timeplanSchema';
+import { useTimePlanStoreWithAPI } from '@/stores/timePlanStoreWithAPI';
+import { TimelinePlanData } from '@/types/timeline';
 import { format } from 'date-fns';
-import { addMockDataToPlan } from '@/utils/mockData';
+import { useEffect } from 'react';
 
 const { Title, Text } = Typography;
 
@@ -55,14 +56,28 @@ export default function TimePlanList() {
   const navigate = useNavigate();
   const { token } = theme.useToken();
 
-  // Store
-  const { plans, addPlan, updatePlan, deletePlan } = useTimePlanStoreWithHistory();
+  // Store - 使用 API 集成的 Store
+  const { 
+    plans, 
+    loading,
+    error,
+    loadPlans,
+    createPlan, 
+    updatePlan, 
+    deletePlan 
+  } = useTimePlanStoreWithAPI();
+
+  // 加载计划列表
+  useEffect(() => {
+    loadPlans();
+  }, [loadPlans]);
 
   // 状态
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [editingPlan, setEditingPlan] = useState<TimePlan | null>(null);
+  const [editingPlan, setEditingPlan] = useState<TimelinePlanData | null>(null);
   const [form] = Form.useForm();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 过滤和排序
   const filteredPlans = useMemo(() => {
@@ -85,36 +100,29 @@ export default function TimePlanList() {
 
   // 创建项目
   const handleCreate = async (values: any) => {
-    let newPlan: TimePlan = {
-      id: `tp-${Date.now()}`,
-      title: values.title,
-      description: values.description,
-      owner: values.owner || '未指定',
-      schemaId: 'default-schema',
-      timelines: [],
-      lines: [],
-      relations: [],
-      createdAt: new Date(),
-      lastAccessTime: new Date(),
-      tags: [],
-    };
+    setIsSubmitting(true);
+    try {
+      const newPlan = await createPlan(
+        values.title,
+        values.owner || '未指定',
+        values.description
+      );
+      
+      message.success('项目创建成功！');
+      setIsCreateModalOpen(false);
+      form.resetFields();
 
-    // 如果选择了添加示例数据，则添加
-    if (values.addMockData) {
-      newPlan = addMockDataToPlan(newPlan);
+      // 导航到新项目
+      navigate(`/${newPlan.id}`);
+    } catch (error: any) {
+      message.error(error.message || '创建项目失败');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    addPlan(newPlan);
-    message.success('项目创建成功！');
-    setIsCreateModalOpen(false);
-    form.resetFields();
-
-    // 导航到新项目
-    navigate(`/${newPlan.id}`);
   };
 
   // 编辑项目
-  const handleEdit = (plan: TimePlan) => {
+  const handleEdit = (plan: TimelinePlanData) => {
     setEditingPlan(plan);
     form.setFieldsValue({
       title: plan.title,
@@ -128,29 +136,40 @@ export default function TimePlanList() {
   const handleSaveEdit = async (values: any) => {
     if (!editingPlan) return;
 
-    updatePlan(editingPlan.id, {
-      title: values.title,
-      description: values.description,
-      owner: values.owner,
-    });
+    setIsSubmitting(true);
+    try {
+      await updatePlan(editingPlan.id, {
+        title: values.title,
+        description: values.description,
+        owner: values.owner,
+      });
 
-    message.success('项目更新成功！');
-    setIsCreateModalOpen(false);
-    setEditingPlan(null);
-    form.resetFields();
+      message.success('项目更新成功！');
+      setIsCreateModalOpen(false);
+      setEditingPlan(null);
+      form.resetFields();
+    } catch (error: any) {
+      message.error(error.message || '更新项目失败');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // 删除项目
-  const handleDelete = (plan: TimePlan) => {
+  const handleDelete = (plan: TimelinePlanData) => {
     Modal.confirm({
       title: '确认删除',
       content: `确定要删除项目 "${plan.title}" 吗？此操作不可恢复。`,
       okText: '删除',
       okType: 'danger',
       cancelText: '取消',
-      onOk: () => {
-        deletePlan(plan.id);
-        message.success('项目已删除');
+      onOk: async () => {
+        try {
+          await deletePlan(plan.id);
+          message.success('项目已删除');
+        } catch (error: any) {
+          message.error(error.message || '删除项目失败');
+        }
       },
     });
   };
@@ -161,7 +180,7 @@ export default function TimePlanList() {
   };
 
   // 操作菜单
-  const getActionMenu = (record: TimePlan): MenuProps => ({
+  const getActionMenu = (record: TimelinePlanData): MenuProps => ({
     items: [
       {
         key: 'edit',
@@ -189,7 +208,7 @@ export default function TimePlanList() {
   });
 
   // 表格列定义
-  const columns: TableColumnsType<TimePlan> = [
+  const columns: TableColumnsType<TimelinePlanData> = [
     {
       key: 'drag',
       width: 40,
@@ -206,7 +225,7 @@ export default function TimePlanList() {
       title: 'Time Plan',
       dataIndex: 'title',
       key: 'title',
-      render: (title: string, record: TimePlan) => (
+      render: (title: string, record: TimelinePlanData) => (
         <div
           onClick={() => handleOpen(record.id)}
           style={{
@@ -237,7 +256,7 @@ export default function TimePlanList() {
                 fontSize: 12,
               }}
             >
-              {record.timelines.length} 条 Timeline · {record.lines.length} 个节点
+              {record.timelines?.length || 0} 条 Timeline
             </Text>
           </div>
         </div>
@@ -330,26 +349,28 @@ export default function TimePlanList() {
       </div>
 
       {/* 项目表格 */}
-      <Table
-        dataSource={filteredPlans}
-        columns={columns}
-        rowKey="id"
-        pagination={{
-          pageSize: 20,
-          showSizeChanger: true,
-          showTotal: (total) => `共 ${total} 个项目`,
-        }}
-        locale={{
-          emptyText: (
-            <div style={{ padding: token.paddingLG }}>
-              <Text type="secondary">暂无项目，点击"新建计划"开始</Text>
-            </div>
-          ),
-        }}
-        style={{
-          backgroundColor: token.colorBgContainer,
-        }}
-      />
+      <Spin spinning={loading.plans} tip="加载中...">
+        <Table
+          dataSource={filteredPlans}
+          columns={columns}
+          rowKey="id"
+          pagination={{
+            pageSize: 20,
+            showSizeChanger: true,
+            showTotal: (total) => `共 ${total} 个项目`,
+          }}
+          locale={{
+            emptyText: (
+              <div style={{ padding: token.paddingLG }}>
+                <Text type="secondary">暂无项目，点击"新建计划"开始</Text>
+              </div>
+            ),
+          }}
+          style={{
+            backgroundColor: token.colorBgContainer,
+          }}
+        />
+      </Spin>
 
       {/* 创建/编辑对话框 */}
       <Modal
@@ -363,6 +384,7 @@ export default function TimePlanList() {
         }}
         okText={editingPlan ? '保存' : '创建'}
         cancelText="取消"
+        confirmLoading={isSubmitting}
         destroyOnHidden
       >
         <Form
@@ -396,17 +418,7 @@ export default function TimePlanList() {
             <Input placeholder="输入负责人（可选）" />
           </Form.Item>
 
-          {!editingPlan && (
-            <Form.Item
-              name="addMockData"
-              valuePropName="checked"
-              initialValue={true}
-            >
-              <Checkbox>
-                添加示例数据（2条时间线 + 5个任务）
-              </Checkbox>
-            </Form.Item>
-          )}
+
         </Form>
       </Modal>
     </div>

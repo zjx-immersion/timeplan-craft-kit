@@ -148,15 +148,20 @@ export const useTimePlanStoreWithAPI = create<TimePlanStoreState>()(
         set({ loading: { ...get().loading, plans: true } });
         try {
           // 加载计划基本信息
+          console.log('[loadPlan] Loading plan:', planId);
           const backendPlan = await planService.getPlan(planId);
+          console.log('[loadPlan] Got plan:', backendPlan);
           const plan = transformPlanResponse(backendPlan);
+          console.log('[loadPlan] Transformed plan:', plan);
 
           // 加载时间线
           const timelines = await timelineService.getTimelines(planId);
+          console.log('[loadPlan] Got timelines:', timelines);
           plan.timelines = timelines;
 
           // 加载节点
           const nodes = await nodeService.getNodesByPlan(planId);
+          console.log('[loadPlan] Got nodes:', nodes);
           // 将节点分配到对应的时间线
           timelines.forEach(timeline => {
             timeline.nodes = nodes.filter(node => node.timelineId === timeline.id);

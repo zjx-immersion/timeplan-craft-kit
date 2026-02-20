@@ -65,7 +65,8 @@ import { VersionTableView } from '../views/VersionTableView';
 import { VersionPlanView } from '../views/VersionPlanView'; // ✅ 版本计划视图
 import IterationView from '../iteration/IterationView'; // 原时间迭代视图
 import { ModuleIterationView } from '../views/ModuleIterationView'; // ✅ 模块迭代视图
-import { useTimePlanStoreWithHistory } from '@/stores/timePlanStoreWithHistory';
+// import { useTimePlanStoreWithHistory } from '@/stores/timePlanStoreWithHistory';
+import { useTimePlanStoreWithAPI } from '@/stores/timePlanStoreWithAPI';
 import type { Timeline } from '@/types/timeplanSchema';
 import { ImageExportDialog } from '../dialogs/ImageExportDialog';
 import ImportDialog from '../views/table/import/ImportDialog';
@@ -73,6 +74,54 @@ import ExportDialog from '../views/table/export/ExportDialog';
 import ColumnSettingsDialog from '../views/table/column/ColumnSettingsDialog';
 import type { ColumnConfig } from '../views/table/column';
 import { getCurrentColumns, saveColumnWidths } from '../views/table/column';
+import type { TimelinePlanData, TimelineNode, Dependency } from '@/types/timeline';
+import type { Line, Relation } from '@/types/timeplanSchema';
+
+/**
+ * 将 TimelinePlanData 转换为 TimePlan
+ * 用于兼容 TimelinePanel 组件
+ */
+function convertToTimePlan(planData: TimelinePlanData | null): TimePlan | null {
+  if (!planData) return null;
+
+  // 将 TimelineNode[] 转换为 Line[]
+  const lines: Line[] = [];
+  planData.timelines?.forEach(timeline => {
+    timeline.nodes?.forEach((node: TimelineNode) => {
+      lines.push({
+        id: node.id,
+        timelineId: timeline.id,
+        label: node.label,
+        type: node.type === 'milestone' ? 'milestone' : node.type === 'gateway' ? 'gateway' : 'bar',
+        startDate: node.startDate,
+        endDate: node.endDate,
+        color: node.color,
+        notes: node.notes,
+      } as Line);
+    });
+  });
+
+  // 将 Dependency[] 转换为 Relation[]
+  const relations: Relation[] = planData.dependencies?.map((dep: Dependency) => ({
+    id: dep.id,
+    fromLineId: dep.fromNodeId,
+    toLineId: dep.toNodeId,
+    type: dep.type,
+    lagDays: dep.lagDays,
+  })) || [];
+
+  return {
+    id: planData.id,
+    title: planData.title,
+    owner: planData.owner,
+    schemaId: 'default',
+    timelines: planData.timelines || [],
+    lines,
+    relations,
+    baselines: planData.baselines || [],
+    baselineRanges: planData.baselineRanges || [],
+  };
+}
 
 /**
  * 统一时间线面板属性
@@ -114,20 +163,29 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
   const { token } = theme.useToken();
   const scrollToTodayRef = useRef<(() => void) | null>(null);
 
-  // Store
+  // Store - 使用 API Store
   const {
     plans,
+    currentPlan,
     updatePlan,
-    undo,
-    redo,
-    canUndo: canUndoFn,
-    canRedo: canRedoFn,
-    clearHistory,
-  } = useTimePlanStoreWithHistory();
+    loadPlan,
+  } = useTimePlanStoreWithAPI();
 
-  const canUndo = canUndoFn();
-  const canRedo = canRedoFn();
-  const hasChanges = canUndo;
+  // 加载计划数据
+  useEffect(() => {
+    loadPlan(planId);
+  }, [planId, loadPlan]);
+
+  // 临时禁用历史功能
+  const canUndo = false;
+  const canRedo = false;
+  const hasChanges = false;
+  
+  // 优先使用 currentPlan，否则从 plans 数组查找
+  const plan = currentPlan?.id === planId ? currentPlan : plans.find(p => p.id === planId);
+  
+  // 转换为 TimePlan 用于兼容 TimelinePanel
+  const timePlan = convertToTimePlan(plan || null);
 
   // 状态
   const [view, setView] = useState<ViewType>(initialView);
@@ -150,9 +208,6 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
     setColumnConfig(config);
   }, []);
   const timelineContainerRef = useRef<HTMLDivElement>(null);
-
-  // 获取当前 plan
-  const plan = plans.find(p => p.id === planId);
 
   if (!plan) {
     return <div>Plan not found</div>;
@@ -207,17 +262,12 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
   }, []);
 
   /**
-   * 取消所有更改
+   * 取消所有更改 (暂时禁用)
    */
   const handleCancelChanges = useCallback(() => {
-    if (!hasChanges) return;
-    // 撤销所有更改直到历史清空
-    while (canUndoFn()) {
-      undo();
-    }
-    clearHistory();
-    message.info('已取消所有更改');
-  }, [hasChanges, canUndoFn, undo, clearHistory]);
+    // 历史功能暂时禁用
+    message.info('历史功能暂不可用');
+  }, []);
 
   /**
    * 导出数据
@@ -241,15 +291,15 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
    * 导入数据处理
    */
   const handleImportLines = useCallback((newLines: any[]) => {
-    if (!plan) return;
+    if (!timePlan) return;
     
     try {
       const updatedData = {
-        ...plan,
-        lines: [...(plan.lines || []), ...newLines],
+        ...timePlan,
+        lines: [...(timePlan.lines || []), ...newLines],
       };
       
-      updatePlan(updatedData);
+      updatePlan(updatedData as any);
       setImportDialogVisible(false);
       message.success(`成功导入 ${newLines.length} 条任务`);
     } catch (error) {
@@ -361,7 +411,7 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
             style={{ width: '100%', height: '100%' }}
           >
             <TimelinePanel
-              data={plan}
+              data={timePlan}
               onDataChange={handleDataChange}
               hideToolbar={true}
               isEditMode={editMode}
@@ -376,7 +426,7 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
       case 'table':
         return (
           <EnhancedTableView
-            data={plan}
+            data={timePlan}
             onDataChange={handleDataChange}
             readonly={!editMode}
             showSearch={true}
@@ -387,15 +437,15 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
 
       case 'matrix-v1':
         // V1版本：Timeline × 月份 矩阵
-        return <MatrixView data={plan} />;
+        return <MatrixView data={timePlan} />;
         
       case 'matrix-v2':
         // V2版本：Product × Team 矩阵
-        return <MatrixViewV2 data={plan} />;
+        return <MatrixViewV2 data={timePlan} />;
         
       case 'matrix':
         // V3版本（默认）：Timeline × TimeNode(里程碑/门禁) 架构
-        return <MatrixViewV3 data={plan} onViewChange={setView} />;
+        return <MatrixViewV3 data={timePlan} onViewChange={setView} />;
 
       case 'version':
         return (
@@ -408,7 +458,7 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
       case 'versionPlan':
         return (
           <VersionPlanView
-            data={plan}
+            data={timePlan}
             onDataChange={handleDataChange}
           />
         );
@@ -416,7 +466,7 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
       case 'iteration':
         return (
           <IterationView
-            data={plan}
+            data={timePlan}
             onDataChange={handleDataChange}
           />
         );
@@ -424,7 +474,7 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
       case 'moduleIteration':
         return (
           <ModuleIterationView
-            data={plan}
+            data={timePlan}
             onLineClick={(line) => {
               message.info(`点击了: ${line.label}`);
             }}
@@ -713,12 +763,13 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
             />
 
             {/* 撤销/重做/取消/保存 - 所有视图都显示 */}
+            {/* 历史功能暂时禁用
             <Tooltip title="撤销 (Ctrl+Z)">
-              <Button size="small" icon={<UndoOutlined />} disabled={!canUndo} onClick={undo} />
+              <Button size="small" icon={<UndoOutlined />} disabled={!canUndo} onClick={() => {}} />
             </Tooltip>
 
             <Tooltip title="重做 (Ctrl+Shift+Z)">
-              <Button size="small" icon={<RedoOutlined />} disabled={!canRedo} onClick={redo} />
+              <Button size="small" icon={<RedoOutlined />} disabled={!canRedo} onClick={() => {}} />
             </Tooltip>
 
             <Tooltip title="取消所有更改">
@@ -730,6 +781,7 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
                 danger
               />
             </Tooltip>
+            */}
 
             <Tooltip title="保存 (Ctrl+S)">
               <Button
@@ -910,7 +962,7 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
           visible={importDialogVisible}
           onClose={() => setImportDialogVisible(false)}
           onImport={handleImportLines}
-          data={plan}
+          data={timePlan}
         />
       )}
       
@@ -919,7 +971,7 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
         <ExportDialog
           visible={exportDialogVisible}
           onClose={() => setExportDialogVisible(false)}
-          lines={plan.lines || []}
+          lines={timePlan?.lines || []}
           timelines={plan.timelines || []}
           selectedRowKeys={selectedRowKeys}
           filteredData={undefined}

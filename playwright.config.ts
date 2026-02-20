@@ -8,7 +8,7 @@ export default defineConfig({
   testDir: './e2e',
   fullyParallel: false, // Run sequentially to avoid conflicts
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 1,
+  retries: process.env.CI ? 2 : 0,
   workers: 1, // Single worker to avoid state conflicts
   reporter: 'list',
   timeout: 60000, // Increase timeout to 60 seconds
