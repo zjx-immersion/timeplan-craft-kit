@@ -19,7 +19,7 @@ import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import type { Baseline } from '@/types/timeplanSchema';
 import type { TimeScale } from '@/utils/dateUtils';
-import { getPositionFromDate, parseDateAsLocal } from '@/utils/dateUtils';
+import { getPositionFromDate, parseDateAsLocalSafe } from '@/utils/dateUtils';
 
 /**
  * BaselineMarker 组件属性
@@ -97,7 +97,7 @@ export const BaselineMarker: React.FC<BaselineMarkerProps> = ({
   const position = useMemo(() => {
     try {
       // ✅ 使用统一的日期解析逻辑，避免时区导致的日期偏移
-      const dateObj = parseDateAsLocal(baseline.date);
+      const dateObj = parseDateAsLocalSafe(baseline.date);
       const pos = getPositionFromDate(dateObj, viewStartDate, scale);
       return leftOffset + pos;
     } catch (error) {
@@ -120,7 +120,7 @@ export const BaselineMarker: React.FC<BaselineMarkerProps> = ({
   const formattedDate = useMemo(() => {
     try {
       // ✅ 使用统一的日期解析逻辑
-      const dateObj = parseDateAsLocal(baseline.date);
+      const dateObj = parseDateAsLocalSafe(baseline.date);
       return format(dateObj, 'yyyy-MM-dd', { locale: zhCN });
     } catch (error) {
       console.error('[BaselineMarker] Error formatting date:', error);

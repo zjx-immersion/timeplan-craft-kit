@@ -542,6 +542,8 @@ export interface Line {
   
   // 元数据
   notes?: string;                   // 备注（Markdown）
+  description?: string;             // 描述（兼容用，同 notes）
+  name?: string;                    // 名称（兼容用，同 label）
   createdAt?: Date;
   updatedAt?: Date;
   createdBy?: string;

@@ -13,7 +13,7 @@
  * @status ✅ TimelinePanel 已集成
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Result, Button, Spin, theme } from 'antd';
 import { HomeOutlined } from '@ant-design/icons';
@@ -28,12 +28,16 @@ export default function Index() {
   // Store - 使用 API 集成的 Store
   const { currentPlan, loading, error, loadPlan, setCurrentPlan } = useTimePlanStoreWithAPI();
 
-  // 加载项目
+  // 加载项目 - 只在 id 变化时加载，避免无限循环
+  const isLoadingRef = useRef(false);
   useEffect(() => {
-    if (id) {
-      loadPlan(id);
+    if (id && !isLoadingRef.current) {
+      isLoadingRef.current = true;
+      loadPlan(id).finally(() => {
+        isLoadingRef.current = false;
+      });
     }
-  }, [id, loadPlan]);
+  }, [id]);
 
   // 显示加载状态
   if (loading.plans || loading.timelines) {

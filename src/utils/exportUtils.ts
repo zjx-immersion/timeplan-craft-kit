@@ -65,7 +65,7 @@ export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return '';
   
   try {
-    const dateObj = typeof date === 'string' ? parseDateAsLocal(date) : date;
+    const dateObj = typeof date === 'string' ? (parseDateAsLocal(date) || new Date()) : date;
     return format(dateObj, 'yyyy-MM-dd');
   } catch (e) {
     return '';

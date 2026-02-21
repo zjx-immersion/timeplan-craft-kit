@@ -15,12 +15,24 @@ import {
 export class NodeService {
   /**
    * 获取计划的所有节点
+   * 通过遍历该计划的所有时间线来获取所有节点
    */
   async getNodesByPlan(planId: string): Promise<TimelineNode[]> {
-    const response = await apiClient.get<{ items: NodeResponse[] }>(
-      `/api/v1/plans/${planId}/nodes`
+    // 首先获取该计划的所有时间线
+    const timelinesResponse = await apiClient.get<{ items: { id: string }[] }>(
+      `/api/v1/timeplans/${planId}/timelines`
     );
-    return transformNodesFromBackend(response.data.items);
+    
+    const timelines = timelinesResponse.data.items || [];
+    const allNodes: TimelineNode[] = [];
+    
+    // 为每个时间线获取节点
+    for (const timeline of timelines) {
+      const nodes = await this.getNodesByTimeline(timeline.id);
+      allNodes.push(...nodes);
+    }
+    
+    return allNodes;
   }
 
   /**

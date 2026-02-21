@@ -18,7 +18,7 @@
  * - Lucide Icons → Ant Design Icons
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button,
@@ -48,7 +48,6 @@ import {
 import { useTimePlanStoreWithAPI } from '@/stores/timePlanStoreWithAPI';
 import { TimelinePlanData } from '@/types/timeline';
 import { format } from 'date-fns';
-import { useEffect } from 'react';
 
 const { Title, Text } = Typography;
 
@@ -67,10 +66,14 @@ export default function TimePlanList() {
     deletePlan 
   } = useTimePlanStoreWithAPI();
 
-  // 加载计划列表
+  // 加载计划列表 - 只在组件挂载时加载一次
+  const hasLoadedRef = useRef(false);
   useEffect(() => {
-    loadPlans();
-  }, [loadPlans]);
+    if (!hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+      loadPlans();
+    }
+  }, []);
 
   // 状态
   const [searchQuery, setSearchQuery] = useState('');

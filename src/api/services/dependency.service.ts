@@ -28,6 +28,7 @@ export class DependencyService {
 
   /**
    * 获取计划的所有依赖关系
+   * 注意：后端依赖API使用 /api/v1/plans 路径
    */
   async getPlanDependencies(planId: string): Promise<Dependency[]> {
     const response = await apiClient.get<{ items: DependencyResponse[] }>(

@@ -16,7 +16,7 @@ import React, { useMemo } from 'react';
 import { Card, Descriptions, Tag, Space, Button } from 'antd';
 import { ThunderboltOutlined, ClockCircleOutlined, CloseOutlined } from '@ant-design/icons';
 import type { Relation, Line } from '@/types/timeplanSchema';
-import { parseDateAsLocal } from '@/utils/dateUtils';
+import { parseDateAsLocalSafe } from '@/utils/dateUtils';
 
 export interface RelationTooltipProps {
   relation: Relation;
@@ -73,23 +73,23 @@ export const RelationTooltip: React.FC<RelationTooltipProps> = ({
       switch (dependencyType) {
         case 'finish-to-start':
           // 前置任务结束时间 → 后置任务开始时间
-          fromDate = fromLine.endDate ? parseDateAsLocal(fromLine.endDate) : parseDateAsLocal(fromLine.startDate);
-          toDate = parseDateAsLocal(toLine.startDate);
+          fromDate = fromLine.endDate ? parseDateAsLocalSafe(fromLine.endDate) : parseDateAsLocalSafe(fromLine.startDate);
+          toDate = parseDateAsLocalSafe(toLine.startDate);
           break;
         case 'start-to-start':
           // 前置任务开始时间 → 后置任务开始时间
-          fromDate = parseDateAsLocal(fromLine.startDate);
-          toDate = parseDateAsLocal(toLine.startDate);
+          fromDate = parseDateAsLocalSafe(fromLine.startDate);
+          toDate = parseDateAsLocalSafe(toLine.startDate);
           break;
         case 'finish-to-finish':
           // 前置任务结束时间 → 后置任务结束时间
-          fromDate = fromLine.endDate ? parseDateAsLocal(fromLine.endDate) : parseDateAsLocal(fromLine.startDate);
-          toDate = toLine.endDate ? parseDateAsLocal(toLine.endDate) : parseDateAsLocal(toLine.startDate);
+          fromDate = fromLine.endDate ? parseDateAsLocalSafe(fromLine.endDate) : parseDateAsLocalSafe(fromLine.startDate);
+          toDate = toLine.endDate ? parseDateAsLocalSafe(toLine.endDate) : parseDateAsLocalSafe(toLine.startDate);
           break;
         case 'start-to-finish':
           // 前置任务开始时间 → 后置任务结束时间
-          fromDate = parseDateAsLocal(fromLine.startDate);
-          toDate = toLine.endDate ? parseDateAsLocal(toLine.endDate) : parseDateAsLocal(toLine.startDate);
+          fromDate = parseDateAsLocalSafe(fromLine.startDate);
+          toDate = toLine.endDate ? parseDateAsLocalSafe(toLine.endDate) : parseDateAsLocalSafe(toLine.startDate);
           break;
         default:
           return null;

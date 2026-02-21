@@ -13,7 +13,7 @@ export class TimelineService {
    */
   async getTimelines(planId: string): Promise<Timeline[]> {
     const response = await apiClient.get<{ items: TimelineResponse[] }>(
-      `/api/v1/plans/${planId}/timelines`
+      `/api/v1/timeplans/${planId}/timelines`
     );
     return response.data.items.map(t => transformTimelineFromBackend(t));
   }
@@ -32,7 +32,7 @@ export class TimelineService {
   async createTimeline(planId: string, data: Partial<Timeline>): Promise<Timeline> {
     const requestData = transformTimelineToBackend(data, planId);
     const response = await apiClient.post<TimelineResponse>(
-      `/api/v1/plans/${planId}/timelines`,
+      `/api/v1/timeplans/${planId}/timelines`,
       { ...requestData, planId }
     );
     return transformTimelineFromBackend(response.data);

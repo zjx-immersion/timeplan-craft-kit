@@ -88,6 +88,13 @@ function convertToTimePlan(planData: TimelinePlanData | null): TimePlan | null {
   const lines: Line[] = [];
   planData.timelines?.forEach(timeline => {
     timeline.nodes?.forEach((node: TimelineNode) => {
+      // 根据节点类型设置对应的 schemaId
+      const schemaId = node.type === 'milestone' 
+        ? 'milestone-schema' 
+        : node.type === 'gateway' 
+          ? 'gateway-schema' 
+          : 'lineplan-schema';
+      
       lines.push({
         id: node.id,
         timelineId: timeline.id,
@@ -97,6 +104,7 @@ function convertToTimePlan(planData: TimelinePlanData | null): TimePlan | null {
         endDate: node.endDate,
         color: node.color,
         notes: node.notes,
+        schemaId,  // ✅ 添加 schemaId 用于 LineRenderer 判断类型
       } as Line);
     });
   });
@@ -171,10 +179,14 @@ export const UnifiedTimelinePanelV2: React.FC<UnifiedTimelinePanelV2Props> = ({
     loadPlan,
   } = useTimePlanStoreWithAPI();
 
-  // 加载计划数据
+  // 加载计划数据 - 只在 planId 变化且当前没有数据时才加载
+  const hasLoadedRef = useRef(false);
   useEffect(() => {
-    loadPlan(planId);
-  }, [planId, loadPlan]);
+    if (planId && !hasLoadedRef.current && !currentPlan) {
+      hasLoadedRef.current = true;
+      loadPlan(planId);
+    }
+  }, [planId, currentPlan, loadPlan]);
 
   // 临时禁用历史功能
   const canUndo = false;

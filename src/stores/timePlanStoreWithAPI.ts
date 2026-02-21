@@ -145,7 +145,7 @@ export const useTimePlanStoreWithAPI = create<TimePlanStoreState>()(
       },
 
       loadPlan: async (planId: string) => {
-        set({ loading: { ...get().loading, plans: true } });
+        set({ loading: { ...get().loading, plans: true, timelines: true } });
         try {
           // 加载计划基本信息
           console.log('[loadPlan] Loading plan:', planId);
@@ -167,17 +167,22 @@ export const useTimePlanStoreWithAPI = create<TimePlanStoreState>()(
             timeline.nodes = nodes.filter(node => node.timelineId === timeline.id);
           });
 
-          // 加载依赖关系
-          const dependencies = await dependencyService.getPlanDependencies(planId);
-          plan.dependencies = dependencies;
+          // 加载依赖关系（可选，失败不阻止页面加载）
+          try {
+            const dependencies = await dependencyService.getPlanDependencies(planId);
+            plan.dependencies = dependencies;
+          } catch (depError) {
+            console.warn('[loadPlan] Failed to load dependencies:', depError);
+            plan.dependencies = [];
+          }
 
           set({
             currentPlan: plan,
-            loading: { ...get().loading, plans: false },
+            loading: { ...get().loading, plans: false, timelines: false },
           });
         } catch (error: any) {
           set({
-            loading: { ...get().loading, plans: false },
+            loading: { ...get().loading, plans: false, timelines: false },
             error: { ...get().error, plans: error.message },
           });
           throw error;

@@ -120,7 +120,7 @@ export class TimeplanService {
    * @returns 分页的 TimePlan 列表
    */
   async getTimePlans(params?: GetTimePlansParams): Promise<PaginatedResponse<PlanResponse>> {
-    const response = await apiClient.get<PaginatedResponse<PlanResponse>>('/api/v1/plans', {
+    const response = await apiClient.get<PaginatedResponse<PlanResponse>>('/api/v1/timeplans', {
       params,
     });
     return response.data;
@@ -133,7 +133,7 @@ export class TimeplanService {
    * @returns TimePlan 详情
    */
   async getTimePlan(id: string): Promise<PlanResponse> {
-    const response = await apiClient.get<PlanResponse>(`/api/v1/plans/${id}`);
+    const response = await apiClient.get<PlanResponse>(`/api/v1/timeplans/${id}`);
     return response.data;
   }
 
@@ -144,7 +144,7 @@ export class TimeplanService {
    * @returns 创建的 TimePlan
    */
   async createTimePlan(data: CreatePlanRequest): Promise<PlanResponse> {
-    const response = await apiClient.post<PlanResponse>('/api/v1/plans', data);
+    const response = await apiClient.post<PlanResponse>('/api/v1/timeplans', data);
     return response.data;
   }
 
@@ -156,7 +156,7 @@ export class TimeplanService {
    * @returns 更新后的 TimePlan
    */
   async updateTimePlan(id: string, data: UpdatePlanRequest): Promise<PlanResponse> {
-    const response = await apiClient.put<PlanResponse>(`/api/v1/plans/${id}`, data);
+    const response = await apiClient.put<PlanResponse>(`/api/v1/timeplans/${id}`, data);
     return response.data;
   }
 
@@ -166,7 +166,7 @@ export class TimeplanService {
    * @param id TimePlan ID
    */
   async deleteTimePlan(id: string): Promise<void> {
-    await apiClient.delete(`/api/v1/plans/${id}`);
+    await apiClient.delete(`/api/v1/timeplans/${id}`);
   }
 
   /**
@@ -177,7 +177,7 @@ export class TimeplanService {
    * @returns 复制的 TimePlan
    */
   async duplicateTimePlan(id: string, newTitle?: string): Promise<PlanResponse> {
-    const response = await apiClient.post<PlanResponse>(`/api/v1/plans/${id}/duplicate`, {
+    const response = await apiClient.post<PlanResponse>(`/api/v1/timeplans/${id}/duplicate`, {
       newTitle,
     });
     return response.data;
@@ -194,7 +194,7 @@ export class TimeplanService {
    * @returns Timeline 列表
    */
   async getTimelines(timeplanId: string): Promise<TimelineResponse[]> {
-    const response = await apiClient.get<TimelineListResponse>(`/api/v1/plans/${timeplanId}/timelines`);
+    const response = await apiClient.get<TimelineListResponse>(`/api/v1/timeplans/${timeplanId}/timelines`);
     return response.data.items || [];
   }
 
@@ -217,7 +217,7 @@ export class TimeplanService {
     };
 
     const response = await apiClient.post<TimelineResponse>(
-      `/api/v1/plans/${timeplanId}/timelines`,
+      `/api/v1/timeplans/${timeplanId}/timelines`,
       requestData
     );
     return response.data;
@@ -245,7 +245,7 @@ export class TimeplanService {
     }));
 
     const response = await apiClient.post<TimelineListResponse>(
-      `/api/v1/plans/${timeplanId}/timelines/batch`,
+      `/api/v1/timeplans/${timeplanId}/timelines/batch`,
       { items: requestData }
     );
     return response.data.items || [];
@@ -332,7 +332,7 @@ export class TimeplanService {
    */
   async getRelations(timeplanId: string): Promise<DependencyResponse[]> {
     const response = await apiClient.get<DependencyListResponse>(
-      `/api/v1/plans/${timeplanId}/dependencies`
+      `/api/v1/timeplans/${timeplanId}/dependencies`
     );
     return response.data.items || [];
   }
@@ -354,7 +354,7 @@ export class TimeplanService {
     };
 
     const response = await apiClient.post<DependencyResponse>(
-      `/api/v1/plans/${timeplanId}/dependencies`,
+      `/api/v1/timeplans/${timeplanId}/dependencies`,
       requestData
     );
     return response.data;
@@ -380,7 +380,7 @@ export class TimeplanService {
     }));
 
     const response = await apiClient.post<DependencyListResponse>(
-      `/api/v1/plans/${timeplanId}/dependencies/batch`,
+      `/api/v1/timeplans/${timeplanId}/dependencies/batch`,
       { items: requestData }
     );
     return response.data.items || [];
@@ -397,7 +397,7 @@ export class TimeplanService {
    * @returns JSON 数据
    */
   async exportAsJSON(id: string): Promise<unknown> {
-    const response = await apiClient.get<unknown>(`/api/v1/plans/${id}/export/json`);
+    const response = await apiClient.get<unknown>(`/api/v1/timeplans/${id}/export/json`);
     return response.data;
   }
 
@@ -408,7 +408,7 @@ export class TimeplanService {
    * @returns Excel 文件 Blob
    */
   async exportAsExcel(id: string): Promise<Blob> {
-    const response = await apiClient.get<Blob>(`/api/v1/plans/${id}/export/excel`, {
+    const response = await apiClient.get<Blob>(`/api/v1/timeplans/${id}/export/excel`, {
       responseType: 'blob',
     });
     return response.data;
@@ -421,7 +421,7 @@ export class TimeplanService {
    * @returns 导入的 TimePlan
    */
   async importFromJSON(data: unknown): Promise<PlanResponse> {
-    const response = await apiClient.post<PlanResponse>('/api/v1/plans/import/json', data);
+    const response = await apiClient.post<PlanResponse>('/api/v1/timeplans/import/json', data);
     return response.data;
   }
 
@@ -435,7 +435,7 @@ export class TimeplanService {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await apiClient.post<PlanResponse>('/api/v1/plans/import/excel', formData, {
+    const response = await apiClient.post<PlanResponse>('/api/v1/timeplans/import/excel', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

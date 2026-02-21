@@ -279,7 +279,12 @@ export const formatDateHeader = (date: Date, scale: TimeScale): string => {
  * 关键问题：'2025-08-28T16:00:00.000Z' 在UTC+8时区会被解析为 2025-08-29
  * 解决方案：直接从字符串提取日期部分 (YYYY-MM-DD)
  */
-export const parseDateAsLocal = (dateInput: Date | string): Date => {
+export const parseDateAsLocal = (dateInput: Date | string | null | undefined): Date | null => {
+  // 处理 null 或 undefined
+  if (dateInput === null || dateInput === undefined) {
+    return null;
+  }
+  
   if (dateInput instanceof Date) {
     // 如果已经是Date对象，提取本地的年月日
     return new Date(dateInput.getFullYear(), dateInput.getMonth(), dateInput.getDate());
@@ -299,6 +304,22 @@ export const parseDateAsLocal = (dateInput: Date | string): Date => {
   // 兜底：使用Date构造函数，然后提取本地日期
   const date = new Date(dateInput);
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+};
+
+/**
+ * 安全版本的 parseDateAsLocal，对于 null/undefined 返回默认日期（今天或指定日期）
+ * 用于那些必须有一个有效日期的场景
+ */
+export const parseDateAsLocalSafe = (
+  dateInput: Date | string | null | undefined,
+  defaultDate?: Date
+): Date => {
+  const result = parseDateAsLocal(dateInput);
+  if (result !== null) {
+    return result;
+  }
+  // 返回默认日期或今天
+  return defaultDate || new Date();
 };
 
 /**
