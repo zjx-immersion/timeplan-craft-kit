@@ -16,7 +16,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { TimeScale } from '@/utils/dateUtils';
 import { Line } from '@/types/timeplanSchema';
-import { getDateFromPosition, getPositionFromDate, snapToGrid, getPixelsPerDay, addDays, parseDateAsLocal } from '@/utils/dateUtils';
+import { getDateFromPosition, getPositionFromDate, snapToGrid, getPixelsPerDay, addDays, parseDateAsLocal, parseDateAsLocalSafe } from '@/utils/dateUtils';
 
 interface DragState {
   isDragging: boolean;
@@ -75,13 +75,13 @@ export const useTimelineDrag = ({
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     
     // ✅ 使用统一的日期解析逻辑
-    const initialStart = parseDateAsLocal(line.startDate);
+    const initialStart = parseDateAsLocalSafe(line.startDate);
     const position = getPositionFromDate(initialStart, viewStartDate, scale);
 
     nodeRef.current = line;
     setMousePosition({ x: clientX, y: clientY });
 
-    const initialEnd = line.endDate ? parseDateAsLocal(line.endDate) : undefined;
+    const initialEnd = line.endDate ? parseDateAsLocalSafe(line.endDate, initialStart) : undefined;
 
     setVisualDates({ start: initialStart, end: initialEnd });
     setSnappedDates({ start: initialStart, end: initialEnd });
@@ -115,7 +115,7 @@ export const useTimelineDrag = ({
       const daysOffset = deltaX / pixelsPerDay;
       
       // ✅ 使用统一的日期解析逻辑
-      const originalStart = parseDateAsLocal(line.startDate);
+      const originalStart = parseDateAsLocalSafe(line.startDate);
       
       // 🛡️ 安全检查：确保originalStart有效（仅在真正无效时才阻止）
       if (!originalStart || isNaN(originalStart.getTime())) {
@@ -151,7 +151,7 @@ export const useTimelineDrag = ({
       }
 
       if (line.endDate) {
-        const originalEnd = parseDateAsLocal(line.endDate);
+        const originalEnd = parseDateAsLocalSafe(line.endDate, originalStart);
         
         // 🛡️ 安全检查：确保originalEnd有效
         if (!originalEnd || isNaN(originalEnd.getTime())) {

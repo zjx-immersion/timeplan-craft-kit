@@ -3,7 +3,7 @@
  * 
  * 对应后端认证API端点
  */
-import { api } from './client';
+import apiClient from './client';
 import type {
   RegisterRequest,
   LoginRequest,
@@ -24,49 +24,49 @@ export const authApi = {
    * POST /api/v1/auth/register
    */
   register: (data: RegisterRequest) =>
-    api.post<UserResponse>('/api/v1/auth/register', data),
+    apiClient.post<UserResponse>('/api/v1/auth/register', data),
 
   /**
    * 用户登录
    * POST /api/v1/auth/login
    */
   login: (data: LoginRequest) =>
-    api.post<TokenResponse>('/api/v1/auth/login', data),
+    apiClient.post<TokenResponse>('/api/v1/auth/login', data),
 
   /**
    * 获取当前用户信息
    * GET /api/v1/auth/me
    */
   getCurrentUser: () =>
-    api.get<UserResponse>('/api/v1/auth/me'),
+    apiClient.get<UserResponse>('/api/v1/auth/me'),
 
   /**
    * 更新用户资料
    * PATCH /api/v1/auth/me
    */
   updateProfile: (data: UpdateProfileRequest) =>
-    api.patch<UserResponse>('/api/v1/auth/me', data),
+    apiClient.patch<UserResponse>('/api/v1/auth/me', data),
 
   /**
    * 修改密码
    * POST /api/v1/auth/change-password
    */
   changePassword: (data: ChangePasswordRequest) =>
-    api.post<MessageResponse>('/api/v1/auth/change-password', data),
+    apiClient.post<MessageResponse>('/api/v1/auth/change-password', data),
 
   /**
    * 删除用户
    * DELETE /api/v1/auth/me
    */
   deleteUser: () =>
-    api.delete<MessageResponse>('/api/v1/auth/me'),
+    apiClient.delete<MessageResponse>('/api/v1/auth/me'),
 
   /**
    * 刷新Token
    * POST /api/v1/auth/refresh
    */
   refreshToken: (data: RefreshTokenRequest) =>
-    api.post<TokenResponse>('/api/v1/auth/refresh', data),
+    apiClient.post<TokenResponse>('/api/v1/auth/refresh', data),
 };
 
 /**
@@ -75,26 +75,39 @@ export const authApi = {
 export const tokenManager = {
   /**
    * 保存Token到localStorage
+   * 使用与 api/client.ts 一致的键名
+   * 注意：tokenResponse 已经被 keysToCamel 转换为 camelCase
    */
   saveTokens: (tokenResponse: TokenResponse) => {
-    localStorage.setItem('access_token', tokenResponse.access_token);
-    localStorage.setItem('refresh_token', tokenResponse.refresh_token);
-    localStorage.setItem('token_expires_in', String(tokenResponse.expires_in));
+    // 处理 Axios 响应对象 - 实际数据在 .data 属性中
+    const data = (tokenResponse as any).data || tokenResponse;
+    
+    // TokenResponse 类型定义是 snake_case，但 apiClient 的响应拦截器已将数据转换为 camelCase
+    // @ts-ignore - 实际数据是 camelCase (accessToken) 或 snake_case (access_token)
+    const accessToken = data.accessToken || data.access_token;
+    // @ts-ignore
+    const refreshToken = data.refreshToken || data.refresh_token;
+    // @ts-ignore
+    const expiresIn = data.expiresIn || data.expires_in;
+    
+    localStorage.setItem('timeplan_access_token', accessToken);
+    localStorage.setItem('timeplan_refresh_token', refreshToken);
+    localStorage.setItem('token_expires_in', String(expiresIn));
     localStorage.setItem('token_saved_at', String(Date.now()));
   },
 
   /**
    * 获取Token
    */
-  getAccessToken: () => localStorage.getItem('access_token'),
-  getRefreshToken: () => localStorage.getItem('refresh_token'),
+  getAccessToken: () => localStorage.getItem('timeplan_access_token'),
+  getRefreshToken: () => localStorage.getItem('timeplan_refresh_token'),
 
   /**
    * 清除Token
    */
   clearTokens: () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('timeplan_access_token');
+    localStorage.removeItem('timeplan_refresh_token');
     localStorage.removeItem('token_expires_in');
     localStorage.removeItem('token_saved_at');
   },

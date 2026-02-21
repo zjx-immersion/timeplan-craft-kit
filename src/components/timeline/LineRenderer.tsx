@@ -25,7 +25,7 @@ import {
 } from '@ant-design/icons';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { parseDateAsLocal } from '@/utils/dateUtils';
+import { parseDateAsLocalSafe } from '@/utils/dateUtils';
 import { EnhancedTooltip } from '@/components/common/EnhancedTooltip';
 import type { TooltipContent } from '@/components/common/EnhancedTooltip';
 
@@ -84,8 +84,8 @@ const BarRenderer: React.FC<LineRendererProps> = memo(({
   
   // ✅ 生成增强的Tooltip内容
   const tooltipContent = React.useMemo((): TooltipContent => {
-    const startDate = parseDateAsLocal(line.startDate);
-    const endDate = parseDateAsLocal(line.endDate);
+    const startDate = parseDateAsLocalSafe(line.startDate);
+    const endDate = parseDateAsLocalSafe(line.endDate, startDate);
     const startDateStr = format(startDate, 'yyyy-MM-dd', { locale: zhCN });
     const endDateStr = format(endDate, 'yyyy-MM-dd', { locale: zhCN });
     
@@ -95,7 +95,7 @@ const BarRenderer: React.FC<LineRendererProps> = memo(({
     const status = line.attributes?.status || line.label?.includes('完成') ? '已完成' : '进行中';
     
     return {
-      summary: line.description || line.label,
+      summary: line.notes || line.label,
       stats: [
         {
           label: '开始日期',
@@ -324,7 +324,7 @@ const MilestoneRenderer: React.FC<LineRendererProps> = memo(({
   // ✅ 格式化日期用于Tooltip（使用统一的日期解析）
   const dateText = React.useMemo(() => {
     try {
-      const startDate = parseDateAsLocal(line.startDate);
+      const startDate = parseDateAsLocalSafe(line.startDate);
       return format(startDate, 'yyyy-MM-dd', { locale: zhCN });
     } catch (error) {
       return '';
@@ -466,7 +466,7 @@ const GatewayRenderer: React.FC<LineRendererProps> = memo(({
   // ✅ 格式化日期用于Tooltip（使用统一的日期解析）
   const dateText = React.useMemo(() => {
     try {
-      const startDate = parseDateAsLocal(line.startDate);
+      const startDate = parseDateAsLocalSafe(line.startDate);
       return format(startDate, 'yyyy-MM-dd', { locale: zhCN });
     } catch (error) {
       return '';

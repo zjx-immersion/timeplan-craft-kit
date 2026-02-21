@@ -16,7 +16,7 @@
 import React, { useMemo, memo, useState } from 'react';
 import { Relation, Line } from '@/types/timeplanSchema';
 import { TimeScale } from '@/utils/dateUtils';
-import { getPositionFromDate, getBarWidthPrecise, parseDateAsLocal } from '@/utils/dateUtils';
+import { getPositionFromDate, getBarWidthPrecise, parseDateAsLocalSafe } from '@/utils/dateUtils';
 import { RelationContextMenu } from './RelationContextMenu';
 import { RelationTooltip } from './RelationTooltip';
 
@@ -94,17 +94,18 @@ export const RelationRenderer: React.FC<RelationRendererProps> = memo(({
       const isDraggingThis = draggingNodeId === line.id;
       const isResizingThis = resizingNodeId === line.id;
       
+      const lineStartDate = parseDateAsLocalSafe(line.startDate);
       const displayStartDate = isDraggingThis && dragSnappedDates.start
         ? dragSnappedDates.start
         : isResizingThis && resizeSnappedDates.start
           ? resizeSnappedDates.start
-          : parseDateAsLocal(line.startDate);
+          : lineStartDate;
       
       const displayEndDate = isDraggingThis && dragSnappedDates.end
         ? dragSnappedDates.end
         : isResizingThis && resizeSnappedDates.end
           ? resizeSnappedDates.end
-          : line.endDate ? parseDateAsLocal(line.endDate) : parseDateAsLocal(line.startDate);
+          : line.endDate ? parseDateAsLocalSafe(line.endDate, lineStartDate) : lineStartDate;
       
       // ✅ 使用显示日期计算位置（拖拽中的临时位置）
       const startPos = getPositionFromDate(displayStartDate, viewStartDate, scale);

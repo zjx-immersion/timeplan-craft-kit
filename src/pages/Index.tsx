@@ -13,11 +13,11 @@
  * @status ✅ TimelinePanel 已集成
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Result, Button, Spin, theme } from 'antd';
 import { HomeOutlined } from '@ant-design/icons';
-import { useTimePlanStoreWithHistory } from '@/stores/timePlanStoreWithHistory';
+import { useTimePlanStoreWithAPI } from '@/stores/timePlanStoreWithAPI';
 import { UnifiedTimelinePanelV2 } from '@/components/timeline/UnifiedTimelinePanelV2';
 
 export default function Index() {
@@ -25,18 +25,36 @@ export default function Index() {
   const navigate = useNavigate();
   const { token } = theme.useToken();
 
-  // Store
-  const { currentPlan, setCurrentPlan, getPlanById } = useTimePlanStoreWithHistory();
+  // Store - 使用 API 集成的 Store
+  const { currentPlan, loading, error, loadPlan, setCurrentPlan } = useTimePlanStoreWithAPI();
 
-  // 加载项目
+  // 加载项目 - 只在 id 变化时加载，避免无限循环
+  const isLoadingRef = useRef(false);
   useEffect(() => {
-    if (id) {
-      setCurrentPlan(id);
+    if (id && !isLoadingRef.current) {
+      isLoadingRef.current = true;
+      loadPlan(id).finally(() => {
+        isLoadingRef.current = false;
+      });
     }
-  }, [id, setCurrentPlan]);
+  }, [id]);
 
-  // 项目不存在
-  if (id && !getPlanById(id)) {
+  // 显示加载状态
+  if (loading.plans || loading.timelines) {
+    return (
+      <div style={{
+        height: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        <Spin size="large" tip="加载项目中..." />
+      </div>
+    );
+  }
+
+  // 项目不存在或加载错误
+  if (id && !currentPlan && (error.plans || error.timelines)) {
     return (
       <div style={{
         height: '100vh',

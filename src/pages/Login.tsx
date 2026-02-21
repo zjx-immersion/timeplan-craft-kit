@@ -100,6 +100,7 @@ export const Login: React.FC = () => {
                   block
                   size="large"
                   loading={isLoading}
+                  style={{ fontWeight: 500 }}
                 >
                   登录
                 </Button>
@@ -178,6 +179,7 @@ export const Login: React.FC = () => {
                   block
                   size="large"
                   loading={isLoading}
+                  style={{ fontWeight: 500 }}
                 >
                   注册
                 </Button>

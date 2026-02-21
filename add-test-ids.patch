@@ -1,0 +1,19 @@
+--- a/src/pages/TimePlanList.tsx
++++ b/src/pages/TimePlanList.tsx
+@@ -310,7 +310,7 @@ export default function TimePlanList() {
+     >
+       {/* 页面标题 */}
+       <div style={{ marginBottom: token.marginLG }}>
+-        <Title level={3} style={{ margin: 0 }}>
++        <Title level={3} style={{ margin: 0 }} data-testid="page-title">
+           Time Plan
+         </Title>
+         <Text type="secondary">管理和查看所有项目计划</Text>
+@@ -332,6 +332,7 @@ export default function TimePlanList() {
+         <Button
+           type="primary"
+           icon={<PlusOutlined />}
++          data-testid="create-plan-button"
+           onClick={() => {
+             setEditingPlan(null);
+             form.resetFields();

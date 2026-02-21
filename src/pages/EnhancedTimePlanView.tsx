@@ -7,11 +7,12 @@
  * @date 2026-02-03
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Result } from 'antd';
 import { UnifiedTimelinePanelV2 } from '@/components/timeline/UnifiedTimelinePanelV2';
-import { useTimePlanStoreWithHistory } from '@/stores/timePlanStoreWithHistory';
+import { useTimePlanStoreWithAPI } from '@/stores/timePlanStoreWithAPI';
+import { Spin } from 'antd';
 
 /**
  * 增强版时间计划视图页面
@@ -19,15 +20,31 @@ import { useTimePlanStoreWithHistory } from '@/stores/timePlanStoreWithHistory';
 const EnhancedTimePlanView: React.FC = () => {
   const { planId } = useParams<{ planId: string }>();
   const navigate = useNavigate();
-  const { plans, setCurrentPlan } = useTimePlanStoreWithHistory();
+  const { currentPlan, loading, error, loadPlan } = useTimePlanStoreWithAPI();
+  const isLoadingRef = useRef(false);
 
   useEffect(() => {
-    if (planId) {
-      setCurrentPlan(planId);
+    if (planId && !isLoadingRef.current) {
+      isLoadingRef.current = true;
+      loadPlan(planId).finally(() => {
+        isLoadingRef.current = false;
+      });
     }
-  }, [planId, setCurrentPlan]);
+  }, [planId]);
 
-  const plan = plans.find(p => p.id === planId);
+  // 加载中
+  if (loading.plans || loading.timelines) {
+    return (
+      <div style={{ 
+        height: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center' 
+      }}>
+        <Spin size="large" tip="加载项目中..." />
+      </div>
+    );
+  }
 
   if (!planId) {
     return (
@@ -36,7 +53,7 @@ const EnhancedTimePlanView: React.FC = () => {
         title="缺少项目 ID"
         subTitle="请从项目列表选择一个项目"
         extra={
-          <Button type="primary" onClick={() => navigate('/plans')}>
+          <Button type="primary" onClick={() => navigate('/')}>
             返回项目列表
           </Button>
         }
@@ -44,14 +61,19 @@ const EnhancedTimePlanView: React.FC = () => {
     );
   }
 
-  if (!plan) {
+  // 安全地获取错误信息
+  const errorMessage = error.plans 
+    ? (typeof error.plans === 'string' ? error.plans : '加载失败')
+    : (error.timelines && typeof error.timelines === 'string' ? error.timelines : '');
+
+  if (!currentPlan || error.plans || error.timelines) {
     return (
       <Result
         status="404"
         title="项目不存在"
-        subTitle={`未找到 ID 为 ${planId} 的项目`}
+        subTitle={`未找到 ID 为 ${planId} 的项目${errorMessage ? ': ' + errorMessage : ''}`}
         extra={
-          <Button type="primary" onClick={() => navigate('/plans')}>
+          <Button type="primary" onClick={() => navigate('/')}>
             返回项目列表
           </Button>
         }

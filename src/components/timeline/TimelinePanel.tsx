@@ -64,6 +64,7 @@ import {
   getScaleUnit,
   getPixelsPerDay,
   parseDateAsLocal,
+  parseDateAsLocalSafe,
 } from '@/utils/dateUtils';
 import {
   format,
@@ -2827,10 +2828,11 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
               });
               console.log('  - 任务位置计算详情:');
               data.lines.forEach((line, idx) => {
-                const startPos = getPositionFromDate(parseDateAsLocal(line.startDate), normalizedViewStartDate, scale);
-                const endPos = line.endDate ? getPositionFromDate(parseDateAsLocal(line.endDate), normalizedViewStartDate, scale) : startPos;
+                const startPos = getPositionFromDate(parseDateAsLocalSafe(line.startDate), normalizedViewStartDate, scale);
+                const endPos = line.endDate ? getPositionFromDate(parseDateAsLocalSafe(line.endDate, parseDateAsLocalSafe(line.startDate)), normalizedViewStartDate, scale) : startPos;
                 const width = endPos - startPos;
-                console.log(`    ${(idx + 1).toString().padStart(3)}. ${(line.label || '未命名').padEnd(20)} | 开始: ${line.startDate.split('T')[0]} | 位置: ${Math.round(startPos).toString().padStart(5)}px | 宽度: ${Math.round(width).toString().padStart(5)}px | 高亮: ${highlightedLineIds.has(line.id) ? '✓' : ' '}`);
+                const startDateStr = typeof line.startDate === 'string' ? line.startDate : String(line.startDate);
+                console.log(`    ${(idx + 1).toString().padStart(3)}. ${(line.label || '未命名').padEnd(20)} | 开始: ${startDateStr.split('T')[0]} | 位置: ${Math.round(startPos).toString().padStart(5)}px | 宽度: ${Math.round(width).toString().padStart(5)}px | 高亮: ${highlightedLineIds.has(line.id) ? '✓' : ' '}`);
               });
               return null;
             })()}
@@ -2871,17 +2873,18 @@ const TimelinePanel: React.FC<TimelinePanelProps> = ({
 
                     // ✅ 修复：使用snappedDates而不是visualDates，确保按天对齐
                     // ✅ 关键修复：使用 parseDateAsLocal 避免时区导致的日期偏移
+                    const lineStartDate = parseDateAsLocalSafe(line.startDate);
                     const displayStartDate = isDraggingThis && dragSnappedDates.start
                       ? dragSnappedDates.start
                       : isResizingThis && resizeSnappedDates.start
                         ? resizeSnappedDates.start
-                        : parseDateAsLocal(line.startDate);
+                        : lineStartDate;
 
                     const displayEndDate = isDraggingThis && dragSnappedDates.end
                       ? dragSnappedDates.end
                       : isResizingThis && resizeSnappedDates.end
                         ? resizeSnappedDates.end
-                        : line.endDate ? parseDateAsLocal(line.endDate) : parseDateAsLocal(line.startDate);
+                        : line.endDate ? parseDateAsLocalSafe(line.endDate, lineStartDate) : lineStartDate;
 
                     // ✅ 修复：统一使用Precise计算，确保对齐
                     const startPos = getPositionFromDate(
