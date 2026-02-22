@@ -4,7 +4,7 @@ const authFile = 'playwright/.auth/user.json';
 
 setup('authenticate', async ({ page, request }) => {
   // First, try to register a test user via API
-  const registerResponse = await request.post('http://localhost:8000/api/v1/auth/register', {
+  const registerResponse = await request.post('http://localhost:3002/api/v1/auth/register', {
     data: {
       username: 'testuser',
       email: 'test@example.com',

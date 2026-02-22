@@ -13,7 +13,7 @@ test.describe('API Integration', () => {
     
     page.on('request', request => {
       const url = request.url();
-      if (url.includes('localhost:8000')) {
+      if (url.includes('localhost:3002')) {
         apiRequests.push({
           method: request.method(),
           url: url,
@@ -24,7 +24,7 @@ test.describe('API Integration', () => {
     
     page.on('response', async response => {
       const url = response.url();
-      if (url.includes('localhost:8000')) {
+      if (url.includes('localhost:3002')) {
         try {
           const body = await response.json().catch(() => null);
           apiResponses.push({
@@ -58,7 +58,7 @@ test.describe('API Integration', () => {
     // 使用Playwright的request对象直接测试API
     console.log('Testing login API...');
     
-    const loginResponse = await request.post('http://localhost:8000/api/v1/auth/login', {
+    const loginResponse = await request.post('http://localhost:3002/api/v1/auth/login', {
       data: {
         username: 'testuser',
         password: 'Test123!@#'
@@ -73,7 +73,7 @@ test.describe('API Integration', () => {
       expect(data.access_token).toBeDefined();
       
       // 使用token测试其他API
-      const plansResponse = await request.get('http://localhost:8000/api/v1/timeplans', {
+      const plansResponse = await request.get('http://localhost:3002/api/v1/timeplans', {
         headers: {
           'Authorization': `Bearer ${data.access_token}`
         }
@@ -94,7 +94,7 @@ test.describe('API Integration', () => {
 
   test('should create plan via API', async ({ request }) => {
     // 先登录
-    const loginResponse = await request.post('http://localhost:8000/api/v1/auth/login', {
+    const loginResponse = await request.post('http://localhost:3002/api/v1/auth/login', {
       data: {
         username: 'testuser',
         password: 'Test123!@#'
@@ -109,7 +109,7 @@ test.describe('API Integration', () => {
     const { access_token } = await loginResponse.json();
     
     // 创建计划
-    const createResponse = await request.post('http://localhost:8000/api/v1/timeplans', {
+    const createResponse = await request.post('http://localhost:3002/api/v1/timeplans', {
       headers: {
         'Authorization': `Bearer ${access_token}`
       },

@@ -55,7 +55,7 @@ test.describe('Integration Test - API Chain', () => {
     const apiCalls: string[] = [];
     page.on('request', request => {
       const url = request.url();
-      if (url.includes('localhost:8000')) {
+      if (url.includes('localhost:3002')) {
         apiCalls.push(`${request.method()} ${url}`);
         console.log(`API Call: ${request.method()} ${url}`);
       }
@@ -108,9 +108,9 @@ test.describe('Integration Test - API Chain', () => {
     console.log('Testing API endpoints directly...');
     
     const endpoints = [
-      { url: 'http://localhost:8000/', method: 'GET', name: 'Health Check' },
-      { url: 'http://localhost:8000/api/v1/auth/login', method: 'POST', name: 'Login API' },
-      { url: 'http://localhost:8000/api/v1/timeplans', method: 'GET', name: 'List Plans' },
+      { url: 'http://localhost:3002/', method: 'GET', name: 'Health Check' },
+      { url: 'http://localhost:3002/api/v1/auth/login', method: 'POST', name: 'Login API' },
+      { url: 'http://localhost:3002/api/v1/timeplans', method: 'GET', name: 'List Plans' },
     ];
     
     for (const endpoint of endpoints) {
